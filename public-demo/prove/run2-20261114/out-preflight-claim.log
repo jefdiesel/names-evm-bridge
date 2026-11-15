@@ -1,0 +1,17 @@
+deposit leaf 1 of 8
+root 0x974637da889e23dab941f44e180c63b715eb258793f4836dc1e9626f5592323f
+claim nullifier 0x48dd1e4af3b5f776fd845b48534eff8ef6223785c59a49d74aca75dcd2138279
+recipient B8UnZGJdFP3dtvUFeXsp8NTySWBY2qU8FwDK4oari3wT (one-time address of 2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC; the opening stays on this machine)
+sponsor 100000000 from the bridge float (float 100000000000)
+isDepositRoot[root] slot 0xbaa61165dd5345265ebf5e63223e2d8e5cea47db6afcb8398f7df0265be212a8 value 0x0000000000000000000000000000000000000000000000000000000000000001
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+Dry run: nothing proven or sent
+  public cycles:  81749
+  base fees:      exec 8 / stor 8 (height 416)
+  fee at head:    5724608
+  headroom:       5 blocks, up to exec 13 / stor 13 (9302488)
+  reserve:        5724608 (surplus refunded)
+  fee payer:      2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC
+  claims:         0 pending credit(s), 0 to the payer
+  refund to:      the payer's alias
+dry run: simulated in 183.4ms; nothing proven or sent

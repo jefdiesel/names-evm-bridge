@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="How to test the Names Wallet bridge from Sepolia to the LEZ 0.4 bridge test network: what you need, the two ways through, what to expect and the known limits. Sepolia testnet: the coins have no value.">
+  <meta property="og:title" content="Testing this bridge · Names Wallet bridge (Sepolia testnet)">
+  <title>Testing this bridge · Names Wallet bridge (Sepolia testnet)</title>
+<!-- site:assets -->
+<link rel="icon" href="/favicon.ico?v=85b55946" sizes="any">
+<link rel="icon" href="/favicon.svg?v=2143afb7" type="image/svg+xml">
+<link rel="preload" href="/assets/fonts/Inter-Bold.woff2?v=fa888127" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/tokens.css?v=586856d3">
+<link rel="stylesheet" href="/assets/chrome.css?v=a2a40c35">
+<!-- /site:assets -->
+  <link rel="stylesheet" href="../../app.css?v=bef66ad2e4ca">
+</head>
+<body>
+<!-- site:header -->
+<a class="site-skip" href="#main">Skip to content</a>
+<header class="site-top">
+  <div class="site-top-in">
+    <a class="site-brand" href="/"><img src="/assets/mark.svg?v=2143afb7" alt="" width="28" height="28">Names Wallet</a>
+    <span class="site-net"><b>Testnet</b><span class="site-net-more">: coins have no value</span></span>
+    <nav class="site-nav" aria-label="Main">
+      <ul>
+        <li><a href="/basecamp/">Basecamp</a></li>
+        <li><a href="/android/">Android</a></li>
+        <li><a href="/bridge/" aria-current="page">EVM Bridge</a></li>
+        <li><a href="/registry/">Registry</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<!-- /site:header -->
+  <main id="main" tabindex="-1">
+    <div class="wrap doc">
+      <p class="crumbs"><a href="../../">Back to the bridge</a></p>
+      <h1>Testing this bridge</h1>
+      <p class="lede">A test bridge from Sepolia to our LEZ 0.4 bridge test network. Test coins only. The network is reset now and then.</p>
+
+      <h2>What you need</h2>
+      <ol class="doc-steps">
+        <li>Sepolia ETH in a browser wallet, such as MetaMask or Rabby.</li>
+        <li>Logos Basecamp on your computer.</li>
+        <li>The Names Wallet test build for LEZ 0.4: <a href="/basecamp/" data-link="wallet-test-build">get the Names Wallet test build for LEZ 0.4</a>.</li>
+      </ol>
+
+      <h2>A. From your Names Wallet (a deposit code)</h2>
+      <p>In test builds that have “Receive from Ethereum”.</p>
+      <ol class="doc-steps">
+        <li>In the Names Wallet, use “Receive from Ethereum” to get a deposit code.</li>
+        <li>On the <a href="../../">bridge page</a>, choose “Paste deposit code” and paste it.</li>
+        <li>Connect your Ethereum wallet on Sepolia, compare the digits with your Names Wallet, and deposit.</li>
+        <li>Wait up to about 20 minutes.</li>
+        <li>Your Names Wallet shows the deposit and offers the claim.</li>
+      </ol>
+      <details class="more">
+        <summary>More about this way</summary>
+        <p>The wallet makes and keeps the deposit’s secret; the bridge page sees only public facts. There is no claim file on this way. If the digits on the page differ from your wallet’s, stop: the code would deposit to someone else.</p>
+      </details>
+
+      <h2>B. With a claim file</h2>
+      <ol class="doc-steps">
+        <li>On the <a href="../../">bridge page</a>, connect your Ethereum wallet on Sepolia.</li>
+        <li>Choose the amount, then paste a public account whose keys are in your LEZ 0.4 wallet (Names Wallet 0.17).</li>
+        <li>Save the claim file once, then deposit.</li>
+        <li>Wait up to about 20 minutes.</li>
+        <li>In the Names Wallet: Wallet → LEZ 0.4 → “Claim a bridge deposit”, choose the claim file, press “Claim” and approve it.</li>
+      </ol>
+      <details class="more">
+        <summary>More about the claim file</summary>
+        <p>The page makes the deposit’s secret in your browser tab and puts it in the claim file. Without the file the deposit cannot be claimed, and nobody can recover it for you. Whoever has it can claim the deposit: keep it private.</p>
+        <p>An account that is only in your LEZ 0.3 wallet cannot claim the deposit. A LEZ 0.4 wallet restored from the same recovery phrase has the same public accounts; one created new has different ones.</p>
+      </details>
+
+      <h2>What to expect</h2>
+      <ul>
+        <li>The deposit is final on Sepolia in about 15 minutes. The claim works once our attester has posted the deposit root to LEZ 0.4: up to about 20 minutes after the deposit.</li>
+        <li>Installing a Names Wallet test build, Basecamp shows a notice that the package is unsigned.</li>
+        <li>In some builds, Approve becomes available only after a short wait.</li>
+      </ul>
+
+      <h2>Known limits</h2>
+      <ul>
+        <li>The deposit root reaches LEZ 0.4 through our operator key (our attester), not through a light client.</li>
+        <li>A public claim links the Sepolia deposit to the Logos account, publicly.</li>
+        <li>Private claims are not in the wallet yet.</li>
+        <li>The bridge’s relay pays the claim’s fee, so the account needs no LEZ. The relay has daily limits; when it will not pay, nothing is sent.</li>
+        <li>This test vault was set up with a wrong starting value, so it can’t pay ETH back out. Deposits can be claimed on the bridge test network; withdrawals come with the next vault.</li>
+        <li>Fixed amounts only: 0.01, 0.1 or 1 Sepolia ETH, or 100, 1,000 or 10,000 demo USDC (a test token only the team can hand out).</li>
+      </ul>
+      <details class="more">
+        <summary>Related pages</summary>
+        <p>What a deposit makes public: <a href="../privacy/">What a deposit reveals</a>. What the page checks and holds: <a href="../security/">Security of the page</a>. Checking the page’s files: <a href="../verify/">Verify the page</a>.</p>
+      </details>
+
+      <h2>Report a problem</h2>
+      <p>Email <a href="mailto:bridge@nameswallet.app" data-link="report-problem">bridge@nameswallet.app</a>. Say which way you used (A or B), what you did and what you saw.</p>
+    </div>
+  </main>
+<!-- site:footer -->
+<footer class="site-foot">
+  <div class="site-foot-in">
+    <div class="site-foot-brand">
+      <a class="site-brand" href="/"><img src="/assets/mark.svg?v=2143afb7" alt="" width="36" height="36">Names Wallet</a>
+      <p>A wallet, LNS names and private messages on Logos.</p>
+      <p>Testnet software: the coins have no value.</p>
+      <ul><li><a href="/accessibility/">Accessibility</a></li></ul>
+    </div>
+    <nav class="site-foot-cols" aria-label="Footer">
+      <div>
+        <h2>Wallet</h2>
+        <ul>
+          <li><a href="/basecamp/">Basecamp</a></li>
+          <li><a href="/basecamp/details/">Basecamp details</a></li>
+          <li><a href="/android/">Android</a></li>
+          <li><a href="/android/details/">Android details</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>EVM Bridge</h2>
+        <ul>
+          <li><a href="/bridge/">Bridge demo</a></li>
+          <li><a href="/bridge/about/privacy/">What a deposit reveals</a></li>
+          <li><a href="/bridge/about/security/">Security of the page</a></li>
+          <li><a href="/bridge/about/verify/">Verify the page</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Registry</h2>
+        <ul>
+          <li><a href="/registry/">Program Registry</a></li>
+          <li><a href="/registry/submit/">Register a program or app</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Source</h2>
+        <ul>
+          <li><a href="https://github.com/jefdiesel/logos-names">Basecamp source</a></li>
+          <li><a href="https://github.com/jefdiesel/logos-node-android/tree/android-app">Android source</a></li>
+          <li><a href="https://github.com/jefdiesel/lez-program-registry">Registry source</a></li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+</footer>
+<!-- /site:footer -->
+</body>
+</html>

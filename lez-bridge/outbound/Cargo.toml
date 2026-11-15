@@ -1,0 +1,18 @@
+# G2-lite, the outbound state proof (LEZ chain -> burns and claims -> the vault's `update`):
+# outbound/core is the statement (pure Rust, shared with the zkVM guest), outbound/host the
+# driver (sequencer RPC, native run, RISC Zero executor run, journal + mock seal, release inputs,
+# and, only with `--prove`, the owner-started in-process CPU proof of an update or a release).
+# Its own workspace, excluded by having its own [workspace] table, like release/: the host needs
+# risc0-zkvm's "prove" feature, which must not leak into the bridge workspace. Tests never prove.
+[workspace]
+resolver = "3"
+members = ["claim-acc", "core", "host"]
+exclude = ["wrap"]   # its own workspace (x86-64 Linux builds only it)
+
+# Same keccak patch as the bridge workspace: core links bridge_core (lee_core) and the guests
+# must match what the zone builds.
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
+
+[profile.release]
+opt-level = 3

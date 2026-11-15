@@ -1,0 +1,25 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "exits": [
+      {
+        "denom_text": "100",
+        "eth_to": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+        "exit_commitment": "0x6266d24f2203520fbab20f347080067dd45e84adb35a911f399139b38a05432a",
+        "id": "rdm-1794576624570-0",
+        "plan": "rdm-1794576624570",
+        "receive_text": "99.5",
+        "relay_fee_text": "0.5",
+        "release": {
+          "available": false,
+          "reason": "Releasing on Ethereum needs the outbound proof (G2), which proves LEZ burns to the vault. It is not built yet, so no exit can be released today.",
+          "vault_note": "This deployment's vault is a demo whose outbound image is a placeholder: it can never release, even after G2 exists. A new vault version is needed.",
+          "what_happens_next": "Once G2 runs, the vault records exit roots; after the release delay, anyone (you or a relayer, paid the fee you chose) proves your exit and the vault pays the recipient you fixed when burning."
+        },
+        "stage": "simulated",
+        "symbol": "dUSDC"
+      }
+    ]
+  }
+}

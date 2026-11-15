@@ -1,0 +1,12 @@
+[package]
+name = "eth_attest_probe"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# A minimal reference consumer of the RFP-021 attestation: verifies one statement in its own
+# actor and asserts the anchor publicly. Used by the tests and for cycle counts.
+[dependencies]
+borsh.workspace = true
+eth_attest_core.workspace = true
+lee_core.workspace = true

@@ -1,0 +1,121 @@
+# public-demo/relayer/e2e-relay.sh with RUNBOOK §13.2 stage 1: the new relayer.py (review-B fixes, payer bound with
+# --bind-payer) and the DEPLOYED CLI (sha256 700bda76…) with the old rc3 programs, on a throwaway loopback rc3 chain,
+# build host, 2026-11-14. Fresh keys, synthetic stand-in leaves, nothing proved; chain stopped and deleted afterwards.
+# Not covered here: two relayed claims in one block (review B M1), which ran only against the unit tests' fakes.
+
+setup done: operator 14gDLTu6hZsq1wcKnhFAvTmosWMaxNus7MdsuY8MpUfo
+started pid 81612, height {"jsonrpc":"2.0","id":1,"result":1}
+  listens TCP 127.0.0.1:3431
+  listens TCP 127.0.0.1:3430
+[fund-relay] exit 0
+Transaction hash is ac793aa238b5f61f43279e09a1523fb19cd5f6889a3edbad977fcce94cdd8718
+Transaction is included in block 2
+operator 14gDLTu6hZsq1wcKnhFAvTmosWMaxNus7MdsuY8MpUfo | relay payer CGYpYN8SBrybb3SbZmy6LGd7djVgr4TNxZFYWcZgDLdc | claimers X 5QfJdpC4uD95FGE6nwEn8ZcQBVcw6iu1ToW8oFC79ji5, Y 8sw5GAu5M4pxomHS1MT8nHKCTSoVdVV3ZEBCrkXeKz46
+[dep-token] exit 0
+Transaction is included in block 6
+Transaction hash is e976a0b3d7e32ebc8835dcae2fd43df126d6d2c2176a301aa192edb0ce9b8031
+Transaction is included in block 7
+immutable
+program DShuuPvCgChrBWbTYYrHswm4XpoiZvDBfcFE8k4feAqR
+[dep-bridge] exit 0
+Transaction is included in block 13
+Transaction hash is 007b102b700ca659aae5d7d38c7b8a9074f213bba848f1979ce42ff3bf9be99d
+Transaction is included in block 14
+immutable
+program 122BPhN6Y9BeGgsFguXsKu55yWpjcwhqWUzZ6n3oGbTb
+[wrap] exit 0
+definition account CtdwmpzzrvUByej8a4k9RaZR2STs7sviZ2qaJALMsHqb
+tx 65fc1ac66c2cbfb7820772b257b12863086967c37f17d2e30feded4babe87644
+applied in block 15
+token CtdwmpzzrvUByej8a4k9RaZR2STs7sviZ2qaJALMsHqb
+[init] exit 0
+cfg_id the bridge will derive 0xd9a65225c89b69544b4bda9739b4fa2ba6c658bb62faf9471d16209711183416
+submitted in 46.9ms
+tx 56ea9d32a649ba1ef5ca1b6c8a758460841767b07c5faafa424e973afc4dd1ce
+applied in block 16
+[reg] exit 0
+submitted in 49.6ms
+tx 3a217dba5074dd767bb10f2f73d5b59aacd8188930511baf5aad2dd87c467d31
+applied in block 17
+[attest] exit 0
+submitted in 48.4ms
+tx a749a799b8f48a02783b3d5dd05c587f8b79a03d04cfc876ffe02a24ea1525c6
+applied in block 18
+bound CGYpYN8SBrybb3SbZmy6LGd7djVgr4TNxZFYWcZgDLdc to this chain (<R>/wallets/relay/relay-chain.json)
+{"payer": "CGYpYN8SBrybb3SbZmy6LGd7djVgr4TNxZFYWcZgDLdc", "bridge": "122BPhN6Y9BeGgsFguXsKu55yWpjcwhqWUzZ6n3oGbTb", "max_gas": 250000, "max_fee": "2500000"}
+
+== A. X never used: ABSENT; the relay only checks (--dry-run) 11:06:13
+[a-dry] exit 0
+deposit leaf 0 of 3
+root 0xa62f196dc740fa259f861bce42db65fc0ed34ba0fb6baccb20eea92d32205db2
+claim nullifier 0x9daffd28f70388b1245d1e802abf8825d19b434c3eb5e232c0a25c76db61b7ff
+recipient 5QfJdpC4uD95FGE6nwEn8ZcQBVcw6iu1ToW8oFC79ji5 (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+relay http://127.0.0.1:3432/relay: fee payer CGYpYN8SBrybb3SbZmy6LGd7djVgr4TNxZFYWcZgDLdc, caps gas 250000, max_fee 2500000
+relayed claim: declared gas 185970, max_fee 2500000 (measured 148776 cycles), signed by the claimer
+dry run: the relay checked the claim and would co-sign it; nothing signed by the relay or sent
+
+== B. X claims leaf 0 through the relay; X holds no native LEZ 11:06:13
+[b-claim] exit 0
+claim nullifier 0x9daffd28f70388b1245d1e802abf8825d19b434c3eb5e232c0a25c76db61b7ff
+recipient 5QfJdpC4uD95FGE6nwEn8ZcQBVcw6iu1ToW8oFC79ji5 (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+relay http://127.0.0.1:3432/relay: fee payer CGYpYN8SBrybb3SbZmy6LGd7djVgr4TNxZFYWcZgDLdc, caps gas 250000, max_fee 2500000
+relayed claim: declared gas 185970, max_fee 2500000 (measured 148776 cycles), signed by the claimer
+relayed and submitted in 265.1ms
+tx 6e348d865b4ccaa103c8d45aad755afd0c2ecb10e11f1f5e6bcab2785dbdd298
+applied in block 19
+X after: PRESENT nonce=1 native=0 | relay payer 100000000 -> 98793240: paid 1206760
+Public/5QfJdpC4uD95FGE6nwEn8ZcQBVcw6iu1ToW8oFC79ji5  CtdwmpzzrvUByej8a4k9RaZR2STs7sviZ2qaJALMsHqb  100000000
+relayed tx 6e348d865b4ccaa103c8d45aad755afd0c2ecb10e11f1f5e6bcab2785dbdd298
+
+== C. the repeat: CLI pre-check, then the relay's own check (--no-precheck on the claimer's side) 11:06:40
+[c-repeat] exit 1
+claim nullifier 0x9daffd28f70388b1245d1e802abf8825d19b434c3eb5e232c0a25c76db61b7ff
+recipient 5QfJdpC4uD95FGE6nwEn8ZcQBVcw6iu1ToW8oFC79ji5 (public claimer)
+Error: deposit already claimed: its nullifier is spent; nothing sent
+[c-repeat-relay] exit 1
+claim refused
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Error: the claim would revert: Failed to execute program: Guest panicked: claim refused; nothing sent
+
+== D. replay of the co-signed transaction as it is on chain 11:06:40
+{"jsonrpc":"2.0","id":1,"result":"6e348d865b4ccaa103c8d45aad755afd0c2ecb10e11f1f5e6bcab2785dbdd298"}
+relay payer now 98793240 (unchanged = not charged)
+
+== E. Y claims leaf 1 through the relay, and minting is frozen in the same block (sent first) 11:07:00
+[e-claim] exit 5
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+relay http://127.0.0.1:3432/relay: fee payer CGYpYN8SBrybb3SbZmy6LGd7djVgr4TNxZFYWcZgDLdc, caps gas 250000, max_fee 2500000
+relayed claim: declared gas 185969, max_fee 2500000 (measured 148775 cycles), signed by the claimer
+relayed and submitted in 398.5ms
+tx eceb2ecea7bd9f81076c3323f4c387d97e2feca1eaaf6883b6f1857a4b1a2153
+Error: eceb2ecea7bd9f81076c3323f4c387d97e2feca1eaaf6883b6f1857a4b1a2153 was included in block 23 but reverted
+submitted in 133.8ms
+tx 71648984b011c85021a4f489d00d15991a0d8e2ac0723f91df36843ae5c0ad6f
+applied in block 23
+Y after: PRESENT nonce=1 native=0 | relay payer 98793240 -> 97288936: a reverted relayed claim cost 1504304
+[e-unfreeze] exit 0
+submitted in 45.2ms
+tx 10dcc8dcd0151b3ae779901700a90907b8cef37dd8f8d18b8a96c9d9ef514f7b
+applied in block 24
+
+== F. X's second deposit (leaf 2): the relay's per-nullifier record does not block a new deposit 11:07:50
+[f-claim] exit 0
+relayed claim: declared gas 188823, max_fee 2500000 (measured 151058 cycles), signed by the claimer
+relayed and submitted in 302.8ms
+tx 1cab8208e265f1c13894865c41add97082d7e6a146a81596a23d385731b3192b
+applied in block 25
+X after: PRESENT nonce=2 native=0 | relay payer paid 1225016
+
+== relay log 11:08:03
+{"at": "2026-11-14 11:06:12", "channel": "248745447c30f0f7f1c18b96a2c72500b2d68caecd351fb153a3e43b5eac7f08", "event": "bound", "genesis": "bba476ea7df5639b614be63102d24bee4ea8870a0d25756f3e582ac348dcef54", "payer": "CGYpYN8SBrybb3SbZmy6LGd7djVgr4TNxZFYWcZgDLdc"}
+{"at": "2026-11-14 11:06:12", "bridge": "122BPhN6Y9BeGgsFguXsKu55yWpjcwhqWUzZ6n3oGbTb", "daily_max": 100, "desk_only": false, "dry_run": false, "event": "start", "floor": 10000000, "ip_daily_max": 5, "listen": "127.0.0.1:3432", "max_fee": 2500000, "max_gas": 250000, "payer": "CGYpYN8SBrybb3SbZmy6LGd
+{"at": "2026-11-14 11:06:13", "claimer": "5QfJdpC4uD95FGE6nwEn8ZcQBVcw6iu1ToW8oFC79ji5", "commitment": "0xe86d3b2491dca2aeb0868f529619dabe5369c8d9b283d8955d659c1aea7e0fe7", "cycles": 148776, "dry_run": false, "event": "checked", "gas": 185970, "ip": "692d0ebdbd2e67850175", "max_fee": "2500000", "nul
+{"at": "2026-11-14 11:06:13", "claimer": "5QfJdpC4uD95FGE6nwEn8ZcQBVcw6iu1ToW8oFC79ji5", "commitment": "0xe86d3b2491dca2aeb0868f529619dabe5369c8d9b283d8955d659c1aea7e0fe7", "cycles": 148776, "event": "SENT", "gas": 185970, "ip": "692d0ebdbd2e67850175", "max_fee": "2500000", "nullifier": "0x9daffd28f
+{"at": "2026-11-14 11:07:12", "block": 19, "event": "INCLUDED", "nullifier": "0x9daffd28f70388b1245d1e802abf8825d19b434c3eb5e232c0a25c76db61b7ff", "tx": "6e348d865b4ccaa103c8d45aad755afd0c2ecb10e11f1f5e6bcab2785dbdd298"}
+{"at": "2026-11-14 11:07:12", "claimer": "8sw5GAu5M4pxomHS1MT8nHKCTSoVdVV3ZEBCrkXeKz46", "commitment": "0x98cb76a28944b8164ebe89263d3acdb387a2e18ebc5bacc23d5cb5d4331565e1", "cycles": 148775, "event": "SENT", "gas": 185969, "ip": "692d0ebdbd2e67850175", "max_fee": "2500000", "nullifier": "0xb1afc231a
+{"at": "2026-11-14 11:07:50", "block": 23, "event": "INCLUDED", "nullifier": "0xb1afc231aedcd460f3e626fd226cd89f80fbf3d683822dacd5ec577d4a8d638a", "tx": "eceb2ecea7bd9f81076c3323f4c387d97e2feca1eaaf6883b6f1857a4b1a2153"}
+{"at": "2026-11-14 11:07:50", "claimer": "5QfJdpC4uD95FGE6nwEn8ZcQBVcw6iu1ToW8oFC79ji5", "commitment": "0xd8a27aaa85b89f04a5f45827c1568e246784d05e2d1f5fea7fb952e29a8e238d", "cycles": 151058, "event": "SENT", "gas": 188823, "ip": "692d0ebdbd2e67850175", "max_fee": "2500000", "nullifier": "0xaef0eb69e
+
+== done (stop: kill $(cat <R>/relay/pid); R=<R> RPC=127.0.0.1:3430 METRICS=127.0.0.1:3431 <W>/src/public-demo/relayer/../rc3/chain-rc3.sh stop; then delete <R>) 11:08:03

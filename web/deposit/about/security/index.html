@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="The security trade-offs of the Names Wallet bridge page on the Sepolia testnet: what it holds, what it checks, and what a tampered copy could do.">
+  <meta property="og:title" content="Security of the bridge page · Names Wallet bridge (Sepolia testnet)">
+  <title>Security of the bridge page · Names Wallet bridge (Sepolia testnet)</title>
+<!-- site:assets -->
+<link rel="icon" href="/favicon.ico?v=85b55946" sizes="any">
+<link rel="icon" href="/favicon.svg?v=2143afb7" type="image/svg+xml">
+<link rel="preload" href="/assets/fonts/Inter-Bold.woff2?v=fa888127" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/tokens.css?v=586856d3">
+<link rel="stylesheet" href="/assets/chrome.css?v=a2a40c35">
+<!-- /site:assets -->
+  <link rel="stylesheet" href="../../app.css?v=bef66ad2e4ca">
+</head>
+<body>
+<!-- site:header -->
+<a class="site-skip" href="#main">Skip to content</a>
+<header class="site-top">
+  <div class="site-top-in">
+    <a class="site-brand" href="/"><img src="/assets/mark.svg?v=2143afb7" alt="" width="28" height="28">Names Wallet</a>
+    <span class="site-net"><b>Testnet</b><span class="site-net-more">: coins have no value</span></span>
+    <nav class="site-nav" aria-label="Main">
+      <ul>
+        <li><a href="/basecamp/">Basecamp</a></li>
+        <li><a href="/android/">Android</a></li>
+        <li><a href="/bridge/" aria-current="page">EVM Bridge</a></li>
+        <li><a href="/registry/">Registry</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<!-- /site:header -->
+  <main id="main" tabindex="-1">
+    <div class="wrap doc">
+      <p class="crumbs"><a href="../../">Back to the bridge</a></p>
+      <h1>Security of the bridge page</h1>
+      <p class="lede">There are two ways to deposit. They trade convenience for what this page ever sees.</p>
+      <h2>Two ways to deposit</h2>
+      <ul>
+        <li><strong>Made here</strong> (the default): the page creates your secret in this tab and puts it in the claim file. Convenient, but the secret exists in the browser until you close the tab.</li>
+        <li><strong>From your Names Wallet’s deposit code</strong>: the wallet keeps the secret, and the page only sees public facts. The safer way, once the wallet’s bridge mini-app is out.</li>
+      </ul>
+      <h2>What can go wrong when the secret is made here</h2>
+      <ul>
+        <li>A tampered copy of this page could send the secret away and claim your deposit.</li>
+        <li>A browser extension allowed to read pages could read it too.</li>
+      </ul>
+      <p>What protects you: the page’s Content-Security-Policy lets it talk to no site but its Sepolia read service (PublicNode); it loads no third-party code; it never stores or sends the secret; and every file is listed in a manifest you can <a href="../verify/">check</a>.</p>
+      <h2>What the page checks before you sign</h2>
+      <ul>
+        <li>Your wallet is on Sepolia. Every other network, Ethereum mainnet included, is refused.</li>
+        <li>The vault is the known one and holds the configuration your deposit was made for.</li>
+        <li>The amount is one the vault accepts, deposits are open, the limit has room, and the commitment is new.</li>
+        <li>When the bridge fee is on: the deposit desk forwards to that vault and quotes the same amount, and the fee is in the total you see before your wallet asks.</li>
+        <li>The deposit succeeds when simulated, checked again right before your wallet asks.</li>
+      </ul>
+      <p>A token approval is for the exact amount, never unlimited.</p>
+      <h2>Your wallet is the last check</h2>
+      <p>It must show Sepolia and the demo vault, <code>0x26af59855b99a8af199361289A5Ed6088729E60E</code>. When the bridge fee is on, it shows the deposit desk instead; the page shows the desk’s address before you confirm, and the desk passes the deposit to the vault in the same transaction. That catches a page that sends you to another vault. It cannot show a swapped commitment, so that depends on the page being genuine.</p>
+      <h2>Limits today</h2>
+      <ul>
+        <li>This test vault was set up with a wrong starting value, so it can’t pay ETH back out. Deposits can be claimed on the bridge test network; withdrawals come with the next vault.</li>
+        <li>A claim is signed by the receiving account and needs the claim file. You claim in the Names Wallet (Wallet → LEZ 0.4 → “Claim a bridge deposit”), into a public account; that wallet build (0.17) is not released yet, so you can’t claim to your own account yourself today. The bridge pays a claim’s fee, so the account needs no LEZ. A claim to a public account links the Sepolia deposit to that account publicly.</li>
+        <li>A LEZ account ID has no checksum: a mistyped account, or a key pasted instead of an ID, is accepted and makes the deposit unclaimable. The page shows the account for checking and asks you to confirm it.</li>
+        <li>Tested with real Sepolia deposits through this page and MetaMask, and with a scripted wallet; not yet in Safari or Firefox, or with a screen reader.</li>
+        <li>Phone wallets work inside their own browser. There is no WalletConnect.</li>
+      </ul>
+    </div>
+  </main>
+<!-- site:footer -->
+<footer class="site-foot">
+  <div class="site-foot-in">
+    <div class="site-foot-brand">
+      <a class="site-brand" href="/"><img src="/assets/mark.svg?v=2143afb7" alt="" width="36" height="36">Names Wallet</a>
+      <p>A wallet, LNS names and private messages on Logos.</p>
+      <p>Testnet software: the coins have no value.</p>
+      <ul><li><a href="/accessibility/">Accessibility</a></li></ul>
+    </div>
+    <nav class="site-foot-cols" aria-label="Footer">
+      <div>
+        <h2>Wallet</h2>
+        <ul>
+          <li><a href="/basecamp/">Basecamp</a></li>
+          <li><a href="/basecamp/details/">Basecamp details</a></li>
+          <li><a href="/android/">Android</a></li>
+          <li><a href="/android/details/">Android details</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>EVM Bridge</h2>
+        <ul>
+          <li><a href="/bridge/">Bridge demo</a></li>
+          <li><a href="/bridge/about/privacy/">What a deposit reveals</a></li>
+          <li><a href="/bridge/about/security/">Security of the page</a></li>
+          <li><a href="/bridge/about/verify/">Verify the page</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Registry</h2>
+        <ul>
+          <li><a href="/registry/">Program Registry</a></li>
+          <li><a href="/registry/submit/">Register a program or app</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Source</h2>
+        <ul>
+          <li><a href="https://github.com/jefdiesel/logos-names">Basecamp source</a></li>
+          <li><a href="https://github.com/jefdiesel/logos-node-android/tree/android-app">Android source</a></li>
+          <li><a href="https://github.com/jefdiesel/lez-program-registry">Registry source</a></li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+</footer>
+<!-- /site:footer -->
+</body>
+</html>

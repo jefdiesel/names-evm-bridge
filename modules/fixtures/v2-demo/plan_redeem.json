@@ -1,0 +1,111 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "amount_text": "100",
+    "blocked": "This vault can never release: its outbound proof image is a placeholder (demo deployment), and the outbound proof (G2) is not built. Burning here would destroy your wrapped tokens for good, so only a dry run is offered.",
+    "created": 1794576624570,
+    "eth_to": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+    "eth_token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+    "exits_possible": false,
+    "id": "rdm-1794576624570",
+    "pieces": [
+      {
+        "burned": false,
+        "denom": "100000000",
+        "denom_index": 0,
+        "denom_text": "100",
+        "exit_commitment": "0x6266d24f2203520fbab20f347080067dd45e84adb35a911f399139b38a05432a",
+        "from": "2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC",
+        "from_kind": "private",
+        "receive": "99500000",
+        "receive_text": "99.5",
+        "relay_fee": "500000",
+        "relay_fee_text": "0.5",
+        "withdraw_fee": "0"
+      }
+    ],
+    "privacy": {
+      "always_public": [
+        {
+          "item": "Token and amount",
+          "where": "both chains",
+          "why": "Amounts are fixed denominations, so they say little when other people move the same amount. The fewer such moves, the less they hide."
+        },
+        {
+          "item": "Timing",
+          "where": "both chains",
+          "why": "When you deposit, claim, burn and release is visible. Spreading the steps out is the protection."
+        },
+        {
+          "item": "An exit commitment and the burned denomination",
+          "where": "LEZ",
+          "why": "The commitment hides your Ethereum recipient."
+        },
+        {
+          "item": "The release recipient, relayer and relay fee",
+          "where": "Ethereum",
+          "why": "Public by construction. The relay fee is 0 or a value from the vault's fixed menu, so it does not fingerprint you."
+        },
+        {
+          "item": "Your network address",
+          "where": "the RPC and sequencer you use",
+          "why": "Outside the bridge's protection. Use endpoints you trust, or your own."
+        }
+      ],
+      "confirmed": false,
+      "flow": "redeem",
+      "headline": "Private. Only the amount, the token and the timing are public.",
+      "level": "private",
+      "notes": [],
+      "on_chain_error_text": "If a claim is refused on chain, the only message anyone sees is \"claim refused\": it never says which deposit. The detailed reason shown here is worked out on this computer and is not sent.",
+      "overrides": [
+        {
+          "chosen": false,
+          "key": "public_account",
+          "leaks": "A claim into a public account publishes the deposit's secret, which ties your Ethereum deposit (and the address that paid for it) to this LEZ account for good. A burn from a public account shows which account burned. Neither can be undone.",
+          "needs_confirmation": true,
+          "title": "Use a public account",
+          "who": "anyone reading either chain"
+        },
+        {
+          "chosen": false,
+          "key": "odd_amount",
+          "leaks": "The bridge only moves standard amounts. Anything left over stays where it is; sending it some other way would fingerprint you.",
+          "needs_confirmation": true,
+          "title": "Keep an amount that is not a standard denomination",
+          "who": "anyone reading amounts"
+        },
+        {
+          "chosen": false,
+          "key": "self_relay",
+          "leaks": "Paying the release's gas yourself means the release transaction comes from an Ethereum address you funded. That address's history can identify you. A relayer, paid a fixed fee from the menu, avoids this.",
+          "needs_confirmation": true,
+          "title": "Release on Ethereum myself (no relayer)",
+          "who": "anyone reading Ethereum"
+        },
+        {
+          "chosen": false,
+          "key": "known_recipient",
+          "leaks": "The release recipient is public on Ethereum by construction. Sending to an address linked to your identity (an exchange deposit address, your main wallet) tells everyone who received the money, though not which burn paid it.",
+          "needs_confirmation": true,
+          "title": "Release to an address that is already mine and known",
+          "who": "anyone reading Ethereum"
+        }
+      ],
+      "requires_confirmation": false,
+      "stays_private": [
+        "Which burn pays which release",
+        "Your LEZ account (for a private burn)",
+        "The exit's secret"
+      ],
+      "weakened_by": []
+    },
+    "receive_text": "99.5",
+    "relay_fee_index": 1,
+    "symbol": "dUSDC",
+    "warnings": [
+      "dUSDC's issuer can block addresses. A blocked recipient can't receive the release."
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "lez_bridge_ui",
+  "display_name": "LEZ Bridge",
+  "version": "0.1.0",
+  "type": "ui_qml",
+  "category": "finance",
+  "description": "Move ERC-20 tokens and ETH between Ethereum and LEZ privately: deposit, claim, redeem, recover, and administer the bridge",
+  "view": "qml/Main.qml",
+  "icon": "src/icons/icon.png",
+  "dependencies": [
+    {
+      "name": "lez_bridge",
+      "version": ">=0.1.0"
+    }
+  ],
+  "provides": [],
+  "uses": [],
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}

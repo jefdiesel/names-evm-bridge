@@ -1,0 +1,14 @@
+=== RUN 2 SUMMARY (send this) ===
+local LEZ v0.4.0-rc3 chain, instance 0x482defa1a67c772cbf823b8a9bbf98cf41d21a7ffb1fcdb2a27693de6d989bfd (Sepolia checkpoint slot 11576640), live v2 vault
+proof 1, private attested claim leaf 1 from V: tx 7c8d98afd8a82b33d79fb1773c718b3ba175d5c60f870095dbfae878b555035e block 463 | guard: exit=0 wall=701s peak_footprint=9391MB peak_rss=6433MB
+proof 2, light-client update -> slot 11576672, anchor 0x22f106e24bdb3e239f4b2df9088d25b11519a8a808f352d224427b75c64d9085: tx 10bcc52fdd4ee6793e5fbbd7cc5b002861b2c5099eb5f555a540e8dd42527c47 block 950 | guard: exit=0 wall=7296s peak_footprint=9457MB peak_rss=7387MB
+out-claim-private.log:proved and submitted in 676.0s
+out-update.log:proved and submitted in 7283.0s
+public attested claim leaf 3 -> P2 under the update's anchor: tx dbf862e98e34b103458bed117f4fab8e8076a2b92ca30d856c4be0615b3539a4 block 951
+whole script 9220 s
+positive control: the one-time address is in the claim block (the search works)
+searched 952 of 952 blocks 1..952: 0 hit(s), 0 read failure(s)
+V in claim/update block: V              absent
+V in claim/update block: V              absent
+logs: <local path> privacy-check.txt, footprint-*.log
+===

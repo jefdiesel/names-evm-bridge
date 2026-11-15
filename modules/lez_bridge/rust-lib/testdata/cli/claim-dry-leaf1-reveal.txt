@@ -1,0 +1,16 @@
+root 0xbe1e080d85207b6b7832392daf38ce65347cabe7902bed16e3251ee03a21d3e8
+claim nullifier 0x<redacted: deposit unclaimed>
+recipient 2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC BY NAME (--reveal-recipient): the mint publishes this private account
+no sponsoring (sponsor_amount 20000000): 2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC pays this transaction's fee from its own balance (fund it with `lez-bridge shield`, which credits a one-time address)
+isDepositRoot[root] slot 0x8a4947a6b1393817e081b66486230d161aecbd58de58c26d7a3e0c69dff781cd value 0x0000000000000000000000000000000000000000000000000000000000000001
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+Dry run: nothing proven or sent
+  public cycles:  79468
+  base fees:      exec 8 / stor 8 (height 5077)
+  fee at head:    5706360
+  headroom:       5 blocks, up to exec 13 / stor 13 (9272835)
+  reserve:        9272835 (surplus refunded)
+  fee payer:      2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC
+  claims:         0 pending credit(s), 0 to the payer
+  refund to:      the payer's alias
+dry run: simulated in 118.9ms; nothing proven or sent

@@ -1,0 +1,16 @@
+[package]
+name = "release_core"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# G3, the release proof: the pure statement shared by the zkVM guest (methods/release_guest) and
+# the native tests (release/host). No LEZ runtime, no lee_core: only SHA-256 (RISC Zero's
+# accelerated `sha::Impl` inside the guest, software natively). The guest input is a fixed
+# 1252-byte layout read with `read_slice`, not risc0 serde, which reads every u8 as its own word
+# (that cost about 3x the cycles in the first version).
+# The formulas are copies of bridge_core's; release/host checks they agree byte for byte.
+[dependencies]
+# Caret, not "=": the guests pin =3.0.5 in their own locks; the provers (outbound/release hosts) resolve
+# 3.1.0 (RISC Zero advisory GHSA-g6qg-9j8p-7j87: receipts for the 3.1.0 verifier need risc0-zkvm 3.1.0).
+risc0-zkvm = { version = "3.0.5", default-features = false, features = ["std"] }

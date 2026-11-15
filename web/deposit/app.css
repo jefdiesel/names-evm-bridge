@@ -1,0 +1,301 @@
+/* Logos bridge deposit, a page of the Names Wallet site (nameswallet.app/bridge/).
+
+   Colours, type and radius come from the site's /assets/tokens.css, linked before this file:
+   --paper --card --ink --dim --line --orange --orange-text --warn --warn-bg --bad --radius
+   --font --font-head. This file defines no colour of its own and never uses --green or --ok.
+   Ink for text and titles; one accent, orange: the primary button (ink text on it), the
+   current state, link underlines and focus (--orange-text, which holds 3:1 and more on paper).
+   --warn/--warn-bg and --bad only for real cautions and errors.
+
+   The header, footer, skip link and heading font come from the site's shared /assets/chrome.css
+   (classes site-*), linked before this file; nothing here restyles them. */
+
+/* The Inter Bold @font-face comes with the site's /assets/chrome.css, linked before this file. */
+
+:root {
+  --on-orange: var(--ink); /* ink on orange: 5.3:1 */
+  --sunk: color-mix(in srgb, var(--ink) 5%, var(--card));
+  --bits-off: color-mix(in srgb, var(--ink) 10%, var(--card));
+  --bad-bg: color-mix(in srgb, var(--bad) 9%, var(--card));
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --t: 140ms;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --on-orange: var(--paper); /* dark paper on the dark theme's orange: 6.8:1 */ }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font); font-size: 1rem; line-height: 1.55; overflow-wrap: break-word; font-feature-settings: "tnum" 1; }
+a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--orange-text); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--ink); }
+:focus-visible { outline: 3px solid var(--orange-text); outline-offset: 2px; border-radius: 4px; }
+[tabindex="-1"]:focus { outline: none; }
+h1, h2, h3 { color: var(--ink); margin: 0; font-family: var(--font-head); font-weight: 700; letter-spacing: -0.015em; }
+p { margin: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mono { font-family: var(--mono); font-size: 0.875em; word-break: break-all; }
+.small { font-size: 0.875rem; color: var(--dim); }
+
+/* ---------------------------------------------------------------- page width (the header and footer come from /assets/chrome.css) */
+
+.wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 16px; } /* = the site's --site-wrap */
+@media (min-width: 700px) { .wrap { padding: 0 32px; } }
+
+
+
+
+/* ---------------------------------------------------------------- buttons */
+
+.btn {
+  appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 10px 18px; border-radius: calc(var(--radius) - 2px); border: 1px solid transparent;
+  font: 600 1rem/1.2 var(--font); cursor: pointer; text-decoration: none; color: var(--ink);
+  transition: background-color var(--t), border-color var(--t), filter var(--t), transform var(--t);
+}
+.btn:active:not([disabled]) { transform: translateY(1px); }
+.btn-primary { background: var(--orange); color: var(--on-orange); border-color: var(--orange-text); min-height: 52px; font-size: 1.0625rem; }
+.btn-primary:hover:not([disabled]) { filter: brightness(1.06); }
+.btn-quiet { background: var(--card); border-color: var(--line); }
+.btn-quiet:hover:not([disabled]) { border-color: var(--ink); }
+.btn[disabled] { background: var(--sunk); color: var(--dim); border-color: var(--line); cursor: not-allowed; filter: none; }
+.btn-wide { width: 100%; }
+.btn-small { min-height: 40px; padding: 6px 12px; font-size: 0.9375rem; }
+.link-btn { appearance: none; background: none; border: 0; padding: 6px 0; font: inherit; color: var(--ink); cursor: pointer; text-decoration: underline; text-decoration-color: var(--orange-text); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.link-btn:hover { text-decoration-color: var(--ink); }
+.chip img, .dot { width: 18px; height: 18px; border-radius: 5px; }
+.dot { display: inline-block; background: var(--orange); width: 8px; height: 8px; border-radius: 50%; }
+.dot.big { width: 28px; height: 28px; border-radius: 7px; }
+.chip-net { font-weight: 500; color: var(--dim); font-size: 0.8125rem; }
+.chip-net.wrong { color: var(--warn); }
+
+/* ---------------------------------------------------------------- the card */
+
+main { display: block; outline: none; }
+/* The footer sits at the bottom of the window when the content is short, never against the card. */
+body { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+body > main { flex: 1 0 auto; }
+.bridge { padding-top: 32px; padding-bottom: 64px; }
+@media (min-width: 700px) { .bridge { padding-top: 40px; padding-bottom: 80px; } }
+/* One column below 900 px (the side panel then lives inside the card, in reading order); two
+   columns inside the site's 1080 px frame above it: the steps card left, a quiet panel right. */
+.bridge-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.bridge-grid .card { max-width: 40rem; }
+@media (min-width: 900px) {
+  .bridge-grid { grid-template-columns: minmax(0, 37rem) minmax(0, 1fr); gap: 48px; align-items: start; }
+  .bridge-grid .card { max-width: none; }
+}
+.side[hidden] { display: none; }
+.wallet-row { display: flex; justify-content: flex-end; margin: -8px 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: grid; gap: 20px; }
+@media (max-width: 520px) { .card { padding: 20px 16px; } }
+.card-head h1 { font-size: clamp(1.625rem, 1.45rem + 0.8vw, 2rem); line-height: 1.12; letter-spacing: -0.025em; }
+.card-head .sub { margin-top: 6px; color: var(--dim); }
+.noscript { padding: 16px; background: var(--warn-bg); color: var(--warn); border-radius: var(--radius); }
+
+.form { display: grid; gap: 18px; }
+.field { display: grid; gap: 6px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.field legend, .field > label { font-weight: 600; padding: 0; margin-bottom: 6px; }
+.hint { font-size: 0.875rem; color: var(--dim); }
+.hint[hidden] { display: none; }
+.hint.error { color: var(--bad); }
+.hint.ok { color: var(--ink); }
+.choice .hint { display: block; }
+.claim-line { color: var(--ink); }
+input[type="text"], textarea {
+  width: 100%; font: 400 0.9375rem/1.4 var(--mono); color: var(--ink); background: var(--card);
+  border: 1px solid var(--dim); border-radius: calc(var(--radius) - 4px); padding: 12px; min-height: 48px; /* --dim: the box edge holds 3:1 (WCAG 1.4.11); --line was 1.5:1 */
+}
+input[type="text"]:focus, textarea:focus { border-color: var(--ink); }
+input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--bad); }
+textarea { min-height: 112px; resize: vertical; }
+
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); padding: 3px; background: var(--sunk); }
+.seg-btn { appearance: none; border: 0; background: transparent; min-height: 42px; padding: 8px 10px; border-radius: calc(var(--radius) - 5px); font: 600 0.9375rem/1.2 var(--font); color: var(--dim); cursor: pointer; transition: background-color var(--t), color var(--t); }
+.seg-btn:hover { color: var(--ink); }
+.seg-btn[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: inset 0 -3px 0 var(--orange), 0 0 0 1px var(--line); }
+
+.action { display: grid; gap: 12px; }
+.why { font-size: 0.875rem; color: var(--dim); margin-top: -4px; }
+.alt { text-align: center; font-size: 0.9375rem; }
+/* A Names Wallet deposit code: the commitment's first and last digits, large, to compare with the wallet. */
+.compare { margin: 0.75rem 0 0; padding: 0.75rem 1rem; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: var(--sunk); }
+.compare-digits { font-size: 1.5rem; letter-spacing: 0.08em; margin: 0 0 0.25rem; word-break: normal; }
+/* the four compare words (2026-11-15): large, one line where it fits; the hex digits behind "Digits" */
+.compare { display: grid; gap: 6px; }
+.compare-words { font-family: var(--font-head); font-weight: 700; font-size: 1.5rem; line-height: 1.25; margin: 0; overflow-wrap: anywhere; }
+.compare-line { margin: 0; color: var(--ink); }
+.compare details.more .compare-digits { font-size: 1.125rem; }
+.status { display: flex; gap: 10px; align-items: baseline; font-weight: 600; }
+.status-mark { flex: none; width: 10px; height: 10px; border-radius: 50%; transform: translateY(-1px); background: var(--ink); }
+.status.ok .status-mark { background: var(--ink); }
+.status.busy .status-mark { background: var(--orange); animation: pulse 1.4s ease-in-out 3; } /* three pulses (4.2 s), then still: nothing blinks for more than 5 s (WCAG 2.2.2); the words say it is waiting */
+.status.info { font-weight: 500; }
+.status.info .status-mark { background: var(--dim); }
+.status.bad { color: var(--bad); font-weight: 500; }
+.status.bad .status-mark { background: var(--bad); border-radius: 2px; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.ack { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 4px); background: var(--sunk); cursor: pointer; }
+.ack input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--orange); flex: none; }
+.callout { border-radius: calc(var(--radius) - 4px); padding: 12px 14px; border: 1px solid; display: grid; gap: 6px; font-size: 0.9375rem; }
+.callout.danger { background: var(--bad-bg); border-color: var(--bad); }
+.callout.danger strong { color: var(--bad); }
+.callout .ack { background: transparent; border: 0; padding: 0; }
+
+.notes { display: grid; gap: 6px; font-size: 0.875rem; color: var(--dim); border-top: 1px solid var(--line); padding-top: 14px; }
+.notes strong { color: var(--ink); }
+
+.finality { display: grid; gap: 6px; }
+.meter { height: 8px; background: var(--sunk); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+.meter > span { display: block; height: 100%; width: 0; background: var(--orange-text); border-radius: 999px; transition: width 600ms ease; }
+
+/* ---------------------------------------------------------------- details */
+
+.details { border-top: 1px solid var(--line); padding-top: 12px; }
+.details > summary, .handoff > summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.details[open] { display: grid; gap: 14px; }
+.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; font-size: 0.875rem; }
+.facts dt { color: var(--dim); }
+.facts dd { margin: 0; }
+.facts .sub { display: block; color: var(--dim); }
+.facts dd a, .details > p.small a { display: inline-block; padding: 3px 0; } /* 24 px tall targets (WCAG 2.5.8) */
+@media (max-width: 420px) { .facts { grid-template-columns: minmax(0, 1fr); gap: 0; } .facts dd { margin-bottom: 10px; } }
+.grid-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px; background: var(--sunk); border-radius: calc(var(--radius) - 4px); }
+.bits { width: 96px; height: 96px; display: block; }
+.bits rect.on { fill: var(--ink); }
+.bits rect.off { fill: var(--bits-off); }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; font-size: 0.875rem; }
+.checks li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
+.checks li:first-child { border-top: 0; }
+.checks .detail { display: block; color: var(--dim); }
+.mark { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; line-height: 1; }
+.mark.pass { background: var(--ink); color: var(--card); }
+.mark.fail { background: var(--bad); color: var(--card); }
+.mark.warn { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn); }
+.mark.pending, .mark.skip { border: 2px dashed var(--line); }
+.mark.running { border: 2px solid var(--orange-text); border-right-color: transparent; animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.handoff svg { width: 100%; max-width: 220px; height: auto; display: block; margin: 8px 0; background: #fff; border-radius: 6px; }
+.handoff svg path { fill: #000; }
+
+/* ---------------------------------------------------------------- dialogs */
+
+dialog { border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; background: var(--card); color: var(--ink); width: min(420px, calc(100vw - 32px)); }
+dialog::backdrop { background: color-mix(in srgb, var(--ink) 45%, transparent); }
+dialog h2 { font-size: 1.25rem; margin-bottom: 14px; }
+dialog p { margin-bottom: 10px; }
+dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+.wallet-list { display: grid; gap: 8px; }
+.wallet-btn { justify-content: flex-start; min-height: 52px; font-size: 1rem; }
+.wallet-btn img { width: 28px; height: 28px; border-radius: 7px; }
+.choice { display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 4px); margin-bottom: 8px; cursor: pointer; }
+.choice input { margin: 0; width: 18px; height: 18px; accent-color: var(--orange); }
+fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
+video.scan { width: 100%; border-radius: calc(var(--radius) - 4px); background: #000; aspect-ratio: 1; object-fit: cover; }
+
+/* ---------------------------------------------------------------- short pages (about/) */
+
+/* the about pages: aligned with the site's 1080 px frame (as /basecamp/), text at a reading width */
+.doc { padding-top: 32px; padding-bottom: 64px; }
+.doc > * { max-width: 44rem; }
+@media (min-width: 700px) { .doc { padding-top: 40px; padding-bottom: 80px; } }
+.doc .crumbs { font-size: 0.875rem; margin-bottom: 14px; }
+.doc h1 { font-size: clamp(1.75rem, 1.5rem + 1vw, 2.25rem); line-height: 1.12; letter-spacing: -0.025em; margin-bottom: 10px; }
+.doc .lede { font-size: 1.125rem; color: var(--dim); margin-bottom: 24px; }
+.doc h2 { font-size: 1.25rem; margin: 28px 0 8px; }
+.doc p { margin-bottom: 10px; max-width: 64ch; }
+.doc ul { padding-left: 1.2em; margin: 0 0 10px; }
+.doc li { margin-bottom: 6px; max-width: 64ch; }
+.doc pre { white-space: pre-wrap; word-break: break-all; background: var(--card); border: 1px solid var(--line); padding: 12px 14px; border-radius: calc(var(--radius) - 4px); font: 400 0.8125rem/1.6 var(--mono); margin: 8px 0 12px; }
+.doc code { font-family: var(--mono); font-size: 0.9em; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+@media (max-width: 420px) { .chip-net:not(.wrong) { display: none; } }
+
+/* ---------------------------------------------------------------- where it goes on Logos */
+
+.where { font-size: 0.9375rem; margin-bottom: 4px; }
+.own { display: grid; gap: 6px; margin-top: 6px; }
+.own[hidden], .callout[hidden], #demo-note[hidden] { display: none; }
+.own > label { font-weight: 600; }
+.callout.caution { background: var(--warn-bg); border-color: var(--warn); color: var(--ink); }
+.callout.caution strong { color: var(--warn); }
+.callout.caution .ack { margin-top: 4px; }
+
+/* ---------------------------------------------------------------- what happens next */
+
+.next { display: grid; gap: 10px; }
+.next h2 { font-size: 1.125rem; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: step; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.steps li:first-child { border-top: 0; }
+.steps li p { margin-top: 2px; font-size: 0.9375rem; color: var(--dim); }
+.step-mark { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; border: 2px solid var(--line); color: var(--dim); }
+.step-mark:empty::before { content: counter(step); font-weight: 700; }
+.steps li.done .step-mark { background: var(--ink); border-color: var(--ink); color: var(--card); }
+.steps li.current .step-mark { border-color: var(--orange-text); color: var(--ink); }
+.steps li.current strong { text-decoration: underline; text-decoration-color: var(--orange); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.steps li.todo strong { color: var(--dim); }
+.steps .finality { margin-top: 6px; }
+.action .site-on { justify-self: start; }
+
+/* the vault's one-way rule, said plainly before the deposit and after it (review C) */
+.locked { color: var(--ink); }
+.notes .locked { font-weight: 600; }
+.acct-confirm { word-break: normal; overflow-wrap: anywhere; font-size: 0.9375rem; letter-spacing: 0.02em; }
+.acct-confirm b { font-weight: 700; text-decoration: underline; text-decoration-color: var(--warn); text-underline-offset: 3px; }
+
+.status > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+/* before the deposit: now, then later (no demo account) */
+ol.order { margin: 0 0 8px; padding-left: 1.4em; display: grid; gap: 4px; }
+.callout .small.dim { color: var(--dim); }
+/* after the deposit: the claim, step by step */
+.steps ol.claim-howto { margin: 6px 0 6px; padding-left: 1.4em; list-style: decimal; display: block; font-size: 0.9375rem; color: var(--dim); }
+.steps ol.claim-howto li { display: list-item; grid-template-columns: none; padding: 1px 0; border: 0; counter-increment: none; }
+.steps li p.keep { color: var(--ink); }
+.steps li p.keep strong { color: var(--ink); text-decoration: none; }
+/* which account to paste (v3): above the field, not secondary */
+.own .hint.which { color: var(--ink); margin: 0 0 6px; }
+
+/* ---------------------------------------------------------------- the steps (plain layout, 2026-11-14) */
+/* "Step n of N": the current step open (heading, one sentence, the control), the others one line. */
+.flow-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.flow-steps > li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+.flow-steps > li:first-child { border-top: 0; }
+.flow-steps > li.done { align-items: center; grid-template-columns: 28px minmax(0, 1fr) auto; color: var(--dim); font-size: 0.9375rem; }
+.flow-steps > li.done .step-mark { background: var(--ink); border-color: var(--ink); color: var(--card); }
+.flow-steps > li.todo { color: var(--dim); font-size: 0.9375rem; align-items: center; }
+.flow-steps > li.current .step-mark { border-color: var(--orange-text); color: var(--ink); }
+.flow-steps > li.current > div { display: grid; gap: 12px; min-width: 0; }
+.flow-steps h2 { font-size: 1.125rem; }
+.flow-steps h2:focus { outline: none; }
+.flow-steps h2:focus-visible { outline: 2px solid var(--orange-text); outline-offset: 3px; }
+.step-line { color: var(--ink); }
+/* "More": closed by default; a real button-like summary, 24 px tall at least (WCAG 2.5.8) */
+details.more > summary { cursor: pointer; font-weight: 600; padding: 4px 0; min-height: 24px; color: var(--ink); }
+details.more[open] { display: grid; gap: 8px; }
+details.more p, details.more li { font-size: 0.9375rem; color: var(--dim); }
+details.more ol.order { padding-left: 1.4em; }
+
+/* ---------------------------------------------------------------- the side panel (what happens, the status, the links) */
+.side-in { display: grid; gap: 14px; align-content: start; }
+.side .side-in { padding: 6px 0 0 28px; border-left: 1px solid var(--line); }
+.card .side-in { padding-top: 18px; border-top: 1px solid var(--line); }
+.side-in h2 { font-size: 1.125rem; }
+.side-in ol.what { list-style: decimal; padding-left: 1.3em; margin: 0; display: grid; gap: 6px; }
+.side-in ol.what li::marker { font-weight: 700; }
+.side-in .summary { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 4px); font-size: 0.9375rem; }
+.side-in .summary dt { color: var(--dim); }
+.side-in .summary dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.side-in .side-links { font-weight: 600; }
+.side-in .steps li { padding: 8px 0; }
+.next .wallet-link { font-weight: 600; }
+/* about/testing: numbered steps and disclosures in the docs */
+.doc ol.doc-steps { padding-left: 1.4em; margin: 0 0 10px; }
+.doc ol.doc-steps li { margin-bottom: 6px; max-width: 64ch; }
+.doc details.more { margin: 4px 0 12px; max-width: 64ch; }
+/* the Deposited screen: the wait, said first; one progress line under it */
+.card-head .wait-line { margin-top: 10px; color: var(--ink); }
+.progress-line { margin-top: -12px; }

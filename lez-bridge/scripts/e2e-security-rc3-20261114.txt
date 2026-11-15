@@ -1,0 +1,272 @@
+# lez-bridge/scripts/e2e-security.sh on a throwaway loopback LEZ v0.4.0-rc3 chain + local anvil, build host, 2026-11-14.
+# Fresh keys only; nothing proved; the chain, anvil and relayer were stopped and deleted afterwards. Run dir shown as <R>.
+# Run 1 (old phase, 06:32): the OLD programs deployed, C1-a (header signs a transfer). Its C1-b/C1-c steps used the old CLI,
+# which has no raw-call (usage error, not a refusal); they were re-run in run 2 with this branch's CLI.
+# Run 2 (old phase again, 10:37): C1-b mint and C1-c authority takeover by the header key on the OLD programs.
+# Run 3 (fixed phase, 10:39): the FIXED programs.
+
+######## e2e-old-1.txt
+setup done: operator 7BmVETfTnurChqv2MaaUM6em3KqkTXcfB73E1peMwxLR
+started pid 65443, height {"jsonrpc":"2.0","id":1,"result":1}
+  listens TCP 127.0.0.1:3421
+  listens TCP 127.0.0.1:3420
+
+== OLD programs (before the fixes): deploy with a fresh deployer 06:32:40
+[o-fund] exit 0
+Transaction hash is e7be4c3a7a9713ca338a35aae1229e40872e96443e7b19c59ca4a543dfdb86f2
+Transaction is included in block 2
+[o-tok] exit 0
+Transaction hash is 6eefb21435ec13dcc5c63b766dfa7ae0b71e102252cb5cdd22a54c9aff5caf78
+Transaction is included in block 7
+immutable
+program 82y2Ur5bGC69Dsv3JM6rs7yQFCLqwXmXQPWz85STq4aK
+[o-br] exit 0
+Transaction hash is d5f40a1145913afd4bc77311ca782660d432afc59bcefea53f043b8c320d6d90
+Transaction is included in block 14
+immutable
+program 3TnzzUyQzfEeKWFdPS1sBavNvXgBkHNULF5Cjf8fKyt3
+[o-wrap] exit 0
+definition account Bxo8Ze8s2t2Um9oisjKJdFEkENanr4xjak7YototsExK
+tx 4223b493531a5bafbb2e26110673e900de655bf040486f7180f4b7424a3908f7
+applied in block 15
+token Bxo8Ze8s2t2Um9oisjKJdFEkENanr4xjak7YototsExK
+[o-init] exit 0
+cfg_id the bridge will derive 0x4e71aed747d0b66dcd44ce27be693ff7da2817c18466e9314e5bcb4e790fc72a
+submitted in 55.7ms
+tx e9a96936deca49bd3787142e7ac5c955b5119325a70b19b4c1fde234843c586c
+applied in block 16
+name Wrapped (old, throwaway)
+supply 0
+authority Some(3TnzzUyQzfEeKWFdPS1sBavNvXgBkHNULF5Cjf8fKyt3)
+
+== C1-a: the bridge's header account 3TnzzUyQzfEeKWFdPS1sBavNvXgBkHNULF5Cjf8fKyt3 (key in the deployer's wallet) signs an ordinary public transaction 06:36:30
+[o-fund-header] exit 0
+Transaction hash is 217e3573c4758b435355755216b21426033a2c389881c7dbfff098e058af9e8c
+Transaction is included in block 17
+[o-header-transfer] exit 0
+Transaction hash is c8219ae3902163671bbc0f43579e417ed4eba269e2d0e485f9a124b9cb97c1dc
+Transaction is included in block 18
+header account nonce 2
+
+== C1-b: the header key signs token Mint (as the authority id) to itself 06:36:55
+[o-header-mint] exit 2
+
+Usage: lez-bridge.old [OPTIONS] <COMMAND>
+
+For more information, try '--help'.
+supply 0
+
+== C1-c: the header key signs token SetAuthority (old encoding) to the deployer's account 06:36:56
+[o-header-setauth] exit 2
+
+Usage: lez-bridge.old [OPTIONS] <COMMAND>
+
+For more information, try '--help'.
+authority Some(3TnzzUyQzfEeKWFdPS1sBavNvXgBkHNULF5Cjf8fKyt3)
+
+== done: 0 unexpected result(s). Stop: kill $(cat <R>/anvil.pid) (if any); R=<R> RPC=127.0.0.1:3420 METRICS=127.0.0.1:3421 <W>/src/public-demo/rc3/chain-rc3.sh (not published) stop; delete <R> 06:36:56
+
+######## e2e-old-2.txt
+already running, pid 65443
+
+== OLD programs (before the fixes): deploy with a fresh deployer 10:37:16
+name Wrapped (old, throwaway)
+supply 0
+authority Some(3TnzzUyQzfEeKWFdPS1sBavNvXgBkHNULF5Cjf8fKyt3)
+
+== C1-a: the bridge's header account 3TnzzUyQzfEeKWFdPS1sBavNvXgBkHNULF5Cjf8fKyt3 (key in the deployer's wallet) signs an ordinary public transaction 10:37:17
+[o-fund-header] exit 0
+Transaction hash is 607abadd8e70e567d44a43f9711a910af9a00d70d46f645a40cb2514093446e8
+Transaction is included in block 980
+[o-header-transfer] exit 0
+Transaction hash is 5b3ed308496091172e515218292ef7d02984566a2973992c001df148454abfc2
+Transaction is included in block 981
+header account nonce 3
+
+== C1-b: the header key signs token Mint (as the authority id) to itself 10:37:41
+[o-header-mint] exit 0
+tx 563bae8f010159501f1767a38a841e531f65c78afda00c1bd09e10a3c4f58efa
+applied in block 982
+wrapped supply before 0, after 1000000000000
+C1 EXPLOIT CONFIRMED ON CHAIN: the header key minted 1000000000000 unbacked
+Public/3TnzzUyQzfEeKWFdPS1sBavNvXgBkHNULF5Cjf8fKyt3  Bxo8Ze8s2t2Um9oisjKJdFEkENanr4xjak7YototsExK  1000000000000
+
+== C1-c: the header key signs token SetAuthority (old encoding) to the deployer's account 10:39:13
+[o-header-setauth] exit 0
+tx 8d96cdd7816b7ee41410f90a1939ba4a39a7e135380297d281d9091a851fa331
+applied in block 988
+authority now Some(JZoFm1q9tWSJzbumA4RHMDwm2fnCoPWYTmrpBAjG2gf)
+C1 TAKEOVER CONFIRMED ON CHAIN: the header key moved the mint authority to JZoFm1q9tWSJzbumA4RHMDwm2fnCoPWYTmrpBAjG2gf
+
+== done: 0 unexpected result(s). Stop: kill $(cat <R>/anvil.pid) (if any); R=<R> RPC=127.0.0.1:3420 METRICS=127.0.0.1:3421 <W>/src/public-demo/rc3/chain-rc3.sh (not published) stop; delete <R> 10:39:25
+
+######## e2e-fixed-1.txt
+already running, pid 65443
+
+== FIXED programs: deployer, stranger, claimers V (victim) and A (attacker), relay payer 10:39:33
+[f-fund] exit 0
+Transaction hash is 08136f9f4c6824cd982156e79e6852d12081e23d2a9585b8008386affb68c92b
+Transaction is included in block 989
+[s-fund] exit 0
+Transaction hash is b3e94b3f54964aa05df462ffaaae7487159071446234fae508cc7528602ba885
+Transaction is included in block 990
+[a-fund] exit 0
+Transaction hash is 7f7cb07b5f16543ff99f3e35d37aa8214bfa8b6ad92fd699dbc66d4c1fe4df6a
+Transaction is included in block 991
+[v-fund] exit 0
+Transaction hash is 5bb0b426dfa2c42c5353d248b70ae5b15cfda27f137de643aa841e03e7fae2c0
+Transaction is included in block 992
+[f-tok] exit 0
+Transaction hash is 70549049038a5fa4f0551bae357758dcfeaa864a811b635d3ddb9a615932e33d
+Transaction is included in block 997
+immutable
+program 6XK69yrwCp6BB5KdarF5tGneH3e2t6SbmQ37AYYTyejc
+[f-br] exit 0
+Transaction hash is 26c647d122f637215812bd31bfcc7ad3eb36adeebd463c2dd946d06f0392fa2a
+Transaction is included in block 1004
+immutable
+program GUmAgP76RQsKZr2xqPkMDgFFT5wpcdJWGi5PRMipAGUe
+[f-wrap] exit 0
+definition account 6HMN9dpZYhztzBSasz3dDj6dUfD8RpURe3F6ouZDLYFM
+tx f2b46c524c2e0c90954fdd9dbfe878a3d99d48fce6a0cbfa5f5fdd2498cd7e0c
+applied in block 1005
+token 6HMN9dpZYhztzBSasz3dDj6dUfD8RpURe3F6ouZDLYFM
+image ids: bridge ae988739c7fe838820462fd8f591470ba5798c55542fa43c6ffec40bd5560c0b, token cdf31d511e060cac0f48f95377c3371adde078ff15b2d7ee7eb50e135f3cdd7b (old: bridge ?, token ?)
+name Wrapped USDC (fixed, throwaway)
+supply 0
+authority Some(GUmAgP76RQsKZr2xqPkMDgFFT5wpcdJWGi5PRMipAGUe)
+authority_kind program
+chain channel id 0xd416ed12bbf19a0542b1b1eff38591f9527a5179b5e7fda5445f9127e14df31d; stand-in source id (zoneId) 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+
+== Ethereum: anvil + the vault for bridge GUmAgP76RQsKZr2xqPkMDgFFT5wpcdJWGi5PRMipAGUe (lezChainId = channel id, zoneId = source id) 10:43:48
+vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 usdc 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 cfg 0xdd5c9716433369cbd6911f7cfcaa336fe71287e2966af8965e9559ae9a73ab7e (evm chain 31337)
+
+== H1: a stranger sends Initialize (its own admin) before the deployer: refused on chain 10:43:55
+[h1-stranger] refused on chain: 9c87c10a… was included in block 1007 but reverted
+
+== H1: the retired Init, even signed by the header key: refused on chain 10:44:19
+[h1-legacy] refused on chain: 6038dc8d… was included in block 1008 but reverted
+
+== H1: the same messages without --allow-revert: the simulation refuses them with the program's texts 10:44:31
+[h1-stranger-sim] simulation refused with the program's text: "only this program's header account initialises the bridge"
+[h1-legacy-sim] simulation refused with the program's text: "Init is retired"
+
+== H1: the CLI refuses an init without the header key (stranger's wallet), and a wrong chain id 10:44:31
+[h1-cli-stranger] refused by the CLI: "is not a public account of this wallet"
+[h1-cli-chain] refused by the CLI: "is not this chain's channel id"
+
+== H1: the deployer's header key initialises through the raw Initialize encoding (positive control of the 10:44:31
+
+==     encoding the negative steps use); admin, freezer, attestor = the deployer's fee account 10:44:31
+[f-init] exit 0
+tx 1117cd2ba8ac4135851b64ed9c27fb2d6ce2133564d411e2ded3e3de7d2c9fd3
+applied in block 1009
+cfg_id 0xdd5c9716433369cbd6911f7cfcaa336fe71287e2966af8965e9559ae9a73ab7e
+lez_chain_id 0xd416ed12bbf19a0542b1b1eff38591f9527a5179b5e7fda5445f9127e14df31d
+zone_id 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+admin 6keHa84xSVmy2woppW2UtVvN38WWmu8eAVUUDN4gKL7N
+freezer 6keHa84xSVmy2woppW2UtVvN38WWmu8eAVUUDN4gKL7N
+attestor 6keHa84xSVmy2woppW2UtVvN38WWmu8eAVUUDN4gKL7N
+bridge cfg_id = vault cfgId
+
+== H1: a second Initialize by the header key: refused on chain 10:44:44
+[h1-again] refused on chain: d8d4169a… was included in block 1010 but reverted
+[f-reg] exit 0
+submitted in 80.6ms
+tx 944d28bdafad34e7a83a51aeee02ca4c512bcfbda48a2e7c772dfe3d6aa8eb6d
+applied in block 1011
+
+== M2: sponsor above the program's cap: refused on chain; at the cap: applied 10:45:20
+[m2-over] refused on chain: 83876a40… was included in block 1012 but reverted
+[m2-cap] exit 0
+submitted in 125.5ms
+tx aa44017c8089cec7864ee51471dd8dbe0623ea482ae5fba342f91a61ecc48500
+applied in block 1013
+
+== C1: the FIXED bridge's header key signs token Mint and SetAuthority: refused on chain 10:45:44
+[f-fund-header] exit 0
+Transaction hash is 10bc7eb8ef5b5b6282aaebcf5c0f78646ae3ab77368b0f3f9e838734569b585a
+Transaction is included in block 1014
+[c1-mint] refused on chain: 464fb19e… was included in block 1015 but reverted
+[c1-setauth] refused on chain: 20135457… was included in block 1016 but reverted
+[c1-renounce] refused on chain: e8659700… was included in block 1017 but reverted
+supply 0
+authority Some(GUmAgP76RQsKZr2xqPkMDgFFT5wpcdJWGi5PRMipAGUe)
+authority_kind program
+
+== positive control of the token encodings: an ACCOUNT-authority definition (authority = the deployer) 10:46:45
+[p-newdef] exit 0
+tx dbb5e7464bf886cca69e4017517ff412debbab26ee5c253c027e9ddd002569a0
+applied in block 1018
+[p-mint] exit 0
+tx 5ee2d92a2a499e26da941f49d7fa104f806aa934773ab1c70139823bd1eb41df
+applied in block 1019
+[p-setauth] exit 0
+tx b9c8f1c604bd5c227e91ebcbcad9b105ad5efb94f44a2d14ef0af2fa29b9f707
+applied in block 1020
+control definition: supply 5, authority Some(3JVvQxL1YE3vEn1dsnpVHcE2CbuEeN8WDextJuUJi74n)
+[p-register] refused by the CLI: "not the bridge program"
+
+== Ethereum: V deposits 1000 USDC (secret k); A copies k and deposits the minimum, 100, for A 10:47:34
+       2 vault leaves, root 0xe596d662997ddf120e7560b5d970b9e94f41b5fe817a7d1245430faf476a0b9e
+[f-attest] exit 0
+submitted in 75.4ms
+tx 5d34f86de50b2187873bcc0ed5c30acb8e11da1df697257619a751b5a138d44b
+applied in block 1021
+
+== H2: A claims A's own deposit (leaf 1) first, with V's secret 10:47:47
+[h2-attacker] exit 0
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+submitted in 173.7ms
+tx 6f4c6e351dde28a068828ed37fef46278602a7014d857e49c7973b3e171cc981
+applied in block 1022
+
+== H2: V claims V's deposit (leaf 0) afterwards: must apply (before the fix: claim refused for good) 10:47:59
+[h2-victim] exit 0
+pre-check passed: attested root, unspent nullifier, minting open, denomination 1 = 1000000000
+submitted in 141.6ms
+tx 65d941641fcfad2481383f4fdf0b40ecdeabde45447f8331c13894e65430d4ea
+applied in block 1023
+Public/2pzjeNx8SDSFS4QDZ5W8qaVqn2ZZNemrF8i71DUixWRp  6HMN9dpZYhztzBSasz3dDj6dUfD8RpURe3F6ouZDLYFM  1000000000
+Public/E1mAco6PSTVwhCwm2T956CoCBjMPBzuyqWJ6MWgJN1SD  6HMN9dpZYhztzBSasz3dDj6dUfD8RpURe3F6ouZDLYFM  100000000
+
+== repeat claims refused (CLI pre-check, then on chain with --no-precheck --allow-revert) 10:48:13
+[h2-repeat] refused by the CLI: "already claimed"
+[h2-repeat-chain] refused on chain: 14bf251d… was included in block 1024 but reverted
+
+== relayed public claim of a third deposit into a never-used account X (claim --relay) 10:48:25
+[r-fund] exit 0
+Transaction hash is 66c28911b277980edfad27ce823ab2d29a6ebe2532f8e313b8fc78d7090b9880
+Transaction is included in block 1025
+[r-bind] exit 0
+bound 6oxrJ4jghdFsBF3MPhKd74pYHJBreCiEBNX8r9n3gq1p to this chain (<R>/wallets/relay/relay-chain.json)
+{"payer": "6oxrJ4jghdFsBF3MPhKd74pYHJBreCiEBNX8r9n3gq1p", "bridge": "GUmAgP76RQsKZr2xqPkMDgFFT5wpcdJWGi5PRMipAGUe", "max_gas": 250000, "max_fee": "2500000"}
+[r-attest] exit 0
+submitted in 60.7ms
+tx 71c38bfa3f7f251c6dcf2dd34223116c28ecc3ba817422ebe35f39b6f5aef705
+applied in block 1026
+X before: ABSENT; payer: nonce=0 native=100000000
+[r-claim] exit 0
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+relay http://127.0.0.1:3422/relay: fee payer 6oxrJ4jghdFsBF3MPhKd74pYHJBreCiEBNX8r9n3gq1p, caps gas 250000, max_fee 2500000
+relayed claim: declared gas 186288, max_fee 2500000 (measured 149030 cycles), signed by the claimer
+relayed and submitted in 366.6ms
+tx 35f8545cfa942f47f335ac5e0ce06713789c98f09169abcb7961c6adbd6e3c53
+applied in block 1027
+X after: nonce=1 native=0; payer: nonce=1 native=98791208
+Public/2pzjeNx8SDSFS4QDZ5W8qaVqn2ZZNemrF8i71DUixWRp  6HMN9dpZYhztzBSasz3dDj6dUfD8RpURe3F6ouZDLYFM  1000000000
+Public/6L14oB8vzSdDHHbyeTu5eqFJ8EjUT4MCynfBeCdsy8H5  6HMN9dpZYhztzBSasz3dDj6dUfD8RpURe3F6ouZDLYFM  100000000
+Public/E1mAco6PSTVwhCwm2T956CoCBjMPBzuyqWJ6MWgJN1SD  6HMN9dpZYhztzBSasz3dDj6dUfD8RpURe3F6ouZDLYFM  100000000
+[r-repeat] refused by the CLI: "already claimed"
+[r-repeat-relay] refused by the CLI: "refused"
+relayer log lines: 3
+<W>/src/lez-bridge/scripts/e2e-security-relay.sh: line 59: 71751 Terminated: 15          relayer > "$R/logs/relayer.out" 2>&1 < /dev/null
+
+== burn 100 for exit (A) 10:49:18
+[f-burn] exit 0
+submitted in 116.9ms
+tx 53a7aa79da348896bd2345049372f7c7868f06757e7bc4c0cce12ec7e9697479
+applied in block 1028
+token 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512 def 6HMN9dpZYhztzBSasz3dDj6dUfD8RpURe3F6ouZDLYFM denoms [100000000, 1000000000] claims [2, 1] burns [1, 0] claimed_value 1200000000 burned_value 100000000 registered true mint_frozen false burn_frozen false
+
+== done: 0 unexpected result(s). Stop: kill $(cat <R>/anvil.pid) (if any); R=<R> RPC=127.0.0.1:3420 METRICS=127.0.0.1:3421 <W>/src/public-demo/rc3/chain-rc3.sh (not published) stop; delete <R> 10:49:30

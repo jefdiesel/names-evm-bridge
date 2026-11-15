@@ -1,0 +1,117 @@
+{
+ "_about": "The bridge deployments this module knows, in ONE place (config.rs reads this file at build time; use_deployment takes a name from it, a path or a JSON object of the same shape). A new bridge instance is a new entry here, never a code change. Sources: vault/DEPLOYMENTS.md, public-demo/RUNBOOK.md (not published) (sections 11 and 13), web/deposit/src/lib/deployments.js. To switch the app to another bridge, change `default` (the ONE switch).",
+ "default": "bridge-test-network-v3",
+ "deployments": [
+  {
+   "name": "bridge-test-network-v3",
+   "label": "Sepolia demo vault v3 → bridge test network (LEZ 0.4)",
+   "network": "LEZ 0.4 · bridge test network",
+   "chain_id": 11155111,
+   "vault": "0x26af59855b99a8af199361289A5Ed6088729E60E",
+   "vault_create_block": 12134824,
+   "desk": "0x6b7F38D05751b1ed432a0A0d377A63cFB8c4DBc5",
+   "cfg_id": "0x9a37708a79334bbce6946e4dab4d9f6530538e867fcec10083b05b7d19f20d15",
+   "bridge_program": "4eaeK3yiqATXhpCEYEFMMtjUn1bS7HLxPwfrH31mXCvr",
+   "token_program": "5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7",
+   "lez_rpc": "https://lez.nameswallet.app/",
+   "relay": "rpc",
+   "attest_program": "",
+   "attest_instance": "",
+   "tokens": [
+    {
+     "eth_token": "0x0000000000000000000000000000000000000000",
+     "symbol": "ETH",
+     "decimals": 18,
+     "definition": "CUsiaS9iH4MYtbHbp6mpfqAPaHCa1py5UT5GN8vQYXzM"
+    },
+    {
+     "eth_token": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e",
+     "symbol": "dUSDC",
+     "decimals": 6,
+     "definition": "2MjYbRMi9VW81HGM5o6yptnCwvnY9NXfLLtFeqELkNXy"
+    }
+   ],
+   "notes": [
+    "Sepolia is an Ethereum test network: its coins have no value. Deposits are claimed on the bridge test network (LEZ 0.4), the team's own chain, which is reset now and then.",
+    "This test vault was set up with a wrong starting value, so it can't pay ETH back out. Deposits can be claimed on the bridge test network; withdrawals come with the next vault.",
+    "The bridge's relay pays a public claim's fee: the account needs no LEZ.",
+    "v3 vault: deployed with its outbound starting state (g2State) at zero, so it accepts no update and pays nothing out; deposit desk 0x6b7F…DBc5 at 30 bps."
+   ],
+   "release": "never",
+   "release_note": "This test vault was set up with a wrong starting value, so it can't pay ETH back out. Deposits can be claimed on the bridge test network; withdrawals come with the next vault.",
+   "release_detail": "Why: the vault on Sepolia was deployed with its outbound starting state at zero, and no update the bridge produces starts from zero. The bridge's way back (burn, update, release) is built and runs in the local demo; it needs a new vault."
+  },
+  {
+   "name": "bridge-test-network",
+   "label": "Sepolia demo vault v2 → bridge test network (LEZ 0.4)",
+   "network": "LEZ 0.4 · bridge test network",
+   "chain_id": 11155111,
+   "vault": "0x8C8b2664De28e5287158db4DB65D448638871b74",
+   "vault_create_block": 12122976,
+   "desk": "0x77E37E1D6e886d8fb988496B9c2EfF3E78e27DF2",
+   "cfg_id": "0x7f1ab05e910781ef1c6bd7747b8221372377dc785bc09e303e687d2d4f284b11",
+   "bridge_program": "JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7",
+   "token_program": "3gF78HRJNCfabkWFiszahVVacq181aU8SSGua8Cj9ZE4",
+   "lez_rpc": "https://lez.nameswallet.app/",
+   "relay": "rpc",
+   "attest_program": "",
+   "attest_instance": "",
+   "tokens": [
+    {
+     "eth_token": "0x0000000000000000000000000000000000000000",
+     "symbol": "ETH",
+     "decimals": 18,
+     "definition": "AuyvsTwpPsbfisc8DCHkhpWLwQg7iG13n4VNBsf3UAwJ"
+    },
+    {
+     "eth_token": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e",
+     "symbol": "dUSDC",
+     "decimals": 6,
+     "definition": "EgLorBTz2c2Jez3KXLZ78LsQrkFcjvux9PZb5F2EgexY"
+    }
+   ],
+   "notes": [
+    "Sepolia is an Ethereum test network: its coins have no value. Deposits are claimed on the bridge test network (LEZ 0.4), the team's own chain, which is reset now and then.",
+    "Demo vault: nothing deposited can be released back on Ethereum.",
+    "The bridge's relay pays a public claim's fee: the account needs no LEZ."
+   ],
+   "release": "never"
+  },
+  {
+   "name": "sepolia-demo-v2",
+   "label": "Sepolia demo v2 (local LEZ sequencer)",
+   "network": "LEZ 0.4 · local sequencer",
+   "chain_id": 11155111,
+   "vault": "0x8C8b2664De28e5287158db4DB65D448638871b74",
+   "vault_create_block": 12122976,
+   "desk": "",
+   "cfg_id": "0x7f1ab05e910781ef1c6bd7747b8221372377dc785bc09e303e687d2d4f284b11",
+   "bridge_program": "JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7",
+   "token_program": "4VScJ7mtwaanQ5gcSZZw2iAMHYAbLrVmbYKwEGx2eSex",
+   "lez_rpc": "http://127.0.0.1:3250",
+   "relay": "",
+   "attest_program": "4VhxvwLN5n3u3rZbsz2VNFVavLwc1niNvgxq8JJ15veK",
+   "attest_instance": "0x09dd33204d65597cdb66e90f793a4fe3478cbe226a047a77e228b4dcf05ab4de",
+   "probe_program": "7VDaNr8MGJrtpGruCJcp9huQz5s4n7VtwN1b1nAsBr5y",
+   "tokens": [
+    {
+     "eth_token": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e",
+     "symbol": "dUSDC",
+     "decimals": 6,
+     "definition": "FBqNAwJs9T4eNDw9pQXxXrLZNcnR1sTnnBEYzhudLQZJ"
+    },
+    {
+     "eth_token": "0x0000000000000000000000000000000000000000",
+     "symbol": "ETH",
+     "decimals": 18,
+     "definition": "CswQqK9jzUHf5sraiM8G9HfgMT2bcJ8GhVpbAA9trwQ6"
+    }
+   ],
+   "notes": [
+    "Demo vault: its update image is a placeholder, so nothing deposited can ever be released on Ethereum.",
+    "The LEZ side is a local sequencer on one machine, not a public network."
+   ],
+   "release": "never"
+  }
+ ]
+}

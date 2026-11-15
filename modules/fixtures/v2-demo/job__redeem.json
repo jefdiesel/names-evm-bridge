@@ -1,0 +1,57 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "can_cancel": false,
+    "can_pause": false,
+    "can_resume": false,
+    "cancel_requested": false,
+    "dry_run": true,
+    "dry_run_forced": "Sends are off in this build: this ran as a dry run (simulated, nothing proven or sent). Proving needs the memory guard set up and a CLI that reads secrets from a file.",
+    "elapsed_s": 0,
+    "error": null,
+    "exit": 0,
+    "finished": 1794576624882,
+    "guarded": false,
+    "id": "redeem-1794576624583",
+    "kind": "redeem",
+    "log_tail": "Dry run: nothing proven or sent\n  public cycles:  42703\n  base fees:      exec 8 / stor 8 (height 5383)\n  fee at head:    5412240\n  headroom:       5 blocks, up to exec 13 / stor 13 (8794890)\n  reserve:        8794890 (surplus refunded)\n  fee payer:      2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC\n  claims:         0 pending credit(s), 0 to the payer\n  refund to:      the payer's alias\ndry run: simulated in 76.7ms; nothing proven or sent",
+    "meta": {
+      "amount_text": "100",
+      "dry_run_forced": "Sends are off in this build: this ran as a dry run (simulated, nothing proven or sent). Proving needs the memory guard set up and a CLI that reads secrets from a file.",
+      "plan": "rdm-1794576624570",
+      "symbol": "dUSDC"
+    },
+    "paused_ms": 0,
+    "paused_since": null,
+    "peak_estimate_mb": 9550,
+    "peak_rss_mb": 9,
+    "pgid": 10421,
+    "phase": "done",
+    "phase_elapsed_s": 0,
+    "phases": [
+      {
+        "at": 1794576624583,
+        "phase": "fetch"
+      },
+      {
+        "at": 1794576624882,
+        "phase": "done"
+      }
+    ],
+    "prove_estimate_s": 690,
+    "result": {
+      "dry_run": true,
+      "fee_at_head": "5412240",
+      "fee_payer": "2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC",
+      "public_cycles": 42703,
+      "reserve": "8794890",
+      "simulated_in": "76.7ms"
+    },
+    "started": 1794576624583,
+    "state": "done",
+    "step": 0,
+    "steps": 1,
+    "subject": "rdm-1794576624570"
+  }
+}

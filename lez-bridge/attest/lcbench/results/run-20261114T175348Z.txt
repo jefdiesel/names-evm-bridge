@@ -1,0 +1,144 @@
+## zkcrypto: Sepolia finality update, same period (509/512): session user=116462240 total=123994112 segments=119
+| step | user cycles |
+|---|---:|
+| setup: read + decode the bench input | 1332807 |
+| setup: decode the ReceiveInput | 41680 |
+| A: handle: borsh-decode the Message (committee + update), dispatch | 50338 |
+| A: lc: instance id (sha256 of config) | 2391 |
+| A: lc: committee_hash of the 24,624-byte witness(es) | 64919 |
+| A: lc: SSZ decode of the committee witness(es) | 341843 |
+| A: lc: build the Helios store (committee clones) | 48798 |
+| A: lc: SSZ decode of the update | 8928 |
+| A: lc: participation policy (GenericUpdate clone + popcount) | 9207 |
+| A: lc: Helios verify_finality_update | 36332226 |
+| A: lc: Helios apply_finality_update | 30723 |
+| A: lc: map committees back to commitments, new summary | 195615 |
+| A: rest (progress check, Advance message, response) | 5164 |
+| A = TOTAL handle() (sum of the A rows) | 37090152 |
+| B: signing key, Helios: decompress+subgroup-check aggregate and 3 non-signers, subtract | 4125963 |
+| B: signature G2 decompress incl. subgroup check | 1455199 |
+| B: Helios's extra G2 subgroup check (sig * r) | 8042403 |
+| B: hash_to_curve G2 (XMD:SHA-256, SSWU, cofactor clearing) | 2806393 |
+| B: G2Prepared x2 (line coefficients) | 2403591 |
+| B: multi Miller loop, 2 pairs | 6499532 |
+| B: final exponentiation + compare | 10833143 |
+| C: signing key from witnesses: aggregate + 3 non-signers (on curve, recompress = committed), subtract | 62734 |
+| C: signature G2 decompress incl. subgroup check | 1455199 |
+| C: hash_to_curve G2 | 2806393 |
+| C: G2Prepared x2 (line coefficients) | 2403572 |
+| C: multi Miller loop, 2 pairs | 6499519 |
+| C: final exponentiation + compare | 10833130 |
+| D: SSZ branches: aggregate leaf + 3 non-signer branches (depth 9) against the committee root | 39581 |
+| D: signing key from branch-bound witnesses (3 non-signers) | 61254 |
+| D2: whole SyncCommittee hash_tree_root, direct sha2 (1,025 sha256 of 64 bytes) | 1281722 |
+| E: floor 342/512: signing key from witnesses, 170 non-signers | 2401517 |
+| E: floor 342/512: 170 SSZ branches against the committee root | 2051961 |
+| F: 1024 x sha256(64 B), sha2 0.9 (risczero patch) | 1242294 |
+| F: 1024 x sha256(64 B), risc0_zkvm::sha::Impl | 460911 |
+| F: 1024 x sha256(64 B), plain software (control) | 10038501 |
+  verdict: A: handle() returned an Advance: ok
+  verdict: B: Helios method verifies the real signature: ok
+  verdict: C: witness path verifies the real signature: ok
+  verdict: C: witness key equals Helios's key: ok
+  verdict: D: branches verify against the committee root: ok
+  verdict: D: branch-bound key equals Helios's key: ok
+  verdict: D2: direct root equals the host's tree_hash root: ok
+  verdict: E: floor key path accepted the witnesses: ok
+  verdict: E: floor branches verify: ok
+  verdict: F: software control matches sha2: ok
+## zkcrypto: mainnet finality update, same period (507/512): session user=120917989 total=128974848 segments=123
+| step | user cycles |
+|---|---:|
+| setup: read + decode the bench input | 1346804 |
+| setup: decode the ReceiveInput | 42678 |
+| A: handle: borsh-decode the Message (committee + update), dispatch | 51674 |
+| A: lc: instance id (sha256 of config) | 2391 |
+| A: lc: committee_hash of the 24,624-byte witness(es) | 64919 |
+| A: lc: SSZ decode of the committee witness(es) | 341843 |
+| A: lc: build the Helios store (committee clones) | 48798 |
+| A: lc: SSZ decode of the update | 37248 |
+| A: lc: participation policy (GenericUpdate clone + popcount) | 11414 |
+| A: lc: Helios verify_finality_update | 38590391 |
+| A: lc: Helios apply_finality_update | 37256 |
+| A: lc: map committees back to commitments, new summary | 195711 |
+| A: rest (progress check, Advance message, response) | 5486 |
+| A = TOTAL handle() (sum of the A rows) | 39387131 |
+| B: signing key, Helios: decompress+subgroup-check aggregate and 5 non-signers, subtract | 6189901 |
+| B: signature G2 decompress incl. subgroup check | 1455195 |
+| B: Helios's extra G2 subgroup check (sig * r) | 8042403 |
+| B: hash_to_curve G2 (XMD:SHA-256, SSWU, cofactor clearing) | 2806393 |
+| B: G2Prepared x2 (line coefficients) | 2403591 |
+| B: multi Miller loop, 2 pairs | 6499532 |
+| B: final exponentiation + compare | 10833143 |
+| C: signing key from witnesses: aggregate + 5 non-signers (on curve, recompress = committed), subtract | 90762 |
+| C: signature G2 decompress incl. subgroup check | 1455195 |
+| C: hash_to_curve G2 | 2806393 |
+| C: G2Prepared x2 (line coefficients) | 2403572 |
+| C: multi Miller loop, 2 pairs | 6499519 |
+| C: final exponentiation + compare | 10833130 |
+| D: SSZ branches: aggregate leaf + 5 non-signer branches (depth 9) against the committee root | 63674 |
+| D: signing key from branch-bound witnesses (5 non-signers) | 89412 |
+| D2: whole SyncCommittee hash_tree_root, direct sha2 (1,025 sha256 of 64 bytes) | 1281722 |
+| E: floor 342/512: signing key from witnesses, 170 non-signers | 2401517 |
+| E: floor 342/512: 170 SSZ branches against the committee root | 2051961 |
+| F: 1024 x sha256(64 B), sha2 0.9 (risczero patch) | 1242294 |
+| F: 1024 x sha256(64 B), risc0_zkvm::sha::Impl | 460911 |
+| F: 1024 x sha256(64 B), plain software (control) | 10038501 |
+  verdict: A: handle() returned an Advance: ok
+  verdict: B: Helios method verifies the real signature: ok
+  verdict: C: witness path verifies the real signature: ok
+  verdict: C: witness key equals Helios's key: ok
+  verdict: D: branches verify against the committee root: ok
+  verdict: D: branch-bound key equals Helios's key: ok
+  verdict: D2: direct root equals the host's tree_hash root: ok
+  verdict: E: floor key path accepted the witnesses: ok
+  verdict: E: floor branches verify: ok
+  verdict: F: software control matches sha2: ok
+## zkcrypto: Sepolia period update 1410 (proves the next committee): session user=125685770 total=134217728 segments=128
+| step | user cycles |
+|---|---:|
+| setup: read + decode the bench input | 1351539 |
+| setup: decode the ReceiveInput | 79144 |
+| A: handle: borsh-decode the Message (committee + update), dispatch | 87801 |
+| A: lc: instance id (sha256 of config) | 2391 |
+| A: lc: committee_hash of the 24,624-byte witness(es) | 64919 |
+| A: lc: SSZ decode of the committee witness(es) | 341843 |
+| A: lc: build the Helios store (committee clones) | 48798 |
+| A: lc: SSZ decode of the update | 351820 |
+| A: lc: participation policy (GenericUpdate clone + popcount) | 65584 |
+| A: lc: Helios verify_update | 44419378 |
+| A: lc: Helios apply_update | 166366 |
+| A: lc: map committees back to commitments, new summary | 520687 |
+| A: rest (progress check, Advance message, response) | 5309 |
+| A = TOTAL handle() (sum of the A rows) | 46074896 |
+| B: signing key, Helios: decompress+subgroup-check aggregate and 3 non-signers, subtract | 4125963 |
+| B: signature G2 decompress incl. subgroup check | 1455199 |
+| B: Helios's extra G2 subgroup check (sig * r) | 8042403 |
+| B: hash_to_curve G2 (XMD:SHA-256, SSWU, cofactor clearing) | 2806393 |
+| B: G2Prepared x2 (line coefficients) | 2403591 |
+| B: multi Miller loop, 2 pairs | 6499532 |
+| B: final exponentiation + compare | 10833143 |
+| C: signing key from witnesses: aggregate + 3 non-signers (on curve, recompress = committed), subtract | 62734 |
+| C: signature G2 decompress incl. subgroup check | 1455199 |
+| C: hash_to_curve G2 | 2806393 |
+| C: G2Prepared x2 (line coefficients) | 2403572 |
+| C: multi Miller loop, 2 pairs | 6499519 |
+| C: final exponentiation + compare | 10833130 |
+| D: SSZ branches: aggregate leaf + 3 non-signer branches (depth 9) against the committee root | 39583 |
+| D: signing key from branch-bound witnesses (3 non-signers) | 61254 |
+| D2: whole SyncCommittee hash_tree_root, direct sha2 (1,025 sha256 of 64 bytes) | 1281722 |
+| E: floor 342/512: signing key from witnesses, 170 non-signers | 2401517 |
+| E: floor 342/512: 170 SSZ branches against the committee root | 2051961 |
+| F: 1024 x sha256(64 B), sha2 0.9 (risczero patch) | 1242294 |
+| F: 1024 x sha256(64 B), risc0_zkvm::sha::Impl | 460911 |
+| F: 1024 x sha256(64 B), plain software (control) | 10038501 |
+  verdict: A: handle() returned an Advance: ok
+  verdict: B: Helios method verifies the real signature: ok
+  verdict: C: witness path verifies the real signature: ok
+  verdict: C: witness key equals Helios's key: ok
+  verdict: D: branches verify against the committee root: ok
+  verdict: D: branch-bound key equals Helios's key: ok
+  verdict: D2: direct root equals the host's tree_hash root: ok
+  verdict: E: floor key path accepted the witnesses: ok
+  verdict: E: floor branches verify: ok
+  verdict: F: software control matches sha2: ok

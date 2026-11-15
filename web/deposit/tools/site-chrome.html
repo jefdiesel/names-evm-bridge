@@ -1,0 +1,78 @@
+<!-- The Names Wallet site's shared header and footer, byte for byte from the canonical markup in
+     nameswallet-site/partials/README.md (as used by site/android/index.html, merge 12464c7),
+     with "Bridge" marked as the current page and the bridge's own footer sentence and links as
+     the allowed second <p>/<ul>. tools/chrome.mjs writes these blocks into every page (the
+     deposit page's skip link reads "Skip to the deposit"); then the site's
+     tools/version-assets.mjs stamps every /assets/ and favicon URL with ?v=<hash>
+     (bridge-src/build-source.sh runs all of it). Do not stamp by hand. -->
+<template id="ASSETS">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/assets/fonts/Inter-Bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/chrome.css">
+</template>
+<template id="HEADER">
+<a class="site-skip" href="#main">Skip to content</a>
+<header class="site-top">
+  <div class="site-top-in">
+    <a class="site-brand" href="/"><img src="/assets/mark.svg" alt="" width="28" height="28">Names Wallet</a>
+    <span class="site-net"><b>Testnet</b><span class="site-net-more">: coins have no value</span></span>
+    <nav class="site-nav" aria-label="Main">
+      <ul>
+        <li><a href="/basecamp/">Basecamp</a></li>
+        <li><a href="/android/">Android</a></li>
+        <li><a href="/bridge/" aria-current="page">EVM Bridge</a></li>
+        <li><a href="/registry/">Registry</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+</template>
+<template id="FOOTER">
+<footer class="site-foot">
+  <div class="site-foot-in">
+    <div class="site-foot-brand">
+      <a class="site-brand" href="/"><img src="/assets/mark.svg" alt="" width="36" height="36">Names Wallet</a>
+      <p>A wallet, LNS names and private messages on Logos.</p>
+      <p>Testnet software: the coins have no value.</p>
+      <ul><li><a href="/accessibility/">Accessibility</a></li></ul>
+    </div>
+    <nav class="site-foot-cols" aria-label="Footer">
+      <div>
+        <h2>Wallet</h2>
+        <ul>
+          <li><a href="/basecamp/">Basecamp</a></li>
+          <li><a href="/basecamp/details/">Basecamp details</a></li>
+          <li><a href="/android/">Android</a></li>
+          <li><a href="/android/details/">Android details</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>EVM Bridge</h2>
+        <ul>
+          <li><a href="/bridge/">Bridge demo</a></li>
+          <li><a href="/bridge/about/privacy/">What a deposit reveals</a></li>
+          <li><a href="/bridge/about/security/">Security of the page</a></li>
+          <li><a href="/bridge/about/verify/">Verify the page</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Registry</h2>
+        <ul>
+          <li><a href="/registry/">Program Registry</a></li>
+          <li><a href="/registry/submit/">Register a program or app</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Source</h2>
+        <ul>
+          <li><a href="https://github.com/jefdiesel/logos-names">Basecamp source</a></li>
+          <li><a href="https://github.com/jefdiesel/logos-node-android/tree/android-app">Android source</a></li>
+          <li><a href="https://github.com/jefdiesel/lez-program-registry">Registry source</a></li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+</footer>
+</template>

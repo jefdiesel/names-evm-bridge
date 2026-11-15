@@ -1,0 +1,14 @@
+{
+ "_provenance": "Hand-made in relayed.rs's shapes (tests_relayed.rs checks them against the module's real replies); no chain or wallet ran for this file.",
+ "success": true,
+ "value": {
+  "needs": "programs",
+  "request": {
+   "request": "req-3f2a",
+   "kind": "programs",
+   "state": "pending"
+  },
+  "message": "Approve, once, the two programs this app asks your wallet to sign claims for (the bridge and its token program) in the Names app. The bridge program is not in the Program Registry yet, so the Names app asks you to tick that you accept that before you approve."
+ },
+ "error": null
+}

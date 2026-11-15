@@ -1,0 +1,61 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "can_cancel": true,
+    "can_pause": false,
+    "can_resume": false,
+    "cancel_requested": false,
+    "dry_run": false,
+    "elapsed_s": 292,
+    "error": null,
+    "exit": null,
+    "finished": null,
+    "guarded": true,
+    "id": "claim-1794576623852",
+    "kind": "claim",
+    "log_tail": "root 0xbe1e080d85207b6b7832392daf38ce65347cabe7902bed16e3251ee03a21d3e8\nrecipient AePC3xbb5yVhcpHfUkwCqCqNtoCsgVQnBCfbz8G4vGkN (one-time address of 2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC; the opening stays on this machine)\nsponsor 20000000 from the bridge float (float 100000000)\nisDepositRoot[root] slot 0x8a4947a6b1393817e081b66486230d161aecbd58de58c26d7a3e0c69dff781cd value 0x0000000000000000000000000000000000000000000000000000000000000001\npre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000\nprivacy-preserving: proving on this computer",
+    "meta": {
+      "denom": "100000000",
+      "deposit": "dep-188c6f3a5a40",
+      "privacy": "private",
+      "symbol": "dUSDC"
+    },
+    "paused_ms": 0,
+    "paused_since": null,
+    "peak_estimate_mb": 9403,
+    "peak_rss_mb": 6468,
+    "pgid": 10414,
+    "phase": "prove",
+    "phase_elapsed_s": 290,
+    "phases": [
+      {
+        "phase": "fetch",
+        "at": 1794576623852
+      },
+      {
+        "phase": "simulate",
+        "at": 1794576624852
+      },
+      {
+        "phase": "prove",
+        "at": 1794576625852
+      }
+    ],
+    "prove_estimate_s": 671,
+    "result": null,
+    "started": 1794576623852,
+    "state": "running",
+    "step": 0,
+    "steps": 1,
+    "subject": "dep-188c6f3a5a40",
+    "_provenance": "timing and memory from the real proved claim of LEZ block 4998 (guard sample 06:47:30, 292 s after start); shape from the module's job reply",
+    "progress": {
+      "recipient": "AePC3xbb5yVhcpHfUkwCqCqNtoCsgVQnBCfbz8G4vGkN",
+      "recipient_kind": "one_time",
+      "sponsor": "20000000",
+      "float": "100000000",
+      "precheck": true
+    }
+  }
+}

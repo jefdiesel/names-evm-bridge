@@ -1,0 +1,54 @@
+## blst: Sepolia finality update, same period (509/512): session user=27269848 total=29360128 segments=28
+| step | user cycles |
+|---|---:|
+| setup: read + decode the bench input | 1259120 |
+| blst: signing key from witnesses: aggregate + 3 non-signers (on curve, recompress = committed), subtract | 43366 |
+| blst: signature decompress + G2 subgroup check + not infinity | 526808 |
+| blst: hash_to_curve G2 (blst_hash_to_g2, same DST) | 1169300 |
+| blst P1: two Miller loops + conjugate + product | 4088045 |
+| blst P1: final exponentiation + is_one | 3581133 |
+| blst P2: negate the G1 generator | 988 |
+| blst P2: blst_miller_loop_n, 2 pairs | 3251353 |
+| blst P2: final exponentiation + is_one | 3581137 |
+| blst: (negative test, not part of a path) | 96 |
+| blst E: floor 342/512: signing key from witnesses, 170 non-signers | 1584593 |
+  verdict: blst P1: real signature verifies: ok
+  verdict: blst P2: real signature verifies: ok
+  verdict: blst: a wrong signing root is rejected: ok
+  verdict: blst E: floor key path accepted the witnesses: ok
+## blst: mainnet finality update, same period (507/512): session user=27301197 total=29360128 segments=28
+| step | user cycles |
+|---|---:|
+| setup: read + decode the bench input | 1272408 |
+| blst: signing key from witnesses: aggregate + 5 non-signers (on curve, recompress = committed), subtract | 61806 |
+| blst: signature decompress + G2 subgroup check + not infinity | 526808 |
+| blst: hash_to_curve G2 (blst_hash_to_g2, same DST) | 1169124 |
+| blst P1: two Miller loops + conjugate + product | 4088045 |
+| blst P1: final exponentiation + is_one | 3581133 |
+| blst P2: negate the G1 generator | 988 |
+| blst P2: blst_miller_loop_n, 2 pairs | 3251353 |
+| blst P2: final exponentiation + is_one | 3581137 |
+| blst: (negative test, not part of a path) | 96 |
+| blst E: floor 342/512: signing key from witnesses, 170 non-signers | 1584593 |
+  verdict: blst P1: real signature verifies: ok
+  verdict: blst P2: real signature verifies: ok
+  verdict: blst: a wrong signing root is rejected: ok
+  verdict: blst E: floor key path accepted the witnesses: ok
+## blst: Sepolia period update 1410 (proves the next committee): session user=27269622 total=29360128 segments=28
+| step | user cycles |
+|---|---:|
+| setup: read + decode the bench input | 1259120 |
+| blst: signing key from witnesses: aggregate + 3 non-signers (on curve, recompress = committed), subtract | 43366 |
+| blst: signature decompress + G2 subgroup check + not infinity | 526934 |
+| blst: hash_to_curve G2 (blst_hash_to_g2, same DST) | 1169124 |
+| blst P1: two Miller loops + conjugate + product | 4088045 |
+| blst P1: final exponentiation + is_one | 3581133 |
+| blst P2: negate the G1 generator | 988 |
+| blst P2: blst_miller_loop_n, 2 pairs | 3251353 |
+| blst P2: final exponentiation + is_one | 3581137 |
+| blst: (negative test, not part of a path) | 96 |
+| blst E: floor 342/512: signing key from witnesses, 170 non-signers | 1584593 |
+  verdict: blst P1: real signature verifies: ok
+  verdict: blst P2: real signature verifies: ok
+  verdict: blst: a wrong signing root is rejected: ok
+  verdict: blst E: floor key path accepted the witnesses: ok

@@ -1,0 +1,90 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "always_public": [
+      {
+        "item": "Token and amount",
+        "where": "both chains",
+        "why": "Amounts are fixed denominations, so they say little when other people move the same amount. The fewer such moves, the less they hide."
+      },
+      {
+        "item": "Timing",
+        "where": "both chains",
+        "why": "When you deposit, claim, burn and release is visible. Spreading the steps out is the protection."
+      },
+      {
+        "item": "A one-time LEZ address that receives the mint",
+        "where": "LEZ",
+        "why": "Used once, for this claim only; it is not your account and does not lead to it."
+      },
+      {
+        "item": "The attestation anchor, the bridge and its deployment id",
+        "where": "LEZ",
+        "why": "Shared by every claim under the same anchor, so it narrows the candidates to deposits made before that anchor. Claim against the newest anchor."
+      },
+      {
+        "item": "A claim nullifier",
+        "where": "LEZ",
+        "why": "Stops a second claim of the same deposit. It cannot be linked to the deposit without your secret."
+      },
+      {
+        "item": "The fixed sponsor payment and the fee",
+        "where": "LEZ",
+        "why": "The same for every sponsored claim."
+      },
+      {
+        "item": "Your network address",
+        "where": "the RPC and sequencer you use",
+        "why": "Outside the bridge's protection. Use endpoints you trust, or your own."
+      }
+    ],
+    "confirmed": false,
+    "flow": "claim",
+    "headline": "Less private. The choices below make you easier to match by timing or pattern.",
+    "level": "reduced",
+    "notes": [],
+    "on_chain_error_text": "If a claim is refused on chain, the only message anyone sees is \"claim refused\": it never says which deposit. The detailed reason shown here is worked out on this computer and is not sent.",
+    "overrides": [
+      {
+        "chosen": false,
+        "key": "reveal_recipient",
+        "leaks": "The mint names your private account instead of a one-time address. Anyone can then see that this account received a bridge mint of this token and amount at this time, and connect it to your later activity. The bridge does not sponsor the fee in this mode, so your account pays it.",
+        "needs_confirmation": true,
+        "title": "Mint to my private account by name",
+        "who": "anyone reading the LEZ chain"
+      },
+      {
+        "chosen": false,
+        "key": "public_account",
+        "leaks": "A claim into a public account publishes the deposit's secret, which ties your Ethereum deposit (and the address that paid for it) to this LEZ account for good. A burn from a public account shows which account burned. Neither can be undone.",
+        "needs_confirmation": true,
+        "title": "Use a public account",
+        "who": "anyone reading either chain"
+      },
+      {
+        "chosen": true,
+        "key": "claim_early",
+        "leaks": "A claim soon after a deposit, while few other deposits of the same amount have arrived, can be matched to it by timing alone: an observer pairs the two events that sit close together.",
+        "needs_confirmation": true,
+        "title": "Claim before the suggested time",
+        "who": "anyone comparing the two chains' timestamps"
+      }
+    ],
+    "requires_confirmation": true,
+    "stays_private": [
+      "Your LEZ account",
+      "Which deposit you are claiming",
+      "The deposit's secret",
+      "Who paid the claim's fee (the bridge float pays it)"
+    ],
+    "weakened_by": [
+      {
+        "key": "claim_early",
+        "leaks": "A claim soon after a deposit, while few other deposits of the same amount have arrived, can be matched to it by timing alone: an observer pairs the two events that sit close together.",
+        "title": "Claim before the suggested time",
+        "who": "anyone comparing the two chains' timestamps"
+      }
+    ]
+  }
+}

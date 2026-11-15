@@ -1,0 +1,35 @@
+[package]
+name = "outbound_guest"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# G2-lite, the outbound state proof the vault's `update` verifies (statement: outbound/core).
+# Its own workspace like release_guest. THIS package is the release build: no `trusted-tip`, so
+# its finality source is the Logos Blockchain light client, which is not implemented and refuses
+# every batch. The test build with TrustedTip is ../outbound_guest_trusted_tip (same source file,
+# feature on, another image id). Built only by outbound/host (executor only).
+[workspace]
+
+[[bin]]
+name = "outbound_guest"
+path = "src/main.rs"
+
+[dependencies]
+outbound_core = { path = "../../outbound/core" }
+borsh = "1.5.7"
+risc0-zkvm = { version = "=3.1.0", default-features = false, features = ["std"] }
+
+[features]
+default = []
+trusted-tip = ["outbound_core/trusted-tip"]
+# Trusted-tip build only (a compile error otherwise): private receipts not checked.
+unchecked-private = []
+
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

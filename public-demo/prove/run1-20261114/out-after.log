@@ -1,0 +1,9 @@
+sponsor_amount 25000000
+float 99975000000
+token 0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e def EgLorBTz2c2Jez3KXLZ78LsQrkFcjvux9PZb5F2EgexY denoms [100000000, 1000000000, 10000000000] claims [2, 0, 0] burns [0, 0, 0] claimed_value 200000000 burned_value 0 registered true mint_frozen false burn_frozen false
+name Wrapped dUSDC (demo)
+supply 200000000
+authority Some(JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7)
+Private/2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC  EgLorBTz2c2Jez3KXLZ78LsQrkFcjvux9PZb5F2EgexY  100000000
+double claim (dry run, must be refused):
+Error: deposit already claimed: its nullifier is spent; nothing sent

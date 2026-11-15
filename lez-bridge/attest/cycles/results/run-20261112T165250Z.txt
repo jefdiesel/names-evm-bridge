@@ -1,0 +1,43 @@
+# attestation program: submitter's actor (private part when proved) and public parts
+  Init: verify bootstrap at the checkpoint (Sepolia, Gloas): user=9030666 total=9699328 segments=10 (0.90x the 10M cap)
+  Update: finality update, same period (Sepolia, 509/512): user=37234879 total=39845888 segments=38 (3.72x the 10M cap)
+  public: store applies Advance (+ sends RecordAnchor): user=38488 total=131072 segments=1 (0.00x the 10M cap)
+  (Advance message: 520 bytes borsh; store state 259 bytes; Gloas summaries carry no state root/number)
+  public: anchor PDA records an anchor: user=18269 total=65536 segments=1 (0.00x the 10M cap)
+  public: AssertAnchor (what a consumer pays publicly): user=15997 total=65536 segments=1 (0.00x the 10M cap)
+  Update: period update proving the next committee (Sepolia 1410): user=46323919 total=49545216 segments=48 (4.63x the 10M cap)
+  Update: finality update signed by the next committee, rotates (Sepolia 1411): user=37857914 total=40894464 segments=39 (3.79x the 10M cap)
+  Init: verify bootstrap (mainnet, Fulu): user=9140689 total=9961472 segments=10 (0.91x the 10M cap)
+  Update: finality update, same period (mainnet, 507/512): user=39534359 total=42205184 segments=41 (3.95x the 10M cap)
+# consumer: statements in the consumer's own actor (reference consumer guest)
+  (real Sepolia proof: 8 account nodes, 5 storage nodes, header 677 bytes)
+  statement: storage slot, real Sepolia mapping entry (header + account + storage proof): user=245836 total=524288 segments=1 (0.02x the 10M cap)
+  statement: account field, real Sepolia account (header + account proof): user=172039 total=262144 segments=1 (0.02x the 10M cap)
+# bridge claim: stand-in vs RFP-021 path (claimer's actor = private part; config = public)
+  (synthetic state: 200001 accounts, vault with 4001 roots; proof 6 account nodes, 4 storage nodes)
+  bridge claim, stand-in: claimer's actor (Merkle path): user=67763 total=131072 segments=1 (0.01x the 10M cap)
+  bridge claim, RFP-021: claimer's actor (Merkle path + storage proof, state-root anchor): user=237428 total=524288 segments=1 (0.02x the 10M cap)
+  bridge claim, RFP-021: claimer's actor (same, block-hash anchor + header): user=251858 total=524288 segments=1 (0.03x the 10M cap)
+  public: bridge root PDA AssertRoot (stand-in): user=11340 total=65536 segments=1 (0.00x the 10M cap)
+  public: bridge config Claim (stand-in): user=28126 total=131072 segments=1 (0.00x the 10M cap)
+  public: bridge config ClaimAttested (RFP-021): user=31968 total=131072 segments=1 (0.00x the 10M cap)
+
+| scenario | user cycles | total cycles | segments | user / 10M |
+|---|---:|---:|---:|---:|
+| Init: verify bootstrap at the checkpoint (Sepolia, Gloas) | 9030666 | 9699328 | 10 | 0.903 |
+| Update: finality update, same period (Sepolia, 509/512) | 37234879 | 39845888 | 38 | 3.723 |
+| public: store applies Advance (+ sends RecordAnchor) | 38488 | 131072 | 1 | 0.004 |
+| public: anchor PDA records an anchor | 18269 | 65536 | 1 | 0.002 |
+| public: AssertAnchor (what a consumer pays publicly) | 15997 | 65536 | 1 | 0.002 |
+| Update: period update proving the next committee (Sepolia 1410) | 46323919 | 49545216 | 48 | 4.632 |
+| Update: finality update signed by the next committee, rotates (Sepolia 1411) | 37857914 | 40894464 | 39 | 3.786 |
+| Init: verify bootstrap (mainnet, Fulu) | 9140689 | 9961472 | 10 | 0.914 |
+| Update: finality update, same period (mainnet, 507/512) | 39534359 | 42205184 | 41 | 3.953 |
+| statement: storage slot, real Sepolia mapping entry (header + account + storage proof) | 245836 | 524288 | 1 | 0.025 |
+| statement: account field, real Sepolia account (header + account proof) | 172039 | 262144 | 1 | 0.017 |
+| bridge claim, stand-in: claimer's actor (Merkle path) | 67763 | 131072 | 1 | 0.007 |
+| bridge claim, RFP-021: claimer's actor (Merkle path + storage proof, state-root anchor) | 237428 | 524288 | 1 | 0.024 |
+| bridge claim, RFP-021: claimer's actor (same, block-hash anchor + header) | 251858 | 524288 | 1 | 0.025 |
+| public: bridge root PDA AssertRoot (stand-in) | 11340 | 65536 | 1 | 0.001 |
+| public: bridge config Claim (stand-in) | 28126 | 131072 | 1 | 0.003 |
+| public: bridge config ClaimAttested (RFP-021) | 31968 | 131072 | 1 | 0.003 |

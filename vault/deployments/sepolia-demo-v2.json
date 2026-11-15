@@ -1,0 +1,269 @@
+{
+  "chain": "sepolia",
+  "chainId": 11155111,
+  "demo": true,
+  "version": 2,
+  "statement": "DEMO v2 (fixed code, 2026-11-13): deposits only. updateImageId is a placeholder (keccak256(\"RFP022/demo/no-update-image\")); no G2 proof can verify, so no exit can ever be recorded or released on this vault. Admin, freezer and fee recipient are a throwaway test key. Supersedes v1 0xA34adbe8413838668b0521230A4d96C6B7e91484.",
+  "vault": "0x8C8b2664De28e5287158db4DB65D448638871b74",
+  "usdc": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e",
+  "usdcReusedFromV1": true,
+  "verifier": "0x2a098988600d87650Fb061FfAff08B97149Fa84D",
+  "deployer": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+  "updateImageId": "0x5f425420081746e3e77f3c94e7a44e7d0b3bdcc3cd4e114eaa07d7540fa282e3",
+  "releaseImageId": "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4",
+  "lezChainId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "zoneId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "programId": "0xfff8054169fcabf078493cfda8214d14f03a7294be509dfd9180d29e33fde910",
+  "bridgeProgram": "JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7",
+  "cfgId": "0x7f1ab05e910781ef1c6bd7747b8221372377dc785bc09e303e687d2d4f284b11",
+  "runtimeBytes": 20614,
+  "lezImages": {
+    "token": "633555cc0d90901139f0bf541fe2f32912f969579e829e9d6acab2def083ab5d",
+    "bridge": "249a19c6386bfab7b70018312585f4555d9a302cd972308ea4b1a77db74f0129",
+    "attest": "84f6c998c5879d917175a83fa15af9fef0d93cb3097c49d8f072a6bddb6f7712",
+    "probe": "b9dcbb1872a66e36155a187f90f37ba63721f5ef1802ac930f58c8bbbfc7f255"
+  },
+  "lezAccounts": {
+    "V2": "2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC",
+    "P2": "6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f",
+    "F": "6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV",
+    "tokenProgram": "4VScJ7mtwaanQ5gcSZZw2iAMHYAbLrVmbYKwEGx2eSex",
+    "attestProgram": "4VhxvwLN5n3u3rZbsz2VNFVavLwc1niNvgxq8JJ15veK",
+    "probe": "7VDaNr8MGJrtpGruCJcp9huQz5s4n7VtwN1b1nAsBr5y"
+  },
+  "txs": [
+    {
+      "tx": "0x107b557777b653ac5f48cf89c0b17f9eecbcaa53cbefb5e5db723324c6b39fcc",
+      "what": "create BridgeVault (v2)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122976,
+      "status": 1,
+      "gasUsed": 32895648,
+      "effectiveGasPrice_wei": 10000029,
+      "fee_wei": 328957433973792
+    },
+    {
+      "tx": "0xc2376f2e7199ea7e729aaf72d64ed0168d00c4a024b0eda8fe47541cfc4dfb95",
+      "what": "registerToken(address,uint8,uint256[],uint256[],uint256[],uint64)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122979,
+      "status": 1,
+      "gasUsed": 1037730,
+      "effectiveGasPrice_wei": 10000029,
+      "fee_wei": 10377330094170
+    },
+    {
+      "tx": "0xe2b8ee9886ab76a8a25fb82bef2d9aca30b2766d97298298b1e4d155eb03a7fa",
+      "what": "registerToken(address,uint8,uint256[],uint256[],uint256[],uint64)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122980,
+      "status": 1,
+      "gasUsed": 828103,
+      "effectiveGasPrice_wei": 10000029,
+      "fee_wei": 8281054014987
+    },
+    {
+      "tx": "0xddf6419fe6dd88b508d85a44ce684b1a1d47467fb2aaa562855cde4d788dce83",
+      "what": "setRelayFeeMenu(address,uint256[][])",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122981,
+      "status": 1,
+      "gasUsed": 1705443,
+      "effectiveGasPrice_wei": 10000030,
+      "fee_wei": 17054481163290
+    },
+    {
+      "tx": "0xb0a14c958e6fb72a91a9bb315e470795a37388fe1036e2c93fea7c7916e75dec",
+      "what": "setRelayFeeMenu(address,uint256[][])",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122982,
+      "status": 1,
+      "gasUsed": 1705371,
+      "effectiveGasPrice_wei": 10000030,
+      "fee_wei": 17053761161130
+    },
+    {
+      "tx": "0x342eded151907af910d6390d91961db264b3fc0b165a4b2a6b06d7b8609f3606",
+      "what": "setCaps(address,uint64,uint256,uint256)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122983,
+      "status": 1,
+      "gasUsed": 477828,
+      "effectiveGasPrice_wei": 10000031,
+      "fee_wei": 4778294812668
+    },
+    {
+      "tx": "0x676d18cdce4151fe33836849326997c9406b0e8b00413b32894a0c666547786b",
+      "what": "setCaps(address,uint64,uint256,uint256)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122984,
+      "status": 1,
+      "gasUsed": 477636,
+      "effectiveGasPrice_wei": 10000030,
+      "fee_wei": 4776374329080
+    },
+    {
+      "tx": "0x7a86a5b207d25f17fe96e1aad9fd0961dc5c237765579841dbef1346fbf52729",
+      "what": "setGlobalCaps(uint64,uint256,uint256)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122985,
+      "status": 1,
+      "gasUsed": 475083,
+      "effectiveGasPrice_wei": 10000029,
+      "fee_wei": 4750843777407
+    },
+    {
+      "tx": "0x75ed6558daae4d2c4da2e5758745c49ebf56633de43de8e9568fef6c5c3f06d9",
+      "what": "setCapWeight(address,uint256)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122986,
+      "status": 1,
+      "gasUsed": 132673,
+      "effectiveGasPrice_wei": 10000029,
+      "fee_wei": 1326733847517
+    },
+    {
+      "tx": "0xce211b6b9b2cbe5bdd492cb2cb8992d0c8f1ff68602135c85e337f99c07c2ac4",
+      "what": "setCapWeight(address,uint256)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122987,
+      "status": 1,
+      "gasUsed": 132397,
+      "effectiveGasPrice_wei": 10000030,
+      "fee_wei": 1323973971910
+    },
+    {
+      "tx": "0x16ada5c78f410918c6cc0a5f25057ac82f686945ac08ffa13c512b60fb9db852",
+      "what": "mint(address,uint256)",
+      "contract": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "block": 12122991,
+      "status": 1,
+      "gasUsed": 42292,
+      "effectiveGasPrice_wei": 10000032,
+      "fee_wei": 422921353344
+    },
+    {
+      "tx": "0x44d1a3c3d8d8962b344fd0020197a964793e0acee95eec363db86d24ca73f88b",
+      "what": "approve(address,uint256)",
+      "contract": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "block": 12122992,
+      "status": 1,
+      "gasUsed": 127839,
+      "effectiveGasPrice_wei": 10000033,
+      "fee_wei": 1278394218687
+    },
+    {
+      "tx": "0x5ca7529743269c4ce77fe9d1f2777d6f47a96030fed4113091853be8a925598e",
+      "what": "deposit(address,uint32,bytes32)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122993,
+      "status": 1,
+      "gasUsed": 801427,
+      "effectiveGasPrice_wei": 10000033,
+      "fee_wei": 8014296447091
+    },
+    {
+      "tx": "0x3543c1b3a68c7ad037930054784f18929fd4d7ef39b4129ae34b3681377887c3",
+      "what": "deposit(address,uint32,bytes32)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122994,
+      "status": 1,
+      "gasUsed": 510476,
+      "effectiveGasPrice_wei": 10000033,
+      "fee_wei": 5104776845708
+    },
+    {
+      "tx": "0x50ecdb3c2e262de6380c791840b7aa453b550ad0626785354c60ee03ad603d7a",
+      "what": "deposit(address,uint32,bytes32)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122995,
+      "status": 1,
+      "gasUsed": 509832,
+      "effectiveGasPrice_wei": 10000034,
+      "fee_wei": 5098337334288
+    },
+    {
+      "tx": "0x7a0ca82a6dd36e9276fc0c098b12645a4c9d4fcce34397a51cc62ba189c2e7b0",
+      "what": "deposit(address,uint32,bytes32)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122996,
+      "status": 1,
+      "gasUsed": 513309,
+      "effectiveGasPrice_wei": 10000034,
+      "fee_wei": 5133107452506
+    },
+    {
+      "tx": "0x75239c1c373d9932009a55b0254db20fcfe0529e7e1d801dd43acd127cd70a76",
+      "what": "depositETH(uint32,bytes32)",
+      "contract": "0x8c8b2664de28e5287158db4db65d448638871b74",
+      "block": 12122997,
+      "status": 1,
+      "gasUsed": 471329,
+      "effectiveGasPrice_wei": 10000033,
+      "fee_wei": 4713305553857
+    }
+  ],
+  "deposits": [
+    {
+      "for": "V2 (private)",
+      "amount": "100 dUSDC",
+      "leaf": 0,
+      "commitment": "0xa50e0f44940eca30735460fa9b657d6ab948fc422b29b1293be0f7e5d6b7ad2e",
+      "tx": "0x5ca7529743269c4ce77fe9d1f2777d6f47a96030fed4113091853be8a925598e",
+      "block": 12122993,
+      "gasUsed": 801427
+    },
+    {
+      "for": "V2",
+      "amount": "100 dUSDC",
+      "leaf": 1,
+      "commitment": "0x188c6f3a5a409e9ac4a5c69fb55213593b4b1774eadca84ede91ec44e300bacd",
+      "tx": "0x3543c1b3a68c7ad037930054784f18929fd4d7ef39b4129ae34b3681377887c3",
+      "block": 12122994,
+      "gasUsed": 510476
+    },
+    {
+      "for": "V2",
+      "amount": "1,000 dUSDC",
+      "leaf": 2,
+      "commitment": "0x4b7b9d32f6b53f8cbd76261abafa450ce18e450e8ae974e86a61f1344893e514",
+      "tx": "0x50ecdb3c2e262de6380c791840b7aa453b550ad0626785354c60ee03ad603d7a",
+      "block": 12122995,
+      "gasUsed": 509832
+    },
+    {
+      "for": "P2 (public)",
+      "amount": "100 dUSDC",
+      "leaf": 3,
+      "commitment": "0x6cdd53cd6e42fe59609b0427aa6ef6fd1996a1b224dddb955211962f3fe0878d",
+      "tx": "0x7a0ca82a6dd36e9276fc0c098b12645a4c9d4fcce34397a51cc62ba189c2e7b0",
+      "block": 12122996,
+      "gasUsed": 513309
+    },
+    {
+      "for": "V2",
+      "amount": "0.01 ETH",
+      "leaf": 4,
+      "commitment": "0xffb6f3360e0acd47eb2fb92546674c9762ef4a628364be8d922e4618e3f07e37",
+      "tx": "0x75239c1c373d9932009a55b0254db20fcfe0529e7e1d801dd43acd127cd70a76",
+      "block": 12122997,
+      "gasUsed": 471329
+    }
+  ],
+  "emptyRoot": "0xc6f67e02e6e4e1bdefb994c6098953f34636ba2b6ca20a4721d2b26a886722ff",
+  "depositRoot": "0xbe1e080d85207b6b7832392daf38ce65347cabe7902bed16e3251ee03a21d3e8",
+  "depositCount": 5,
+  "lastDeposit": {
+    "block": 12122997,
+    "blockHash": "0x8cdcc8134832cf021da11dc34b5a21b0e5b370f2293079fd41543415b1ddac9d",
+    "slot": 11566945,
+    "timestamp": 1794536940
+  },
+  "isDepositRootSlotIndex": 83,
+  "repeatedCommitment": "deposit(C_V100A) and depositETH(C_VETH) revert CommitmentUsed() 0x7b000717 by eth_call; a fresh commitment estimates 428,510 gas",
+  "deployerBalance": {
+    "before_wei": 5489488275920805701,
+    "after_wei": 5479059830500454269
+  },
+  "totalFees_wei": 428445420351432
+}

@@ -1,0 +1,45 @@
+{
+  "_provenance": "Shapes from the module's Names Wallet mode (names_mode.rs / wallet.rs, as its unit tests check them); not recorded from a live Names Wallet (none installed).",
+  "error": null,
+  "success": true,
+  "value": {
+    "can_cancel": true,
+    "can_pause": false,
+    "can_resume": false,
+    "dry_run": false,
+    "elapsed_s": 41,
+    "error": null,
+    "finished": null,
+    "id": "wr-1794576623852",
+    "kind": "claim",
+    "log_tail": "",
+    "meta": {
+      "denom": "100000000",
+      "deposit": "dep-188c6f3a5a40",
+      "privacy": "private",
+      "symbol": "dUSDC"
+    },
+    "note": "Waiting for you in the Names app: it shows what this call does, simulated by your wallet.",
+    "peak_estimate_mb": 9403,
+    "peak_rss_mb": 0,
+    "phase": "approve",
+    "phase_elapsed_s": 0,
+    "phases": [
+      {
+        "phase": "approve"
+      }
+    ],
+    "prove_estimate_s": 671,
+    "request": "41d2c8e0f1a2b3c4d5e6f708192a3b4c",
+    "result": null,
+    "started": 1794576623852,
+    "state": "running",
+    "subject": "dep-188c6f3a5a40",
+    "wallet": "names",
+    "wallet_request": {
+      "check": "ready",
+      "phase": null,
+      "state": "pending"
+    }
+  }
+}

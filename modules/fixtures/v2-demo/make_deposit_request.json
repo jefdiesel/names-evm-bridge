@@ -1,0 +1,175 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "account_kind": "private",
+    "chain_id": 11155111,
+    "commitment": "0x8173d75fa7a5fad21de5e9255d2f1b3be8796d94806f11f3eaab73dacead4dfa",
+    "denom_text": "100",
+    "deposit": {
+      "account": "2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC",
+      "account_kind": "private",
+      "claimed": false,
+      "commitment": "0x8173d75fa7a5fad21de5e9255d2f1b3be8796d94806f11f3eaab73dacead4dfa",
+      "created": 1794576613317,
+      "denom": "100000000",
+      "denom_index": 0,
+      "eth_token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "id": "dep-8173d75fa7a5",
+      "source": "module",
+      "symbol": "dUSDC"
+    },
+    "deposit_fee_text": "0",
+    "eip681": "ethereum:0x8C8b2664De28e5287158db4DB65D448638871b74@11155111/deposit?address=0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e&uint32=0&bytes32=0x8173d75fa7a5fad21de5e9255d2f1b3be8796d94806f11f3eaab73dacead4dfa",
+    "export_text": "LEZ bridge deposit request\n\nNetwork: Sepolia (chain id 11155111)\nVault: 0x8C8b2664De28e5287158db4DB65D448638871b74\nToken: dUSDC (0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e)\nAmount: 100 dUSDC (deposit fee 0)\nCommitment: 0x8173d75fa7a5fad21de5e9255d2f1b3be8796d94806f11f3eaab73dacead4dfa\n\nStep 1: Approve the vault to take 100 dUSDC\n  to: 0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e\n  value (wei): 0\n  data: 0x095ea7b30000000000000000000000008c8b2664de28e5287158db4db65d448638871b740000000000000000000000000000000000000000000000000000000005f5e100\nStep 2: Deposit 100 dUSDC into the vault\n  to: 0x8C8b2664De28e5287158db4DB65D448638871b74\n  value (wei): 0\n  data: 0x07e8d10c000000000000000000000000ac207b9bfebf3ef7c26297ea6abadeeccc4aa71e00000000000000000000000000000000000000000000000000000000000000008173d75fa7a5fad21de5e9255d2f1b3be8796d94806f11f3eaab73dacead4dfa\n\nThe commitment does not reveal which LEZ account receives the deposit. Keep this computer's bridge data backed up: the secret that claims this deposit is stored only here.\n",
+    "privacy": {
+      "always_public": [
+        {
+          "item": "Token and amount",
+          "where": "both chains",
+          "why": "Amounts are fixed denominations, so they say little when other people move the same amount. The fewer such moves, the less they hide."
+        },
+        {
+          "item": "Timing",
+          "where": "both chains",
+          "why": "When you deposit, claim, burn and release is visible. Spreading the steps out is the protection."
+        },
+        {
+          "item": "Your Ethereum address and the deposit",
+          "where": "Ethereum",
+          "why": "A deposit is an ordinary token transfer from your address. The commitment it carries reveals nothing about your LEZ account."
+        },
+        {
+          "item": "Your network address",
+          "where": "the RPC and sequencer you use",
+          "why": "Outside the bridge's protection. Use endpoints you trust, or your own."
+        }
+      ],
+      "confirmed": false,
+      "flow": "deposit",
+      "headline": "Private. Only the amount, the token and the timing are public.",
+      "level": "private",
+      "notes": [],
+      "on_chain_error_text": "If a claim is refused on chain, the only message anyone sees is \"claim refused\": it never says which deposit. The detailed reason shown here is worked out on this computer and is not sent.",
+      "overrides": [
+        {
+          "chosen": false,
+          "key": "public_account",
+          "leaks": "A claim into a public account publishes the deposit's secret, which ties your Ethereum deposit (and the address that paid for it) to this LEZ account for good. A burn from a public account shows which account burned. Neither can be undone.",
+          "needs_confirmation": true,
+          "title": "Use a public account",
+          "who": "anyone reading either chain"
+        },
+        {
+          "chosen": false,
+          "key": "all_at_once",
+          "leaks": "Several deposits sent together, then claimed together, form a pattern (count, amounts, timing) that stands out from other people's deposits even though each piece is a standard amount.",
+          "needs_confirmation": true,
+          "title": "Deposit every piece at the same time",
+          "who": "anyone reading the vault's deposits"
+        },
+        {
+          "chosen": false,
+          "key": "odd_amount",
+          "leaks": "The bridge only moves standard amounts. Anything left over stays where it is; sending it some other way would fingerprint you.",
+          "needs_confirmation": true,
+          "title": "Keep an amount that is not a standard denomination",
+          "who": "anyone reading amounts"
+        }
+      ],
+      "requires_confirmation": false,
+      "stays_private": [
+        "Which LEZ account the deposit is for",
+        "The deposit's secret (it never leaves this computer)"
+      ],
+      "weakened_by": []
+    },
+    "qr": {
+      "rows": [
+        "111111100101110101010010110101100001000110110111001111111",
+        "100000100110101101011100011100001100111101010101001000001",
+        "101110101010010001001110110101101001010010001111001011101",
+        "101110101110001001111101010001110100100101110101001011101",
+        "101110101100001010101010101111101100110000100001001011101",
+        "100000101101100100000010111000110011101101001010001000001",
+        "111111101010101010101010101010101010101010101010101111111",
+        "000000001110001001011110111000101001010110101110000000000",
+        "101111100111111011001011001111110000110001010111001111100",
+        "000100001110001111010100110101110001110001110100110000011",
+        "000101101100111001110100110001010111111100000011111001100",
+        "111010010001011010011001110101111100000111111101010111101",
+        "101110110110011000110101101011000111101000000101001000110",
+        "111000011010001100010000100110110101010100111100110111101",
+        "001100110101111000110111110011000010101001010010001100010",
+        "101101001010101010010010100011101010010100111001100011111",
+        "001010101101010111111010010101110011111000000010101100001",
+        "010111000001001111000111100000101001110100101001110011101",
+        "010110100111110101101011101001000110101001000100101001110",
+        "101101011101010101110110100010111100010110111101100010101",
+        "111001101100011111101011011001100011111001100101010001000",
+        "001000000111000000011010101110110001100000110000110001101",
+        "011110101110110001010011000000110101111101010011101001100",
+        "011110000111101101111100110011101101010111111101010011100",
+        "101010111011110101011011000100110111110001000101001101000",
+        "101101010001001100101110101001100101100111111100100000111",
+        "001111111011000110010100001111110010011000000010111111000",
+        "001010001000011111001000111000111101000101111100100010101",
+        "101010101001100110011111001010100000100000100101101011000",
+        "101110001100101101001100111000110001110110110000100010111",
+        "000111111111110000100100111111110111101001000011111110000",
+        "011110000101010101101101100010001110000110111101111111100",
+        "110110100100000000100100101100110101110001000000100110001",
+        "100011010101011011111011000001010101110011110101111000100",
+        "101110111111000001010100010101100010100010000010100100011",
+        "011000010101101111100001011001011100000010111100011001100",
+        "001001100100111101000011011000110001110100000010010111000",
+        "011000000000001110100010110101100000000110101100000000001",
+        "001110111011110010100110001001110111111001010010000000110",
+        "011011001111001111111101100100011100100110111111111000111",
+        "111110101111100000100011011010000011111001100100010011000",
+        "100010000000100110011000100101110101110000110101010101111",
+        "110110111110001111010110110110100011101101000010110100100",
+        "001111011110111011001001101101001100000111100001011111110",
+        "000011111010010111000011000111010001101001110110000110011",
+        "011101011001100011011100101100000001000001100000001000001",
+        "101001100111101111011101011001010110111000101110000100110",
+        "111110011000010000101000110000101000011011111111111110111",
+        "000000111111001000011110111111110101111101000100111111010",
+        "000000001110100011101111111000100100110000101101100011111",
+        "111111100010010111001001101010110010011101010010101010000",
+        "100000101010011011111101101000100000010111111100100011100",
+        "101110101110000011011101111111110011100101100001111110010",
+        "101110101101111010001100111010100100110001100101000010000",
+        "101110101001001000000111100100010011101100001010111101100",
+        "100000100001111111000010101010101000010011111101010011100",
+        "111111101101111011011010010101010101110100000110101001010"
+      ],
+      "size": 57,
+      "text": "ethereum:0x8C8b2664De28e5287158db4DB65D448638871b74@11155111/deposit?address=0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e&uint32=0&bytes32=0x8173d75fa7a5fad21de5e9255d2f1b3be8796d94806f11f3eaab73dacead4dfa"
+    },
+    "send_in_basecamp": {
+      "available": false,
+      "reason": "Sending from Basecamp comes with the Logos Ethereum module. Until then, send these steps from any Ethereum wallet."
+    },
+    "steps": [
+      {
+        "data": "0x095ea7b30000000000000000000000008c8b2664de28e5287158db4db65d448638871b740000000000000000000000000000000000000000000000000000000005f5e100",
+        "step": "approve",
+        "text": "Approve the vault to take 100 dUSDC",
+        "to": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e",
+        "value": "0"
+      },
+      {
+        "data": "0x07e8d10c000000000000000000000000ac207b9bfebf3ef7c26297ea6abadeeccc4aa71e00000000000000000000000000000000000000000000000000000000000000008173d75fa7a5fad21de5e9255d2f1b3be8796d94806f11f3eaab73dacead4dfa",
+        "step": "deposit",
+        "text": "Deposit 100 dUSDC into the vault",
+        "to": "0x8C8b2664De28e5287158db4DB65D448638871b74",
+        "value": "0"
+      }
+    ],
+    "symbol": "dUSDC",
+    "total": "100000000",
+    "total_text": "100",
+    "vault": "0x8C8b2664De28e5287158db4DB65D448638871b74"
+  }
+}

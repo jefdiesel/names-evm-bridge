@@ -1,0 +1,68 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "can_cancel": false,
+    "can_pause": false,
+    "can_resume": false,
+    "cancel_requested": false,
+    "dry_run": true,
+    "dry_run_forced": "Sends are off in this build: this ran as a dry run (simulated, nothing proven or sent). Proving needs the memory guard set up and a CLI that reads secrets from a file.",
+    "elapsed_s": 0,
+    "error": null,
+    "exit": 0,
+    "finished": 1794576624173,
+    "guarded": false,
+    "id": "claim-1794576623852",
+    "kind": "claim",
+    "log_tail": "root 0xbe1e080d85207b6b7832392daf38ce65347cabe7902bed16e3251ee03a21d3e8\nrecipient B8UnZGJdFP3dtvUFeXsp8NTySWBY2qU8FwDK4oari3wT (one-time address of 2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC; the opening stays on this machine)\nsponsor 20000000 from the bridge float (float 80000000)\nisDepositRoot[root] slot 0x8a4947a6b1393817e081b66486230d161aecbd58de58c26d7a3e0c69dff781cd value 0x0000000000000000000000000000000000000000000000000000000000000001\npre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000\nDry run: nothing proven or sent\n  public cycles:  81568\n  base fees:      exec 8 / stor 8 (height 5383)\n  fee at head:    5723160\n  headroom:       5 blocks, up to exec 13 / stor 13 (9300135)\n  reserve:        9300135 (surplus refunded)\n  fee payer:      2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC\n  claims:         0 pending credit(s), 0 to the payer\n  refund to:      the payer's alias\ndry run: simulated in 139.4ms; nothing proven or sent",
+    "meta": {
+      "denom": "100000000",
+      "deposit": "dep-188c6f3a5a40",
+      "dry_run_forced": "Sends are off in this build: this ran as a dry run (simulated, nothing proven or sent). Proving needs the memory guard set up and a CLI that reads secrets from a file.",
+      "privacy": "private",
+      "symbol": "dUSDC"
+    },
+    "paused_ms": 0,
+    "paused_since": null,
+    "peak_estimate_mb": 9403,
+    "peak_rss_mb": 9,
+    "pgid": 10414,
+    "phase": "done",
+    "phase_elapsed_s": 0,
+    "phases": [
+      {
+        "at": 1794576623852,
+        "phase": "fetch"
+      },
+      {
+        "at": 1794576624159,
+        "phase": "simulate"
+      },
+      {
+        "at": 1794576624173,
+        "phase": "done"
+      }
+    ],
+    "prove_estimate_s": 671,
+    "result": {
+      "dry_run": true,
+      "fee_at_head": "5723160",
+      "fee_payer": "2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC",
+      "float": "80000000",
+      "precheck": true,
+      "public_cycles": 81568,
+      "recipient": "B8UnZGJdFP3dtvUFeXsp8NTySWBY2qU8FwDK4oari3wT",
+      "recipient_kind": "one_time",
+      "reserve": "9300135",
+      "root": "0xbe1e080d85207b6b7832392daf38ce65347cabe7902bed16e3251ee03a21d3e8",
+      "simulated_in": "139.4ms",
+      "sponsor": "20000000"
+    },
+    "started": 1794576623852,
+    "state": "done",
+    "step": 0,
+    "steps": 1,
+    "subject": "dep-188c6f3a5a40"
+  }
+}

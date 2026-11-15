@@ -1,0 +1,28 @@
+[package]
+name = "bridge_client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "RFP-022 bridge client logic: seed-derived secrets, deposit requests, the recovery scan"
+
+# Pure logic: no network, no wallet. The CLI (`lez-bridge`) supplies the chain sources through
+# the traits in `chain.rs`. Every dependency below is already in the workspace lock.
+[dependencies]
+bridge_core.workspace = true
+lee_core.workspace = true
+hmac = "0.12"
+sha2 = "0.10"
+sha3 = "0.10"
+k256 = { version = "0.13.4", default-features = false, features = ["arithmetic"] }
+zeroize = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+proptest = "1.12"
+borsh.workspace = true
+# The bridge's whole-transaction simulator (`bridge/tests/common`, included by path) needs these.
+bridge_token_core.workspace = true
+eth_attest.workspace = true
+eth_attest_core = { workspace = true, features = ["testkit"] }
+lee_core = { workspace = true, features = ["host"] }

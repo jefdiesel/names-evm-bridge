@@ -1,0 +1,156 @@
+# Fixture for scripts/check-versions.test.mjs: an aligned tree (no FAIL, no WARN).
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+schema = 1
+builds_for = "next"
+live = "v1"
+
+[lez.rc3]
+tag = { v = "v0.4.0-rc3", src = "fixture" }
+commit = { v = "bafd07be0701398f9bc435f73ab05e9a7936c301", src = "fixture" }
+
+[[recursion]]
+version = "4.0.4"
+control_root = "a54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56"
+bn254_control_id = "c07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404"
+src = "fixture"
+
+[[recursion]]
+version = "4.1.0"
+control_root = "e6feef13db7aed4a731c7b0852de1f5c89b137726073f625d05333184d3a551d"
+bn254_control_id = "de81d091ba14062acb5023b3b36deee95624e3fd47475cb7ff64aed5f9eac20a"
+src = "fixture"
+
+[[prover]]
+risc0_zkvm = "3.0.5"
+risc0_circuit_recursion = ["4.0.4"]
+risc0_groth16 = ["3.0.4"]
+selector = "0x73c457ba"
+src = "fixture"
+
+[[prover]]
+risc0_zkvm = "3.1.0"
+risc0_circuit_recursion = ["4.1.0"]
+risc0_groth16 = ["3.0.6"]
+selector = "0xe71e6620"
+src = "fixture"
+
+[[known_bad]]
+id = "GHSA-g6qg-9j8p-7j87"
+kind = "crate"
+crate = "risc0-zkvm"
+below = "3.1.0"
+roles = ["eth_provers"]
+src = "fixture"
+
+[[known_bad]]
+id = "GHSA-mm6c-35cm-g4x2"
+kind = "verifier"
+below = "3.1.0"
+src = "fixture"
+
+[deployments.v1]
+label = "fixture v1"
+status = "deployed"
+lez = "rc3"
+chain_id = 11155111
+web_id = "demo-v1"
+vault = { v = "0x26af59855b99a8af199361289A5Ed6088729E60E", src = "fixture" }
+vault_create_block = { v = 12134824, src = "fixture" }
+cfg_id = { v = "0x9a37708a79334bbce6946e4dab4d9f6530538e867fcec10083b05b7d19f20d15", src = "fixture" }
+program_id = { v = "0x363397603aee2f10bc26aad792cd96692e8bda7faa7c952879564513c822e5af", src = "fixture" }
+desk = { v = "0x6b7F38D05751b1ed432a0A0d377A63cFB8c4DBc5", src = "fixture" }
+update_image = { v = "0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017", elf_sha256 = "", src = "fixture" }
+release_image = { v = "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4", elf_sha256 = "", src = "fixture" }
+genesis_g2_state = { v = "0xc3fb14d600000000000000000000000000000000000000000000000000c373e7", src = "fixture" }
+
+[deployments.v1.verifier]
+kind = "risc0-groth16"
+address = { v = "0x8c915b5071206C6E328BC18529586c513408aB3b", src = "fixture" }
+version = { v = "3.1.0", src = "fixture" }
+selector = { v = "0xe71e6620", src = "fixture" }
+control_root = { v = "e6feef13db7aed4a731c7b0852de1f5c89b137726073f625d05333184d3a551d", src = "fixture" }
+bn254_control_id = { v = "de81d091ba14062acb5023b3b36deee95624e3fd47475cb7ff64aed5f9eac20a", src = "fixture" }
+
+[[deployments.v1.lez_side]]
+name = "public"
+module_entry = "demo-v1-public"
+bridge_program = { v = "4eaeK3yiqATXhpCEYEFMMtjUn1bS7HLxPwfrH31mXCvr", src = "fixture" }
+token_program = { v = "5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7", src = "fixture" }
+
+[deployments.v1.roles.lez_chain]
+risc0_zkvm = { v = "3.0.5", src = "fixture" }
+risc0_circuit_recursion = { v = "4.0.4", src = "fixture" }
+
+[deployments.v1.roles.eth_provers]
+risc0_zkvm = { v = "3.1.0", src = "fixture" }
+risc0_circuit_recursion = { v = "4.1.0", src = "fixture" }
+risc0_groth16 = { v = "3.0.6", src = "fixture" }
+
+[deployments.next]
+label = "fixture next"
+status = "planned"
+lez = "rc3"
+chain_id = 11155111
+web_id = ""
+vault = { v = "", src = "not deployed" }
+genesis_g2_state = { v = "", src = "not deployed" }
+
+[deployments.next.verifier]
+kind = "risc0-groth16"
+address = { v = "0x8c915b5071206C6E328BC18529586c513408aB3b", src = "fixture" }
+version = { v = "3.1.0", src = "fixture" }
+selector = { v = "0xe71e6620", src = "fixture" }
+control_root = { v = "e6feef13db7aed4a731c7b0852de1f5c89b137726073f625d05333184d3a551d", src = "fixture" }
+bn254_control_id = { v = "de81d091ba14062acb5023b3b36deee95624e3fd47475cb7ff64aed5f9eac20a", src = "fixture" }
+
+[deployments.next.roles.lez_chain]
+risc0_zkvm = { v = "3.0.5", src = "fixture" }
+risc0_circuit_recursion = { v = "4.0.4", src = "fixture" }
+
+[deployments.next.roles.lez_host]
+risc0_zkvm = { v = "3.0.5", src = "fixture" }
+
+[deployments.next.roles.eth_guests]
+risc0_zkvm = { v = "3.1.0", src = "fixture" }
+
+[deployments.next.roles.eth_provers]
+risc0_zkvm = { v = "3.1.0", src = "fixture" }
+risc0_circuit_recursion = { v = "4.1.0", src = "fixture" }
+risc0_groth16 = { v = "3.0.6", src = "fixture" }
+risc0_build = { v = "3.0.7", src = "fixture" }
+
+[[workspace]]
+path = "ws/host"
+roles = ["eth_provers"]
+
+[[workspace]]
+path = "ws/cli"
+roles = ["lez_host"]
+
+[[workspace]]
+path = "ws/guest"
+roles = ["eth_guests"]
+
+[[workspace]]
+path = "ws/private-tool"
+roles = ["research"]
+private = true
+
+[[pin]]
+file = "docs/DEPLOYMENTS.md"
+section = "## Demo vault v1"
+re = '\| `updateImageId\(\)` \| `([0-9a-fx…]+)`'
+value = "deployments.v1.update_image"
+
+[[pin]]
+file = "docs/DEPLOYMENTS.md"
+section = "## Demo vault v1"
+re = '\| `releaseImageId\(\)` \| `(0x[0-9a-f]{64})`'
+value = "deployments.v1.release_image"
+
+[[pin]]
+file = "docs/private-notes.md"
+re = 'image (0x[0-9a-f]+)'
+value = "deployments.v1.update_image"
+private = true

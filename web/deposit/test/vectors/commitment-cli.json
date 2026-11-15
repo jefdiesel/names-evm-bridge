@@ -1,0 +1,45 @@
+{
+ "about": "Deposit commitments computed by the real bridge CLI on the test machine, 2026-11-13: `lez-bridge commitment --secret <k> --dest <dest> --eth-token <token> --denom <denom> --cfg-id <cfgId>` (binary <local path> built 2026-11-12 21:09). s is a throwaway random master secret; k = SHA-256(\"RFP022/ck\" || s), computed outside the CLI. The CLI refuses a Private/ or Public/ prefix on --dest (bare base58 only). No secret here was ever used for a deposit.",
+ "cases": [
+  {
+   "name": "ETH 10000000000000000 to public (demo P2)",
+   "s": "0xdf478384dafefaf60ff0bd972297df4c564e06ea2a54fed64fd054e7d7981d45",
+   "k": "0x4fa0e4349c04f89c0ded6216b9b5c41039788e82664a73d109941ea3aac576c4",
+   "dest": "6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f",
+   "token": "0x0000000000000000000000000000000000000000",
+   "denom": "10000000000000000",
+   "cfgId": "0x7f1ab05e910781ef1c6bd7747b8221372377dc785bc09e303e687d2d4f284b11",
+   "commitment": "0x1bf9c92fc94bb6676a9a25ea41f92205113db1550b41ea7710c1e14bf0f7e219"
+  },
+  {
+   "name": "dUSDC 100000000 to private (demo V2)",
+   "s": "0xf3d22a29135f6be049bcacf2818a084cfbc1a72b168b3630a89dc9e2c2cabff6",
+   "k": "0x6afab832c0057f1d38810cdb408258ef0e50c4f8a3fec8bce064cb5bcb278bd9",
+   "dest": "2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC",
+   "token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+   "denom": "100000000",
+   "cfgId": "0x7f1ab05e910781ef1c6bd7747b8221372377dc785bc09e303e687d2d4f284b11",
+   "commitment": "0x943cdcb65eee31a343f2511c69c7af1fe750af58bde3153cd66f2500a34b9f51"
+  },
+  {
+   "name": "ETH 1000000000000000000 to random throwaway",
+   "s": "0x9eb695ffb10dcb16a948d9123968a6637d0de0fd4d717570911a968abc698511",
+   "k": "0x74be25d1e01c6a34e43ab1469979d78ceaa0b4d1fb2860021b234c7f9ffc106a",
+   "dest": "BH4tVTxCbAn625tnYavXsHaqmJTdW2BrfziTDXzRhjrP",
+   "token": "0x0000000000000000000000000000000000000000",
+   "denom": "1000000000000000000",
+   "cfgId": "0x7f1ab05e910781ef1c6bd7747b8221372377dc785bc09e303e687d2d4f284b11",
+   "commitment": "0x0b842b902efedc2234cbca03e9b0f9c0979223de13c954ff164cc72497b325e3"
+  },
+  {
+   "name": "dUSDC 10000000000 to leading zero byte",
+   "s": "0x5880b0e1411f08388aea0119f103e1d2303dd24ba267308d42ccf2e272da9dce",
+   "k": "0x74771374f0a8c5e4056cd86ce94e1979315f5bd61c73dc8670c8875afa254174",
+   "dest": "1qPdKACmX4iL7wVg9ReqVLvVhfS5NH4AyutAiE5yVia",
+   "token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+   "denom": "10000000000",
+   "cfgId": "0x7f1ab05e910781ef1c6bd7747b8221372377dc785bc09e303e687d2d4f284b11",
+   "commitment": "0x1c93bb9a855e92b4e87e19998e796e3067c3b8329d110cef65c81b424ea79d30"
+  }
+ ]
+}

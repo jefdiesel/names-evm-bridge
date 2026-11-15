@@ -1,0 +1,47 @@
+{
+  "_about": "The v4 entries for the two deployment lists, with <<V4:KEY>> placeholders that public-demo/v4/apply-v4-entries.py fills from the bring-up's v4.env (V4-PLAN step C1). Never copy this file into a list by hand: the apply script refuses a missing, malformed or leftover value, and web/deposit/test/deployments.test.mjs refuses any '<<V4:' in a build.",
+  "module": {
+    "name": "bridge-test-network-v4",
+    "label": "Sepolia vault v4 (proof-checked) → bridge test network (LEZ 0.4)",
+    "network": "LEZ 0.4 · bridge test network",
+    "chain_id": 11155111,
+    "vault": "<<V4:VAULT>>",
+    "vault_create_block": "<<V4:VAULT_CREATE_BLOCK>>",
+    "desk": "<<V4:DESK>>",
+    "cfg_id": "<<V4:CFG_ID>>",
+    "bridge_program": "<<V4:BP4>>",
+    "token_program": "<<V4:TP>>",
+    "lez_rpc": "https://lez.nameswallet.app/",
+    "relay": "rpc",
+    "attest_program": "",
+    "attest_instance": "",
+    "tokens": [
+      { "eth_token": "0x0000000000000000000000000000000000000000", "symbol": "ETH", "decimals": 18, "definition": "<<V4:DEF_ETH>>" },
+      { "eth_token": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e", "symbol": "dUSDC", "decimals": 6, "definition": "<<V4:DEF_USDC>>" }
+    ],
+    "notes": [
+      "Sepolia is an Ethereum test network: its coins have no value. Deposits are claimed on the bridge test network (LEZ 0.4), the team's own chain.",
+      "Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.",
+      "Which bridge test network blocks count is the bridge operator's word until a finality proof for that chain exists; the vault's caps and a one-hour delay bound a wrong update.",
+      "The bridge's relay pays a public claim's fee: the account needs no LEZ.",
+      "v4 vault: RISC Zero's Groth16 verifier 3.1.0 checks every update and release proof (gate <<V4:GATE>>; updates only from its submitter); deposit desk at 30 bps."
+    ],
+    "release": "proof",
+    "release_note": "Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.",
+    "release_detail": "How: RISC Zero's verifier on Sepolia checks every update and release proof. Which bridge test network blocks count is the bridge operator's word until a finality proof for that chain exists; the vault's caps and a one-hour delay bound a wrong update."
+  },
+  "page": {
+    "const": "SEPOLIA_V4",
+    "id": "sepolia-v4",
+    "label": "Sepolia vault v4",
+    "chainId": 11155111,
+    "vault": "<<V4:VAULT>>",
+    "deployBlock": "<<V4:VAULT_CREATE_BLOCK>>",
+    "cfgId": "<<V4:CFG_ID>>",
+    "desk": "<<V4:DESK>>",
+    "demo": true,
+    "demoAccount": null,
+    "demoNote": "How: RISC Zero’s verifier on Sepolia checks every update and release proof. Which bridge test network blocks count is the bridge operator’s word until a finality proof for that chain exists; the vault’s caps and a one-hour delay bound a wrong update. Test coins only.",
+    "demoShort": "Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits."
+  }
+}

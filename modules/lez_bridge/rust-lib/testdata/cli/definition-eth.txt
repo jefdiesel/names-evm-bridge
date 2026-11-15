@@ -1,0 +1,3 @@
+name Wrapped ETH (Sepolia demo v2)
+supply 0
+authority Some(JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7)

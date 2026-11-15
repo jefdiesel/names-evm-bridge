@@ -1,0 +1,39 @@
+== 2026-11-13 18:33:45 live loopback test: proxy 127.0.0.1:3295 -> sequencer 127.0.0.1:3290
+listeners: sequencer 127.0.0.1:3291; sequencer 127.0.0.1:3290; Python 127.0.0.1:3295; 
+getLastBlockId                       want 200 got 200  PASS
+getChannelId                         want 200 got 200  PASS
+requeueCrossZoneDeadLetter           want 403 got 403  PASS
+getCrossZoneDeadLetters              want 403 got 403  PASS
+rpc.discover                         want 403 got 403  PASS
+batch of two                         want 400 got 400  PASS
+getBlockRange span 100               want 200 got 200  PASS
+getBlockRange span 101               want 400 got 400  PASS
+wrong content type                   want 415 got 415  PASS
+getAccount 20 KB body                want 413 got 413  PASS
+sendTransaction 800 KB               want 413 got 413  PASS
+GET /                                want 405 got 405  PASS
+GET /healthz (loopback)              want 200 got 200  PASS
+GET /healthz via tunnel hdr          want 405 got 405  PASS
+WebSocket upgrade                    want 400 got 400  PASS
+-- the real CLI through the proxy (reads only)
+lez-bridge show via proxy rc         want 0 got 0  PASS
+    cfg_id 0x7f1ab05e910781ef1c6bd7747b8221372377dc785bc09e303e687d2d4f284b11
+    vault 0x8c8b2664de28e5287158db4db65d448638871b74
+    chain 11155111
+    lez_chain_id 0x0000000000000000000000000000000000000000000000000000000000000000
+    zone_id 0x0000000000000000000000000000000000000000000000000000000000000000
+    admin BVDcg8SbSdCTKzx4mJbSpVgEuaoPEMhxmmRwvVCGyBnD
+    freezer BVDcg8SbSdCTKzx4mJbSpVgEuaoPEMhxmmRwvVCGyBnD
+    attestor BVDcg8SbSdCTKzx4mJbSpVgEuaoPEMhxmmRwvVCGyBnD
+    mint_frozen false
+    burn_frozen false
+    root_source stand-in
+    sponsor_amount 25000000
+    float 100000000000
+    token 0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e def EgLorBTz2c2Jez3KXLZ78LsQrkFcjvux9PZb5F2EgexY denoms [100000000, 1000000000, 10000000000] claims [0, 0, 0] burns [0, 0, 0] claimed_value 0 burned_value 0 registered true mint_frozen false burn_frozen false
+    token 0x0000000000000000000000000000000000000000 def AuyvsTwpPsbfisc8DCHkhpWLwQg7iG13n4VNBsf3UAwJ denoms [10000000000000000, 100000000000000000, 1000000000000000000] claims [0, 0, 0] burns [0, 0, 0] claimed_value 0 burned_value 0 registered true mint_frozen false burn_frozen false
+cfg_id = Sepolia v2 vault cfgId: PASS
+-- rate limits, one client (CF-Connecting-IP 198.51.100.7)
+one client, 100 back-to-back reads: {200: 60, 429: 40} PASS
+healthz: {"ok": true, "height": 23, "counters": {"healthz 200": 1, "getLastBlockId 200": 1, "getChannelId 200": 1, "requeueCrossZoneDeadLetter 403": 1, "getCrossZoneDeadLetters 403": 1, "other 403": 1, "- 400": 1, "getBlockRange 200": 1, "getBlockRange 400": 1, "- 415": 1, "getAccount 413": 1, "- 413": 1, "- 405": 1}}
+ALL PASS

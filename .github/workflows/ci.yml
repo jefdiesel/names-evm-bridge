@@ -1,0 +1,96 @@
+name: CI
+
+# Repository-root workflow. GitHub only reads .github/ at the repository root, so
+# vault/.github/workflows/test.yml (left over from `forge init`) never runs; this file replaces it.
+# The public copy uses this same file: scripts/export-public.sh copies it unchanged.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scripts:
+    name: Shell scripts (no early-exit reader of command output)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: lez-bridge/scripts/test-pipe-readers.sh
+
+  # VERSIONS.toml against every Cargo.lock/Cargo.toml, the deployment registries, the pinned
+  # values in docs and scripts, and its own records (selector vs verifier, control roots, known-bad
+  # versions, genesis G2 state). Offline; the on-chain mode (--onchain) runs before a deploy.
+  versions:
+    name: Version alignment (scripts/check-versions.mjs, offline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --version
+      - run: node --test scripts/check-versions.test.mjs
+      - run: node scripts/check-versions.mjs
+
+  vault:
+    name: Vault (forge build --sizes, forge test)
+    runs-on: ubuntu-latest
+    env:
+      # foundry.toml [profile.ci]: 1024 fuzz runs, 256 invariant runs x depth 128
+      FOUNDRY_PROFILE: ci
+    defaults:
+      run:
+        working-directory: vault
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - name: Install Foundry (pinned)
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.5.1
+      - run: forge --version
+      # fails if any non-test contract exceeds EIP-170 (BridgeVault is ~22.7 KB)
+      - run: forge build --sizes
+      - run: forge test -vv
+
+  # LEZ v0.4.0-rc3 (bafd07be): the tag is pinned in lez-bridge/Cargo.toml and in the tracked locks
+  # lez-bridge/Cargo.lock (since 2026-11-14: the one the passing judge-demo run resolved) and
+  # lez-bridge/release/Cargo.lock.
+  lez-programs:
+    name: LEZ programs on LEZ v0.4.0-rc3 (cargo test, no zkVM guest build)
+    runs-on: ubuntu-latest
+    env:
+      # None of the crates tested here embeds a guest; this keeps any risc0-build step from
+      # needing the RISC Zero toolchain.
+      RISC0_SKIP_BUILD: "1"
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Rust toolchain from lez-bridge/rust-toolchain.toml
+        working-directory: lez-bridge
+        run: |
+          rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
+          rustc --version
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            lez-bridge
+            lez-bridge/release
+      - name: Token, bridge and attestation programs (native, LEZ simulator)
+        working-directory: lez-bridge
+        run: cargo test -j 4 -p bridge_token_core -p bridge_core -p eth_attest_core -p eth_attest -p eth_attest_probe --no-fail-fast
+      # Seed-derived secrets (v1 and the Names Wallet app scheme), deposit requests, the recovery scan.
+      - name: Bridge client (KDF vectors, recovery scan)
+        working-directory: lez-bridge
+        run: cargo test -j 4 -p bridge_client --no-fail-fast
+      - name: Release statement (release_core, native)
+        working-directory: lez-bridge/release
+        run: cargo test -j 4 -p release_core

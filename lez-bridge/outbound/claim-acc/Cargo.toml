@@ -1,0 +1,15 @@
+[package]
+name = "claim_acc"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# The claim-nullifier accumulator: an indexed Merkle tree (depth 32, SHA-256, the vault's zero
+# hashes). G2 inserts every claim nullifier with a witness; a future reclaim (failsafe) guest
+# proves non-membership against the root G2 committed. No LEZ or bridge dependency, so both
+# guests can share it.
+[dependencies]
+# Caret, not "=": the guests pin =3.0.5 in their own locks; the provers (outbound/release hosts) resolve
+# 3.1.0 (RISC Zero advisory GHSA-g6qg-9j8p-7j87: receipts for the 3.1.0 verifier need risc0-zkvm 3.1.0).
+risc0-zkvm = { version = "3.0.5", default-features = false, features = ["std"] }
+borsh = { version = "1.5.7", features = ["derive"] }

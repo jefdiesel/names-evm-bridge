@@ -1,0 +1,61 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "cli": "<local path>",
+    "data_dir": "<local path>",
+    "deployment": {
+      "attest_instance": "0x09dd33204d65597cdb66e90f793a4fe3478cbe226a047a77e228b4dcf05ab4de",
+      "attest_program": "4VhxvwLN5n3u3rZbsz2VNFVavLwc1niNvgxq8JJ15veK",
+      "bridge_program": "JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7",
+      "cfg_id": "0x7f1ab05e910781ef1c6bd7747b8221372377dc785bc09e303e687d2d4f284b11",
+      "chain_id": 11155111,
+      "label": "Sepolia demo v2 (local LEZ sequencer)",
+      "name": "sepolia-demo-v2",
+      "notes": [
+        "Demo vault: its update image is a placeholder, so nothing deposited can ever be released on Ethereum.",
+        "The LEZ side is a local sequencer on one machine, not a public network."
+      ],
+      "probe_program": "7VDaNr8MGJrtpGruCJcp9huQz5s4n7VtwN1b1nAsBr5y",
+      "token_program": "4VScJ7mtwaanQ5gcSZZw2iAMHYAbLrVmbYKwEGx2eSex",
+      "tokens": [
+        {
+          "decimals": 6,
+          "definition": "FBqNAwJs9T4eNDw9pQXxXrLZNcnR1sTnnBEYzhudLQZJ",
+          "eth_token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+          "symbol": "dUSDC"
+        },
+        {
+          "decimals": 18,
+          "definition": "CswQqK9jzUHf5sraiM8G9HfgMT2bcJ8GhVpbAA9trwQ6",
+          "eth_token": "0x0000000000000000000000000000000000000000",
+          "symbol": "ETH"
+        }
+      ],
+      "vault": "0x8C8b2664De28e5287158db4DB65D448638871b74",
+      "vault_create_block": 12122976
+    },
+    "eth_proof_rpc": {
+      "11155111": "https://sepolia.rpc.thirdweb.com"
+    },
+    "eth_rpc": {
+      "11155111": "https://ethereum-sepolia-rpc.publicnode.com"
+    },
+    "eth_source": "rpc",
+    "fixtures": null,
+    "lez_network": "local sequencer",
+    "module_version": "0.1.0",
+    "proving": {
+      "enabled": false,
+      "wrapper": []
+    },
+    "ready": {
+      "cli": true,
+      "json_cli": false,
+      "why": null
+    },
+    "sequencer": "http://127.0.0.1:3250",
+    "tmp_dir": "<local path>",
+    "wallet_dir": "<local path>"
+  }
+}

@@ -1,0 +1,20 @@
+block 463: 253961 bytes
+  V              absent
+  OP_operator    absent
+  commitment_V100B absent
+  secret_V100B   absent
+  secret_V100A   absent
+  secret_V1000   absent
+  secret_VETH    absent
+  A_one_time     FOUND as-is@1071
+block 950: 256299 bytes
+  V              absent
+  OP_operator    absent
+  commitment_V100B absent
+  secret_V100B   absent
+  secret_V100A   absent
+  secret_V1000   absent
+  secret_VETH    absent
+  A_one_time     absent
+positive control: the one-time address is in the claim block (the search works)
+searched 952 of 952 blocks 1..952: 0 hit(s), 0 read failure(s)

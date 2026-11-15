@@ -1,0 +1,16 @@
+deposit leaf 3 of 8
+root 0x974637da889e23dab941f44e180c63b715eb258793f4836dc1e9626f5592323f
+claim nullifier 0x520f781cf86f22f8ab3cb193f920f962363ba778c852c097df4a59d65d9d68ed
+recipient 6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f (public claimer)
+isDepositRoot[root] slot 0xbaa61165dd5345265ebf5e63223e2d8e5cea47db6afcb8398f7df0265be212a8 value 0x0000000000000000000000000000000000000000000000000000000000000001
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+Dry run: nothing sent
+  fee payer:        6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f
+  declared gas:     499428
+  metered cycles:   399542
+  wire bytes:       7373
+  base fees:        exec 8 / stor 8 (height 950)
+  fee at head:      3255320 (tip 0)
+  reserve at head:  4054408 (max fee 6588413)
+  action:           applies
+dry run: simulated in 234.1ms; nothing proven or sent

@@ -1,0 +1,19 @@
+[package]
+name = "bridge_core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+borsh.workspace = true
+bridge_token_core.workspace = true
+# RFP-021 consumer library only (statements, inclusion, AssertAnchor); no BLS, no Helios.
+eth_attest_core.workspace = true
+lee_core.workspace = true
+risc0-zkvm.workspace = true
+
+[dev-dependencies]
+lee_core = { workspace = true, features = ["host"] }
+# The real attestation program, so the attest-path tests deliver AssertAnchor to its code.
+eth_attest.workspace = true
+eth_attest_core = { workspace = true, features = ["testkit"] }

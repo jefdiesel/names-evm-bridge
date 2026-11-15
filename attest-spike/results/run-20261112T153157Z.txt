@@ -1,0 +1,182 @@
+# native Helios 0.12.0 (host) on the same inputs
+  native probe (upstream bls12_381): off-subgroup G2 point: torsion_free=false, Helios check (q*r==O)=true, from_compressed rejects=true, from_raw(r)==0: true
+  native [sepolia same-period finality]: OK finalized slot 11563424 exec 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1
+  native [sepolia committee handoff]: OK finalized slot 11563424 exec 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1
+== guest A [sepolia same-period finality]  finalized slot 11563424 root 0x74c22adba9b5f1d8e6b014fb41c808a9b6a0995173c87171ed9939eaf13e84f8 exec(block_hash) 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1
+  SESSION sepolia same-period finality: user_cycles=44914925 paging_cycles=1339849 reserved_cycles=1455434 total_cycles=47710208 segments=46 (segment limit 2^20) exec=0.4s
+          346306  bootstrap: SSZ decode
+         8124039  bootstrap: verify_bootstrap (committee root + branch + header root)
+           58855  bootstrap: apply_bootstrap
+            8708  finality: SSZ decode
+        36273554  finality: verify_finality_update
+           31362  finality: apply_finality_update
+           14791  output: finalized header root + execution commitment
+        44857615  (sum of marks)
+== guest A [sepolia committee handoff]  finalized slot 11563424 root 0x74c22adba9b5f1d8e6b014fb41c808a9b6a0995173c87171ed9939eaf13e84f8 exec(block_hash) 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1
+  SESSION sepolia committee handoff: user_cycles=89848330 paging_cycles=2709382 reserved_cycles=2862704 total_cycles=95420416 segments=91 (segment limit 2^20) exec=0.8s
+          346306  bootstrap: SSZ decode
+         8124039  bootstrap: verify_bootstrap (committee root + branch + header root)
+           58855  bootstrap: apply_bootstrap
+          352182  update[0]: SSZ decode
+        44361293  update[0]: verify_update
+          166959  update[0]: apply_update
+            8714  finality: SSZ decode
+        36273562  finality: verify_finality_update
+           78633  finality: apply_finality_update
+           14791  output: finalized header root + execution commitment
+        89785334  (sum of marks)
+== guest A [sepolia same-period finality] +breakdown  finalized slot 11563424 root 0x74c22adba9b5f1d8e6b014fb41c808a9b6a0995173c87171ed9939eaf13e84f8 exec(block_hash) 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1
+  SESSION sepolia same-period finality: user_cycles=327581640 paging_cycles=9533909 reserved_cycles=9963107 total_cycles=347078656 segments=331 (segment limit 2^20) exec=2.9s
+          346306  bootstrap: SSZ decode
+         8124039  bootstrap: verify_bootstrap (committee root + branch + header root)
+           58855  bootstrap: apply_bootstrap
+            8708  finality: SSZ decode
+        36273554  finality: verify_finality_update
+           31362  finality: apply_finality_update
+            4069  bd: GenericUpdate::from (clone; Helios does this inside verify and apply)
+          460669  bd: (setup) copy 512 pubkey byte strings
+         4143619  bd: aggregate pubkey, real bits (3 non-participants): decompress agg + subtract
+        16343936  bd: 16 x G1 decompress incl. subgroup check (divide by 16 for per-key)
+         2813815  bd: (alt) 16 x G1 decompress WITHOUT subgroup check (sqrt only)
+        16349860  bd: (setup) 16 uncompressed witnesses
+           42595  bd: (alt) 16 x G1 from uncompressed witness + on-curve check
+       176473321  bd: aggregate pubkey, worst passing case (342/512 sign, 170 subtracted; cost only)
+           17935  bd: attested header hash_tree_root + fork data / domain / signing root
+         1457401  bd: signature G2 decompress incl. subgroup check
+         8042412  bd: Helios extra G2 subgroup check (sig * r)
+        15118907  bd: probe (in zkVM): off-subgroup G2 point: torsion_free=false, Helios check (q*r==O)=false, from_compressed rejects=true
+         2809931  bd: hash_to_curve to G2 (expand_message_xmd SHA-256 + SSWU + clear cofactor)
+         2403043  bd: G2Prepared x2 (line coefficients)
+         6499114  bd: multi Miller loop, 2 pairs
+        10832740  bd: final exponentiation + compare
+         8013246  bd: SyncCommittee hash_tree_root via tree_hash 0.10 (512 keys + aggregate)
+         1545735  bd: (alt) same SyncCommittee root with direct sha2 calls (1,025 sha256 of 64 bytes)
+         1258676  bd: 1024 x sha256(64 bytes), sha2 0.9 risczero (2 compressions each)
+           14793  output: finalized header root + execution commitment
+         8013259  output: committee roots (bookkeeping, not verification)
+       327501900  (sum of marks)
+  native alloy-trie: account + storage proof OK
+== guest B [sepolia mapping(bytes32=>bool) entry, keccak accelerated] chain 11155111 block 12119519 state_root 0x29752df333b7d6bd4d99219b299ab40b9bd2ca488849dd2344a6085fc287c647 slot 0x4cd52750e4fc393f9bb4ad1efdb4cbe3e9de0379e51dbc148da8c429956e09b5 value 0x0000000000000000000000000000000000000000000000000000000000000001
+  SESSION sepolia mapping(bytes32=>bool) entry, keccak accelerated: user_cycles=261115 paging_cycles=46703 reserved_cycles=216470 total_cycles=524288 segments=1 (segment limit 2^20) exec=0.0s
+           11575  header: keccak256(rlp) == finalized block hash, decode state_root
+            2201  slot key: keccak256(abi.encode(key, N))
+          118163  account proof: 8 nodes (alloy-trie verify_proof)
+           63694  storage proof: 5 nodes (alloy-trie verify_proof)
+          195633  (sum of marks)
+== guest B [same, software keccak (no accelerator)] chain 11155111 block 12119519 state_root 0x29752df333b7d6bd4d99219b299ab40b9bd2ca488849dd2344a6085fc287c647 slot 0x4cd52750e4fc393f9bb4ad1efdb4cbe3e9de0379e51dbc148da8c429956e09b5 value 0x0000000000000000000000000000000000000000000000000000000000000001
+  SESSION same, software keccak (no accelerator): user_cycles=1012489 paging_cycles=71189 reserved_cycles=95970 total_cycles=1179648 segments=2 (segment limit 2^20) exec=0.0s
+           88445  header: keccak256(rlp) == finalized block hash, decode state_root
+           17575  slot key: keccak256(abi.encode(key, N))
+          548614  account proof: 8 nodes (alloy-trie verify_proof)
+          294283  storage proof: 5 nodes (alloy-trie verify_proof)
+          948917  (sum of marks)
+# negative tests (each must panic in the executor for the stated reason)
+
+thread 'main' (1) panicked at src/main.rs:100:29:
+finality update rejected: invalid sync committee signature
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG A: valid G2 signature from another update (wrong message): rejected as expected: Guest panicked: finality update rejected: invalid sync committee signature
+
+thread 'main' (1) panicked at src/main.rs:100:29:
+finality update rejected: invalid sync committee signature
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG A: signature byte flipped: rejected as expected: Guest panicked: finality update rejected: invalid sync committee signature
+
+thread 'main' (1) panicked at src/main.rs:100:29:
+finality update rejected: invalid sync committee signature
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG A: one participation bit cleared (wrong signer set): rejected as expected: Guest panicked: finality update rejected: invalid sync committee signature
+
+thread 'main' (1) panicked at src/main.rs:72:29:
+bootstrap rejected: invalid current sync committee proof
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG A: bootstrap committee pubkey altered (wrong committee): rejected as expected: Guest panicked: bootstrap rejected: invalid current sync committee proof
+
+thread 'main' (1) panicked at src/main.rs:72:29:
+bootstrap rejected: invalid header hash found: 0xf54bd3575c05c7d83ee53dcef9bbfd98720b39e0be93aa9707a22dce8f2225d3, expected: 0xf44bd3575c05c7d83ee53dcef9bbfd98720b39e0be93aa9707a22dce8f2225d3
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG A: wrong trusted checkpoint root: rejected as expected: Guest panicked: bootstrap rejected: invalid header hash found: 0xf54bd3575c05c7d83ee53dcef9bbfd98720b39e0be93aa9707a22dce8f2225d3, expected: 0xf44bd3575c05c7d83ee53dcef9bbfd98720b39e0be93aa9707a22dce8f2225d3
+
+thread 'main' (1) panicked at src/main.rs:100:29:
+finality update rejected: invalid finality proof
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG A: finalized header altered: rejected as expected: Guest panicked: finality update rejected: invalid finality proof
+
+thread 'main' (1) panicked at src/main.rs:100:29:
+finality update rejected: invalid execution payload proof
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG A: finalized execution block hash altered: rejected as expected: Guest panicked: finality update rejected: invalid execution payload proof
+
+thread 'main' (1) panicked at src/main.rs:100:29:
+finality update rejected: invalid sync committee period
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG A: next-period finality update without the handoff update: rejected as expected: Guest panicked: finality update rejected: invalid sync committee period
+
+thread 'main' (1) panicked at src/main.rs:98:29:
+storage proof invalid: value mismatch at path Nibbles(0x3f1f). got: Some(0xe19f207958b27bdb51ba2ac315cd6750a8112c3ba16d827591a3bb2c2864ab080200). expected: Some(0xa0fb9db24e951f9a49d27df82c32df9ef28808636fd4bfad1befd6acd6933f7dc5)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG B: storage proof leaf byte flipped: rejected as expected: Guest panicked: storage proof invalid: value mismatch at path Nibbles(0x3f1f). got: Some(0xe19f207958b27bdb51ba2ac315cd6750a8112c3ba16d827591a3bb2c2864ab080200). expected: Some(0xa0fb9db24e951f9a49d27df82c32df9ef28808636fd4bfad1befd6acd6933f7dc5)
+
+thread 'main' (1) panicked at src/main.rs:98:29:
+storage proof invalid: value mismatch at path Nibbles(0x3f1f7958b27bdb51ba2ac315cd6750a8112c3ba16d827591a3bb2c2864ab0802). got: Some(0x01). expected: Some(0x02)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG B: claimed value 2 instead of 1: rejected as expected: Guest panicked: storage proof invalid: value mismatch at path Nibbles(0x3f1f7958b27bdb51ba2ac315cd6750a8112c3ba16d827591a3bb2c2864ab0802). got: Some(0x01). expected: Some(0x02)
+
+thread 'main' (1) panicked at src/main.rs:98:29:
+storage proof invalid: value mismatch at path Nibbles(0x7). got: Some(0xf90211a0a4cddf7bd3d7c2c05f5de2879028250264b1beab409d56016fa11c89c2c9747ba0e0a6b597a0eb1edf58b71ad4665d36f2b596e7b0da0ff58a63b371c6e7211c64a08b24293989ef15c6720bef0749b765a61067fc4b069e69c89a8eda01a547c298a0061b3ffe7622053d38986179874d0f461caa667396463b693f5c2d03d30efc15a092b8d315b316a45e3242bd2963869027b7bb8725acb03f0cc009f66eee85b7b2a08725b264cc0b1af059d4d644adb5ec8c52c360cc722b78fa5d2ceb656c1deea5a08453b963d3af89a1412e64e538204ba37c4f2c63664fd8f4f85b5bce909fbbc8a0d1c81aa5523482d9bf1e79bd1b324d66192c5e38b299bc09736ce76befa766b3a01bbf2ccbc59c91c8cdf22987919f58006bf875f7aeb73344a64fba43dc23666ba08ac9420e7f61ee810556a70596829c8c13798285910a88e3b8eade651442c341a0ee3a2402728a3cf61b806aad470d9e351426a5b520ea70ba8d49122ebc6a9c52a071989ca9a0aebdf5969d3d6b8bb0759eca5426058331c2f5e93eb26f93057113a07ed3efaaa2ac5559fc0a9a1046c536737c0bd8e32ee1ec560405a2d50dfe665ca082d97b58f521cd94ed63194baa59ec8b3ee2753aa7d48001a5585373062a7e05a08bae69eaef83fb7934f025f4e4d3b362854918a0c8eb569e5da205a7b243b158a0547527c379e8adecaf3822b34bbdae775c77c93eb05bc31394d31329739d6bd880). expected: Some(0xa0986eaadbbf277745e53404d5341a831c26d049edc69500ab7e960f596e513c91)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG B: different mapping key (absent entry claimed true): rejected as expected: Guest panicked: storage proof invalid: value mismatch at path Nibbles(0x7). got: Some(0xf90211a0a4cddf7bd3d7c2c05f5de2879028250264b1beab409d56016fa11c89c2c9747ba0e0a6b597a0eb1edf58b71ad4665d36f2b596e7b0da0ff58a63b371c6e7211c64a08b24293989ef15c6720bef0749b765a61067fc4b069e69c89a8eda01a547c298a0061b3ffe7622053d38986179874d0f461caa667396463b693f5c2d03d30efc15a092b8d315b316a45e3242bd2963869027b7bb8725acb03f0cc009f66eee85b7b2a08725b264cc0b1af059d4d644adb5ec8c52c360cc722b78fa5d2ceb656c1deea5a08453b963d3af89a1412e64e538204ba37c4f2c63664fd8f4f85b5bce909fbbc8a0d1c81aa5523482d9bf1e79bd1b324d66192c5e38b299bc09736ce76befa766b3a01bbf2ccbc59c91c8cdf22987919f58006bf875f7aeb73344a64fba43dc23666ba08ac9420e7f61ee810556a70596829c8c13798285910a88e3b8eade651442c341a0ee3a2402728a3cf61b806aad470d9e351426a5b520ea70ba8d49122ebc6a9c52a071989ca9a0aebdf5969d3d6b8bb0759eca5426058331c2f5e93eb26f93057113a07ed3efaaa2ac5559fc0a9a1046c536737c0bd8e32ee1ec560405a2d50dfe665ca082d97b58f521cd94ed63194baa59ec8b3ee2753aa7d48001a5585373062a7e05a08bae69eaef83fb7934f025f4e4d3b362854918a0c8eb569e5da205a7b243b158a0547527c379e8adecaf3822b34bbdae775c77c93eb05bc31394d31329739d6bd880). expected: Some(0xa0986eaadbbf277745e53404d5341a831c26d049edc69500ab7e960f596e513c91)
+
+thread 'main' (1) panicked at src/main.rs:91:29:
+account proof invalid: value mismatch at path Nibbles(0xfec8bd3e7d10091d417400460494d39ec46c9f2f3743475fa7bb64e80b723201). got: Some(0xf8440180a03cbbe7321b9753f7f740523ca467aa7294cd6a5a218cda4062bc5e9f645a94c5a006643e7d44538ba353995b6b77634e1c5bd1282ae7902f2b1aceaec97cf572ed). expected: Some(0xf8440180a03dbbe7321b9753f7f740523ca467aa7294cd6a5a218cda4062bc5e9f645a94c5a006643e7d44538ba353995b6b77634e1c5bd1282ae7902f2b1aceaec97cf572ed)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG B: account storage_root altered: rejected as expected: Guest panicked: account proof invalid: value mismatch at path Nibbles(0xfec8bd3e7d10091d417400460494d39ec46c9f2f3743475fa7bb64e80b723201). got: Some(0xf8440180a03cbbe7321b9753f7f740523ca467aa7294cd6a5a218cda4062bc5e9f645a94c5a006643e7d44538ba353995b6b77634e1c5bd1282ae7902f2b1aceaec97cf572ed). expected: Some(0xf8440180a03dbbe7321b9753f7f740523ca467aa7294cd6a5a218cda4062bc5e9f645a94c5a006643e7d44538ba353995b6b77634e1c5bd1282ae7902f2b1aceaec97cf572ed)
+
+thread 'main' (1) panicked at src/main.rs:71:5:
+assertion `left == right` failed: execution header does not hash to the finalized block hash
+  left: 0x581165aa4226a8d89bd3f6d9533efd723196cca045946966c225430c2cd37ef7
+ right: 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  NEG B: execution header altered: rejected as expected: Guest panicked: assertion `left == right` failed: execution header does not hash to the finalized block hash
+  native [mainnet same-period finality (Fulu)]: OK finalized slot 15639264 state_root 0x6e2d3d4142053a16353e46c11f845fc32dd3246a12d51e80b70fb6a9b11dd01d
+== guest A [mainnet same-period finality (Fulu)]  finalized slot 15639264 root 0x5479ea5d949128464bc966a7dacf4eb20c23a49997540fc95283b684778999a2 exec(state_root) 0x6e2d3d4142053a16353e46c11f845fc32dd3246a12d51e80b70fb6a9b11dd01d
+  SESSION mainnet same-period finality (Fulu): user_cycles=47318361 paging_cycles=1402900 reserved_cycles=1610387 total_cycles=50331648 segments=48 (segment limit 2^20) exec=0.5s
+          359346  bootstrap: SSZ decode
+         8216458  bootstrap: verify_bootstrap (committee root + branch + header root)
+           62183  bootstrap: apply_bootstrap
+           37264  finality: SSZ decode
+        38531896  finality: verify_finality_update
+           39000  finality: apply_finality_update
+           14790  output: finalized header root + execution commitment
+        47260937  (sum of marks)
+== guest A [mainnet same-period finality (Fulu)] +breakdown  finalized slot 15639264 root 0x5479ea5d949128464bc966a7dacf4eb20c23a49997540fc95283b684778999a2 exec(state_root) 0x6e2d3d4142053a16353e46c11f845fc32dd3246a12d51e80b70fb6a9b11dd01d
+  SESSION mainnet same-period finality (Fulu): user_cycles=332051319 paging_cycles=9722155 reserved_cycles=9761630 total_cycles=351535104 segments=336 (segment limit 2^20) exec=3.0s
+          359346  bootstrap: SSZ decode
+         8216458  bootstrap: verify_bootstrap (committee root + branch + header root)
+           62183  bootstrap: apply_bootstrap
+           37264  finality: SSZ decode
+        38531896  finality: verify_finality_update
+           39000  finality: apply_finality_update
+            6266  bd: GenericUpdate::from (clone; Helios does this inside verify and apply)
+          460669  bd: (setup) copy 512 pubkey byte strings
+         6207663  bd: aggregate pubkey, real bits (5 non-participants): decompress agg + subtract
+        16343936  bd: 16 x G1 decompress incl. subgroup check (divide by 16 for per-key)
+         2813815  bd: (alt) 16 x G1 decompress WITHOUT subgroup check (sqrt only)
+        16349860  bd: (setup) 16 uncompressed witnesses
+           42595  bd: (alt) 16 x G1 from uncompressed witness + on-curve check
+       176473321  bd: aggregate pubkey, worst passing case (342/512 sign, 170 subtracted; cost only)
+           17941  bd: attested header hash_tree_root + fork data / domain / signing root
+         1457397  bd: signature G2 decompress incl. subgroup check
+         8042412  bd: Helios extra G2 subgroup check (sig * r)
+        15118907  bd: probe (in zkVM): off-subgroup G2 point: torsion_free=false, Helios check (q*r==O)=false, from_compressed rejects=true
+         2809931  bd: hash_to_curve to G2 (expand_message_xmd SHA-256 + SSWU + clear cofactor)
+         2403043  bd: G2Prepared x2 (line coefficients)
+         6499114  bd: multi Miller loop, 2 pairs
+        10832740  bd: final exponentiation + compare
+         8013246  bd: SyncCommittee hash_tree_root via tree_hash 0.10 (512 keys + aggregate)
+         1545735  bd: (alt) same SyncCommittee root with direct sha2 calls (1,025 sha256 of 64 bytes)
+         1258676  bd: 1024 x sha256(64 bytes), sha2 0.9 risczero (2 compressions each)
+           14792  output: finalized header root + execution commitment
+         8013259  output: committee roots (bookkeeping, not verification)
+       331971465  (sum of marks)
+# all negative tests rejected for the expected reason

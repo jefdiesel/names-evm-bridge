@@ -1,0 +1,30 @@
+{
+  "name": "lez_bridge",
+  "display_name": "LEZ Bridge",
+  "version": "0.1.0",
+  "type": "core",
+  "interface": "cdylib",
+  "category": "finance",
+  "description": "Private Ethereum <-> LEZ bridge (RFP-022): registry, deposits, claims, redemptions, recovery and admin, for any Logos app",
+  "main": "lez_bridge_plugin",
+  "dependencies": [],
+  "concurrency": "single",
+
+  "codegen": {
+    "rust": { "crate": "rust-lib", "trait": "LezBridgeModule" }
+  },
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}

@@ -1,0 +1,18 @@
+[package]
+name = "attest_probe_guest"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# The reference consumer (attest/probe) as a guest, for cycle counts of a statement. No BLS.
+[workspace]
+
+[dependencies]
+eth_attest_probe = { path = "../../attest/probe" }
+lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+
+[patch.crates-io]
+# Same keccak patch LEZ (and the bridge workspace) applies: alloy-primitives' keccak256 goes
+# through sha3 0.11 -> keccak 0.2, which this routes to the RISC Zero keccak coprocessor.
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }

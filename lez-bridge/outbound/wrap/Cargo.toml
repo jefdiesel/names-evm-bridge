@@ -1,0 +1,23 @@
+[package]
+name = "outbound_wrap"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# The Groth16 wrap of a succinct receipt made by outbound_host (`update --prove` / `release
+# --prove`), for the on-chain RiscZeroGroth16Verifier 3.1.0. Runs on x86-64 Linux with Docker:
+# risc0-zkvm 3.1.0's compress -> identity_p254 (CPU) -> risc0-groth16 3.0.6 shrink_wrap, which runs
+# the Docker image risczero/risc0-groth16-prover:v2026-10-20.1 (gnark). No guest, no LEZ crate: its
+# own workspace, so the x86 box builds only this. It never proves a guest; it compresses an
+# existing proof. Tests (seal encoding, native Groth16 verification) run anywhere.
+[workspace]
+
+[dependencies]
+risc0-zkvm = { version = "=3.1.0", features = ["prove"] }
+borsh = "1.5.7"
+serde_json = "1"
+hex = "0.4"
+anyhow = "1"
+
+[profile.release]
+opt-level = 3

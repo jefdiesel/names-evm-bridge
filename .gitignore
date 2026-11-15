@@ -1,0 +1,17 @@
+# build output
+target/
+target-*/
+vault/out/
+vault/cache/
+vault/broadcast/
+node_modules/
+# local runs, wallets, secrets
+run/
+*.key
+secrets.env
+.env
+*.pid
+# OS
+.DS_Store
+.cloudflare/
+__pycache__/

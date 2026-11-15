@@ -1,0 +1,31 @@
+[package]
+name = "outbound_host"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# Fetches LEZ blocks from a sequencer (`getBlock`, `getLastBlockId`), runs G2-lite natively and in
+# RISC Zero's in-process executor (ExecutorImpl), writes the journal and a seal for the vault's test
+# MockVerifier, and builds and executes G3 release inputs. With `--prove` (owner-started only,
+# public-demo/prove/prove-outbound-rc3.sh) it proves an update or a release with LocalProver (the
+# in-process CPU prover; `prove_gate` refuses r0vm, dev mode and Bonsai) and verifies the receipt
+# natively. The tests never prove.
+[dependencies]
+outbound_core = { path = "../core", features = ["trusted-tip"] }
+claim_acc = { path = "../claim-acc" }
+release_core = { path = "../../release/core" }
+bridge_core = { path = "../../bridge" }
+bridge_token_core = { path = "../../token" }
+lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3", features = ["host"] }
+risc0-zkvm = { version = "=3.1.0", features = ["prove"] }
+borsh = { version = "1.5.7", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+hex = "0.4"
+anyhow = "1"
+
+[build-dependencies]
+risc0-build = "=3.0.7"   # what risc0-zkvm 3.1.0 requires (^3.0.7)
+
+[package.metadata.risc0]
+methods = ["../../methods/outbound_guest", "../../methods/outbound_guest_trusted_tip", "../../methods/release_guest"]

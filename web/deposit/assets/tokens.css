@@ -1,0 +1,43 @@
+/* STAND-IN for the Names Wallet site's /assets/tokens.css, for local previews only.
+   The deposit page links /assets/tokens.css; on nameswallet.app that file belongs to the wallet
+   pages, and this one is never deployed. It lets the page be previewed where the real file is
+   absent: rfp-022/web/deposit/assets/tokens.css (when that folder is served on its own) and
+   nameswallet-site/bridge-src/tokens-fallback.css (the preview server's fallback) are the same
+   bytes, which bridge-src/check.mjs checks. Values copied from site/assets/tokens.css on
+   2026-11-13; check.mjs reports when the two disagree. */
+:root {
+  --paper: #f4f2ec;
+  --card: #fffefb;
+  --ink: #1b1a17;
+  --dim: #6d6960;
+  --line: #d6d1c4;
+  --orange: #e8662f;       /* the one accent: logo tile, rules, current step, primary button (ink text on it). 2.9:1 on paper: never text */
+  --accent: var(--orange);
+  --orange-text: #b4481c;  /* orange as small text or an underline: 4.8:1 on paper */
+  --green: #1b1a17;        /* legacy name, now ink */
+  --ok: #1b1a17;           /* legacy name, now ink: state is shown by words and marks, not colour */
+  --warn: #7f5d0c;         /* ochre caution text: 4.9:1 on --warn-bg, 5.4:1 on paper */
+  --warn-bg: #f2e7c9;
+  --bad: #a8322a;          /* errors: 6:1 on paper */
+  --radius: 12px;
+  --font: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-head: "Inter", "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif; /* Inter Bold: wordmark and headings; @font-face lives in site.css */
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #11110f;
+    --card: #201f1b;
+    --ink: #edeae2;
+    --dim: #a29d91;
+    --line: #3a3832;
+    --orange: #f0794a;       /* dark text on it for buttons: 6.8:1 */
+    --orange-text: #f0794a;
+    --green: #edeae2;        /* legacy name, now ink */
+    --ok: #edeae2;           /* legacy name, now ink */
+    --warn: #d9b45f;         /* 7.6:1 on --warn-bg */
+    --warn-bg: #2c2617;
+    --bad: #e8806f;
+  }
+}

@@ -1,0 +1,3 @@
+name Wrapped dUSDC (Sepolia demo v2)
+supply 200000000
+authority Some(JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7)

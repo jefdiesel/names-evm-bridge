@@ -1,0 +1,46 @@
+[package]
+name = "lcbench"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# Spike (branch lc-cycles), EXECUTOR ONLY: where the light-client update's cycles go and what
+# cheaper signature paths cost, on the recorded fixtures. No prover call exists in this crate;
+# the "prove" feature only exposes ExecutorImpl (as in attest/cycles). Its own workspace.
+[workspace]
+members = ["common"]
+
+[dependencies]
+eth_attest = { path = "../program" }
+eth_attest_core = { path = "../core" }
+lcbench_common = { path = "common" }
+lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3", features = ["host"] }
+risc0-zkvm = { version = "=3.0.5", features = ["prove"] }
+helios-consensus-core = { git = "https://github.com/a16z/helios", rev = "2af9b41887e069144ee56cd710f3ddca195473f8" }
+ethereum_ssz = "0.9"
+tree_hash = "0.10"
+bls12_381 = { version = "0.8.0", features = ["experimental"] }
+sha2 = "0.9"
+borsh = "1.5.7"
+serde_json = "1"
+hex = "0.4"
+anyhow = "1"
+
+[features]
+# Turn 2 of the spike: also run the blst guest (add "../../methods/lc_bench_blst" to the methods
+# list below; needs the RISC-V C toolchain, see build-lcbench.sh on the build host).
+blst = []
+
+[build-dependencies]
+risc0-build = "=3.0.5"
+
+[package.metadata.risc0]
+methods = ["../../methods/lc_bench_zk", "../../methods/lc_bench_blst", "../../methods/lc_bench_fast"]
+
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
+
+[profile.dev.package.bls12_381]
+opt-level = 3
+[profile.dev.package.helios-consensus-core]
+opt-level = 3

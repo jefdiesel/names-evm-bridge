@@ -1,0 +1,234 @@
+{
+  "format": "Logos bridge compare words",
+  "version": 1,
+  "tag": "logos-bridge/compare/v1",
+  "spec": "h = SHA-256(ASCII tag | 32 commitment bytes); the first 44 bits of h, big-endian, are four 11-bit indexes (bits 0-10, 11-21, 22-32, 33-43); each picks a word of the BIP-39 English list (index 0 = abandon); words_text joins the four words with space, U+00B7, space.",
+  "wordlist": {
+    "name": "BIP-39 English",
+    "count": 2048,
+    "sha256": "2f5eed53a4727b4bf8880d8f3f199efc90e58503646d9ff8eff3a2ed3b24dbda",
+    "first": "abandon",
+    "last": "zoo"
+  },
+  "separator": " · ",
+  "warning": "Synthetic commitments only (fixed patterns and SHA-256 hashes of public labels). Never deposit to them.",
+  "generator": "modules/tools/make-compare-words-vectors.py (not published) (python3 hashlib; independent of the module and the page)",
+  "vectors": [
+    {
+      "name": "all zeros",
+      "commitment": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "32efb20bfa7e3887b1bd7f4beb174ed506762475a0bc2c63d11e6966bb30864a",
+      "indexes": [
+        407,
+        1004,
+        1047,
+        1959
+      ],
+      "words": [
+        "cream",
+        "laugh",
+        "load",
+        "visual"
+      ],
+      "words_text": "cream · laugh · load · visual"
+    },
+    {
+      "name": "all ones (ff)",
+      "commitment": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "hash": "f0fe4ebc4b479cecf607d7f1616085b27e018c5c03f956a898f0b7e309119788",
+      "indexes": [
+        1927,
+        1939,
+        1400,
+        1204
+      ],
+      "words": [
+        "valley",
+        "venue",
+        "pyramid",
+        "notable"
+      ],
+      "words_text": "valley · venue · pyramid · notable"
+    },
+    {
+      "name": "one (0x00..01)",
+      "commitment": "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "hash": "5071987b22fa4ccab2bdc9821ecad4fb8a946c898f75465f8a186fa555c2de52",
+      "indexes": [
+        643,
+        1126,
+        246,
+        559
+      ],
+      "words": [
+        "expire",
+        "mimic",
+        "burst",
+        "echo"
+      ],
+      "words_text": "expire · mimic · burst · echo"
+    },
+    {
+      "name": "top bit only (0x80 00..)",
+      "commitment": "0x8000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "960aed116b1329e477de322560173a3b250d312bb58686d8366ce87414ed3fe8",
+      "indexes": [
+        1200,
+        699,
+        546,
+        1713
+      ],
+      "words": [
+        "noodle",
+        "first",
+        "dust",
+        "stomach"
+      ],
+      "words_text": "noodle · first · dust · stomach"
+    },
+    {
+      "name": "bytes 0x00..0x1f",
+      "commitment": "0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "hash": "335d01f5898cb585ff4917fd5293d617b81a2a75116367ef5974809c39793b98",
+      "indexes": [
+        410,
+        1856,
+        1003,
+        152
+      ],
+      "words": [
+        "crew",
+        "trend",
+        "latin",
+        "basic"
+      ],
+      "words_text": "crew · trend · latin · basic"
+    },
+    {
+      "name": "0x0123456789abcdef repeated",
+      "commitment": "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "hash": "66122571f61f3bcfaecaf9c37d5dd4c626beb310ca1c15582d33e5474514bfec",
+      "indexes": [
+        816,
+        1161,
+        739,
+        1889
+      ],
+      "words": [
+        "gravity",
+        "muffin",
+        "fragile",
+        "umbrella"
+      ],
+      "words_text": "gravity · muffin · fragile · umbrella"
+    },
+    {
+      "name": "alternating 0x55",
+      "commitment": "0x5555555555555555555555555555555555555555555555555555555555555555",
+      "hash": "2cf8d439c6e5da3e5475203e7d0577f13c6d056136228f5067c5f213ff94914f",
+      "indexes": [
+        359,
+        1589,
+        115,
+        1134
+      ],
+      "words": [
+        "coconut",
+        "shop",
+        "attack",
+        "miss"
+      ],
+      "words_text": "coconut · shop · attack · miss"
+    },
+    {
+      "name": "alternating 0xaa",
+      "commitment": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "hash": "354d3ac04bbade12deb9c23c675d03d9315e6b089b2d8958010bf2bf8883be4a",
+      "indexes": [
+        426,
+        846,
+        1408,
+        1211
+      ],
+      "words": [
+        "crystal",
+        "hawk",
+        "quote",
+        "number"
+      ],
+      "words_text": "crystal · hawk · quote · number"
+    },
+    {
+      "name": "SHA-256 of 'compare-words test 1'",
+      "commitment": "0xe9276dc059898056e9a941b7454ee9ee7545a25dfbb1a419322a81332fb1fa59",
+      "hash": "7e7b603a7e8f872266c3410cd705f87ece1be0174d2811e41fed8a54672769b5",
+      "indexes": [
+        1011,
+        1752,
+        116,
+        2024
+      ],
+      "words": [
+        "lazy",
+        "swallow",
+        "attend",
+        "wonder"
+      ],
+      "words_text": "lazy · swallow · attend · wonder"
+    },
+    {
+      "name": "SHA-256 of 'compare-words test 2'",
+      "commitment": "0xd28408f0a955bdfabcb8dd2dbef88baed2bc041865c18d7d4d3477ebaf735a27",
+      "hash": "8352c7fc62f9cc7f0e95b9def5171e050d16fe29ef276cc2a6decac9c220a70a",
+      "indexes": [
+        1050,
+        1201,
+        2040,
+        1583
+      ],
+      "words": [
+        "local",
+        "normal",
+        "yellow",
+        "shine"
+      ],
+      "words_text": "local · normal · yellow · shine"
+    },
+    {
+      "name": "SHA-256 of 'compare-words test 3'",
+      "commitment": "0xe9c0b9843e66eb77bedb6c801ee77113bb89e56c079f953598aad6d3041916a9",
+      "hash": "33e3f8f2af29e57c9cf01b6b9ba59265c09a76fcbbff73ae0190fe5c237ad0ac",
+      "indexes": [
+        415,
+        254,
+        485,
+        754
+      ],
+      "words": [
+        "crop",
+        "cabin",
+        "device",
+        "furnace"
+      ],
+      "words_text": "crop · cabin · device · furnace"
+    },
+    {
+      "name": "request-v1.json first valid vector",
+      "commitment": "0x962f9a3ffc44690aac8d3d0ea8af24ff63b54b58624534c10dee46b139dfdb0f",
+      "hash": "2b180181c3e97a8820f15aac4b12510da8d8ba86bd11ea8e924490540115eb92",
+      "indexes": [
+        344,
+        1536,
+        771,
+        1086
+      ],
+      "words": [
+        "climb",
+        "scale",
+        "gather",
+        "march"
+      ],
+      "words_text": "climb · scale · gather · march"
+    }
+  ]
+}

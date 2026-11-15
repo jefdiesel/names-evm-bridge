@@ -1,0 +1,42 @@
+== claim-own 2026-11-13 18:34:33  claim file: claim-leaf3.json  log: <local path>
+claim file ok: 100 dUSDC (denomination 0) to Public/6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f; commitment checked; no masterSecret in the file: that check skipped
+deposit: leaf 3 of 6, Sepolia tx 0x7a0ca82a6dd36e9276fc0c098b12645a4c9d4fcce34397a51cc62ba189c2e7b0
+vault root 0xe1d0324e5d2ed6eb15d273c62d8a9865f35d1cc3e3fa40ca5bcdc0394eedc7fb; operator-attested root 0xe1d0324e5d2ed6eb15d273c62d8a9865f35d1cc3e3fa40ca5bcdc0394eedc7fb
+wallet: <local path> (read only; never written)
+token program 3gF78HRJNCfabkWFiszahVVacq181aU8SSGua8Cj9ZE4
+account Public/6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f, public key f31c4c105101bf5363ffebb605e318a92cc19e18689c1e57f823f7271ee5a1c3 (the key in the temp wallet gives this id)
+== dry run through https://lez.nameswallet.app/
+deposit leaf 3 of 6
+root 0xe1d0324e5d2ed6eb15d273c62d8a9865f35d1cc3e3fa40ca5bcdc0394eedc7fb
+claim nullifier 0x520f781cf86f22f8ab3cb193f920f962363ba778c852c097df4a59d65d9d68ed
+recipient 6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+Dry run: nothing sent
+  fee payer:        6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f
+  declared gas:     190210
+  metered cycles:   152168
+  wire bytes:       1893
+  base fees:        exec 8 / stor 8 (height 27)
+  fee at head:      1232488 (tip 0)
+  reserve at head:  1536824 (max fee 2497339)
+  action:           applies
+dry run: simulated in 3.7s; nothing proven or sent
+native balance 0; fee reserve with 25% margin 1921030
+operator BVDcg8SbSdCTKzx4mJbSpVgEuaoPEMhxmmRwvVCGyBnD sends 6921030 native LEZ to that public key (fee money)
+Transaction hash is 1bfc2c6523910507b6fbbc8cfca9ef4b32aad5437b22d1ddf9eda385cf126f95
+Transaction is included in block 28
+native balance 6921030
+== claim through https://lez.nameswallet.app/
+deposit leaf 3 of 6
+root 0xe1d0324e5d2ed6eb15d273c62d8a9865f35d1cc3e3fa40ca5bcdc0394eedc7fb
+claim nullifier 0x520f781cf86f22f8ab3cb193f920f962363ba778c852c097df4a59d65d9d68ed
+recipient 6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+submitted in 3.4s
+tx 3785a0e1c3ce37e31a588511e5ea7379c8c6358db2cb654128dd4e6d78416cb5
+applied in block 30
+fee paid: 1232488 native LEZ (balance 6921030 -> 5688542)
+wrapped holdings of Public/6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f (definition, balance in the token's smallest unit):
+Public/6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f  EgLorBTz2c2Jez3KXLZ78LsQrkFcjvux9PZb5F2EgexY  100000000
+your wallet file is unchanged (sha256 checked)
+done in 58 s; the temp directory is deleted on exit

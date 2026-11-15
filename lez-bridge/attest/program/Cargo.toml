@@ -1,0 +1,34 @@
+[package]
+name = "eth_attest"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# The RFP-021 attestation program: instance accounts plus the Helios light-client verification.
+# Natively (tests) this uses upstream bls12_381 / sha2; the zkVM guest (methods/attest_guest, its
+# own workspace) patches them with RISC Zero's accelerated forks, exactly as the attest-spike did.
+[dependencies]
+borsh.workspace = true
+eth_attest_core.workspace = true
+lee_core.workspace = true
+risc0-zkvm.workspace = true
+# Helios consensus-core 0.12.0 (MIT, a16z), unmodified.
+helios-consensus-core = { git = "https://github.com/a16z/helios", rev = "2af9b41887e069144ee56cd710f3ddca195473f8" }
+ethereum_ssz = "0.9"
+tree_hash = "0.10"
+alloy-primitives = { version = "1.7.3", default-features = false }
+
+[features]
+# Spike only (branch lc-cycles): record `env::cycle_count()` at phase boundaries of
+# `lc::verify_update` for the attest/lcbench harness. Off in every program build.
+cycle-marks = []
+
+[dev-dependencies]
+lee_core = { workspace = true, features = ["host"] }
+eth_attest_core = { workspace = true, features = ["testkit"] }
+eth_attest_probe = { path = "../probe" }
+alloy-trie = { version = "0.9.9", features = ["ethereum", "std"] }
+alloy-primitives = { version = "1.7.3", features = ["rlp"] }
+alloy-rlp = "0.3.17"
+serde_json = "1"
+hex = "0.4"

@@ -1,0 +1,24 @@
+[package]
+name = "release_host"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# EXECUTOR ONLY: runs the G3 guest (methods/release_guest) in RISC Zero's in-process executor
+# (ExecutorImpl) and checks it against release_core natively and against bridge_core's formulas.
+# No prover call exists in this crate; "prove" is only what exposes ExecutorImpl (as in
+# attest/cycles). `release_host --write <dir>` regenerates the cross-language fixture.
+[dependencies]
+release_core = { path = "../core" }
+bridge_core = { path = "../../bridge" }
+lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+risc0-zkvm = { version = "=3.1.0", features = ["prove"] }
+serde_json = "1"
+hex = "0.4"
+anyhow = "1"
+
+[build-dependencies]
+risc0-build = "=3.0.7"   # what risc0-zkvm 3.1.0 requires (^3.0.7)
+
+[package.metadata.risc0]
+methods = ["../../methods/release_guest"]

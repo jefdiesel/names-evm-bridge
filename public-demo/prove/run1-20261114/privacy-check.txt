@@ -1,0 +1,15 @@
+block 3069: 253679 bytes
+  V              absent
+  F_operator     absent
+  vault          absent
+  cfg_id         FOUND as-is@1062
+  commitment     absent
+  secret_k       absent
+  secret_V100B   absent
+  secret_V1000   absent
+  secret_VETH    absent
+  secret_P100    absent
+  A_one_time     FOUND as-is@1030
+positive control: the one-time address is in the claim block (the search works)
+searched 3070 of 3070 blocks 1..3070: 0 hit(s), 0 read failure(s)
+files in <local path> (wallet aside) that contain a team secret: 0 (must be 0)

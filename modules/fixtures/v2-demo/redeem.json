@@ -1,0 +1,47 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "can_cancel": true,
+    "can_pause": true,
+    "can_resume": false,
+    "cancel_requested": false,
+    "dry_run": true,
+    "dry_run_forced": "Sends are off in this build: this ran as a dry run (simulated, nothing proven or sent). Proving needs the memory guard set up and a CLI that reads secrets from a file.",
+    "elapsed_s": 0,
+    "error": null,
+    "exit": null,
+    "finished": null,
+    "guarded": false,
+    "id": "redeem-1794576624583",
+    "kind": "redeem",
+    "log_tail": "",
+    "meta": {
+      "amount_text": "100",
+      "dry_run_forced": "Sends are off in this build: this ran as a dry run (simulated, nothing proven or sent). Proving needs the memory guard set up and a CLI that reads secrets from a file.",
+      "plan": "rdm-1794576624570",
+      "symbol": "dUSDC"
+    },
+    "paused_ms": 0,
+    "paused_since": null,
+    "peak_estimate_mb": 9550,
+    "peak_rss_mb": 0,
+    "pgid": 10421,
+    "phase": "fetch",
+    "phase_elapsed_s": 0,
+    "phases": [
+      {
+        "at": 1794576624583,
+        "phase": "fetch"
+      }
+    ],
+    "progress": {},
+    "prove_estimate_s": 690,
+    "result": null,
+    "started": 1794576624583,
+    "state": "running",
+    "step": 0,
+    "steps": 1,
+    "subject": "rdm-1794576624570"
+  }
+}

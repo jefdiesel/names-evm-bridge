@@ -1,0 +1,58 @@
+[package]
+name = "lez_bridge_cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "lez-bridge"
+path = "src/main.rs"
+
+[dependencies]
+bridge_core.workspace = true
+# Seed-derived secrets, deposit requests and the recovery scan (`recover.rs`).
+bridge_client = { path = "../client" }
+bridge_token_core.workspace = true
+eth_attest_core.workspace = true
+bridge_methods = { path = "../methods" }
+# RFP-021 client (`attest ...`): the program crate itself, natively, so the CLI runs the same
+# Helios verification before it builds a transaction and decodes the SSZ committees it must
+# supply as the witness. This links Helios consensus-core and zkcrypto bls12_381 into the host
+# binary only; no guest changes. The guests it deploys come prebuilt from attest_methods.
+eth_attest.workspace = true
+eth_attest_probe = { path = "../attest/probe" }
+attest_methods = { path = "../attest/methods" }
+helios-consensus-core = { git = "https://github.com/a16z/helios", rev = "2af9b41887e069144ee56cd710f3ddca195473f8" }
+ethereum_ssz = "0.9"
+# Beacon API and Ethereum JSON-RPC fetches (already in the lock through LEZ's dependencies).
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+lee_core = { workspace = true, features = ["host"] }
+# `prove`: private proofs run in-process (capped by RAYON_NUM_THREADS), never through the
+# external r0vm, whose all-core run panicked the test machine on 2026-11-06.
+lee = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3", features = ["prove"] }
+common = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+wallet = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+sequencer_service_rpc = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3", features = ["client"] }
+# The chain's Bedrock channel id (`chain-id`, `init`): the sequencer_stake config's layout.
+sequencer_stake_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+borsh.workspace = true
+serde_json = "1"
+# `--json`: keep the real stdout for JSON and send descriptor 1 (the wallet crate's own lines) to stderr.
+libc = "0.2"
+# The privacy receipts this CLI makes are verified by the LEZ rc3 sequencer, so every risc0 crate
+# that shapes a receipt is LEZ v0.4.0-rc3's exact version (its Cargo.lock at bafd07be; the
+# sequencer binary embeds the same). risc0-circuit-recursion 4.1.0 (which the tracked lock had
+# from 2026-11-14 to 2026-11-15) has other control ids: LEZ rc3 refuses its succinct receipts.
+# Test: tests/lez_receipts.rs. Change only together with LEZ (VERSIONS.toml, role lez_host).
+risc0-zkvm.workspace = true
+risc0-binfmt = "=3.0.4"
+risc0-circuit-recursion = { version = "=4.0.4", default-features = false }
+risc0-circuit-rv32im = { version = "=4.0.4", default-features = false }
+risc0-circuit-keccak = { version = "=4.0.5", default-features = false }
+risc0-groth16 = { version = "=3.0.4", default-features = false }
+risc0-zkp = { version = "=3.0.4", default-features = false }
+risc0-core = { version = "=3.0.1", default-features = false }
+url = "2"
+anyhow = "1.0.98"
+clap = { version = "4.5.42", features = ["derive", "env"] }
+tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }

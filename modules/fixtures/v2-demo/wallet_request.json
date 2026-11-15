@@ -1,0 +1,15 @@
+{
+  "_provenance": "Shapes from the module's Names Wallet mode (names_mode.rs / wallet.rs, as its unit tests check them); not recorded from a live Names Wallet (none installed).",
+  "error": null,
+  "success": true,
+  "value": {
+    "accounts": null,
+    "check": null,
+    "error": null,
+    "kind": "secret",
+    "phase": null,
+    "request": "9f3c0b1a2d3e4f5061728394a5b6c7d8",
+    "state": "pending",
+    "tx": null
+  }
+}

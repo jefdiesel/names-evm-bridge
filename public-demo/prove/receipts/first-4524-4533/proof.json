@@ -1,0 +1,13 @@
+{
+  "claimDigest": "0xb4a84e2e7b6a193842a6c7b74d2ce10c8d5493b018b1bc4f63dc999dc070b0bb",
+  "guest": "v4/elf/outbound_guest_trusted_tip.bin (the v4 canonical build)",
+  "imageId": "0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017",
+  "journalDigest": "0x68912219d571bd0b090ec211e72139542c63d8b581f95ec03017d2b810c4c74f",
+  "label": "proved: succinct receipt, RISC Zero in-process CPU prover, verified natively; LEZ finality trusted (TrustedTip); not checked on chain",
+  "proveSeconds": 77.579505791,
+  "receiptBytes": 223815,
+  "receiptKind": "succinct",
+  "segments": 1,
+  "totalCycles": 524288,
+  "userCycles": 296964
+}

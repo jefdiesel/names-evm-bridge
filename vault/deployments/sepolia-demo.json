@@ -1,0 +1,650 @@
+{
+  "chain": "sepolia",
+  "chainId": 11155111,
+  "demo": true,
+  "statement": "DEMO: deposits only. updateImageId is a placeholder (keccak256(\"RFP022/demo/no-update-image\")); no G2 proof can verify, so no exit can ever be recorded or released on this vault. Exits need a new vault version with the real update image. Admin, freezer and fee recipient are a throwaway test key.",
+  "vault": "0xA34adbe8413838668b0521230A4d96C6B7e91484",
+  "usdc": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e",
+  "deployer": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+  "failedTx": {
+    "tx": "0x8602ac1b6ecfa4847eabab83e9a9595b5efa68500177d17b021b942fe8f10034",
+    "what": "first DemoUSDC create attempt, nonce 0: out of gas (forge's local gas estimate)",
+    "block": 12121169,
+    "status": 0,
+    "gasUsed": 804667,
+    "fee_wei": 8046683679339
+  },
+  "txs": [
+    {
+      "tx": "0x27a170fb593e42aab050ef25d4c1e53c38373b1ed2a44f4cadf4934c2dddd923",
+      "what": "create DemoUSDC",
+      "contract": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "block": 12121199,
+      "time_utc": "2026-11-12T20:24:48Z",
+      "status": 1,
+      "gasUsed": 4098169,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 40981751472535
+    },
+    {
+      "tx": "0x42a596755476edc08a4563d61061d33b99424bf8f78d17288b5670f4fb231322",
+      "what": "create BridgeVault",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121200,
+      "time_utc": "2026-11-12T20:25:00Z",
+      "status": 1,
+      "gasUsed": 36133590,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 361336442003850
+    },
+    {
+      "tx": "0xdd8c3b67477c5e6fc5ddb9ca931a18ac2195146db325e2a1cffd43819fe09f4d",
+      "what": "registerToken(address,uint8,uint256[],uint256[],uint256[],uint64)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121204,
+      "time_utc": "2026-11-12T20:25:48Z",
+      "status": 1,
+      "gasUsed": 1037498,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 10374995562470
+    },
+    {
+      "tx": "0x7859c57668e3d3e3f9c272466830a26119502cf59ebcf4e742a9f4674dd23e23",
+      "what": "registerToken(address,uint8,uint256[],uint256[],uint256[],uint64)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121205,
+      "time_utc": "2026-11-12T20:26:00Z",
+      "status": 1,
+      "gasUsed": 827892,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 8278932418380
+    },
+    {
+      "tx": "0x994d4f2d50ca1a3a4d21d2f9d49f6aa509c96816b9ac6336faa36091687a848a",
+      "what": "setRelayFeeMenu(address,uint256[][])",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121206,
+      "time_utc": "2026-11-12T20:26:12Z",
+      "status": 1,
+      "gasUsed": 1705208,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 17052105578120
+    },
+    {
+      "tx": "0x9effb8d02a13ce3f83d0b391677e0b861d1895d3ff91e69d6ac8cd2cc0c05385",
+      "what": "setRelayFeeMenu(address,uint256[][])",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121207,
+      "time_utc": "2026-11-12T20:26:24Z",
+      "status": 1,
+      "gasUsed": 1705136,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 17051385577040
+    },
+    {
+      "tx": "0x23eabef61d5dc64f479c203b246803f418846356f9d95486640bd5de19b11142",
+      "what": "setCaps(address,uint64,uint256,uint256)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121208,
+      "time_utc": "2026-11-12T20:26:36Z",
+      "status": 1,
+      "gasUsed": 477589,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 4775897163835
+    },
+    {
+      "tx": "0x92745cdfaad9a3490201c4d2a89c4c278c5f7ee89d4d5f83a86192766dc788b6",
+      "what": "setCaps(address,uint64,uint256,uint256)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121209,
+      "time_utc": "2026-11-12T20:26:48Z",
+      "status": 1,
+      "gasUsed": 477397,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 4773977160955
+    },
+    {
+      "tx": "0x6f3f366207169219cf85ba9f61f945c818b345a69aef726a9f6dc8fbd4b39048",
+      "what": "setGlobalCaps(uint64,uint256,uint256)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121210,
+      "time_utc": "2026-11-12T20:27:00Z",
+      "status": 1,
+      "gasUsed": 474850,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 4748507122750
+    },
+    {
+      "tx": "0x02ed511a12939507041739f9fb990f88cf44704bb77a477d25faab0e0818f28b",
+      "what": "setCapWeight(address,uint256)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121211,
+      "time_utc": "2026-11-12T20:27:12Z",
+      "status": 1,
+      "gasUsed": 132616,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 1326161989240
+    },
+    {
+      "tx": "0x6d6c28084d80dea1d9b37fce4ff9270660f6c4b520f06bd11ab109278234c02d",
+      "what": "setCapWeight(address,uint256)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121212,
+      "time_utc": "2026-11-12T20:27:24Z",
+      "status": 1,
+      "gasUsed": 132340,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 1323401985100
+    },
+    {
+      "tx": "0x1244cd0741446cf805ad27521fc6293b65e45386c9d7cf0d70ef8a68b88d4519",
+      "what": "mint(address,uint256)",
+      "contract": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "block": 12121218,
+      "time_utc": "2026-11-12T20:28:36Z",
+      "status": 1,
+      "gasUsed": 238132,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 2381323571980
+    },
+    {
+      "tx": "0x0addfd0c694bcdf454e013b509e82e02ca18288794d802d81a34d9b6e2d0aa2a",
+      "what": "approve(address,uint256)",
+      "contract": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "block": 12121219,
+      "time_utc": "2026-11-12T20:28:48Z",
+      "status": 1,
+      "gasUsed": 127839,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 1278391917585
+    },
+    {
+      "tx": "0x220a9257ddfe6f9ee11d80f6be2fcc6a12c84f3f68ed37aaa79a7998b7e47bac",
+      "what": "deposit(address,uint32,bytes32)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121220,
+      "time_utc": "2026-11-12T20:29:00Z",
+      "status": 1,
+      "gasUsed": 800033,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 8000342000495
+    },
+    {
+      "tx": "0x110800c5a720fc1e1dde9097ba6b80498ba3ca894af13b98ca1d0c5a21bcabf6",
+      "what": "deposit(address,uint32,bytes32)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121221,
+      "time_utc": "2026-11-12T20:29:12Z",
+      "status": 1,
+      "gasUsed": 509076,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 5090767636140
+    },
+    {
+      "tx": "0x779e97d1e80519fd3ccbb480f7d1960f4bdcf37ebfc18e23cf392fd04c3e25ff",
+      "what": "deposit(address,uint32,bytes32)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121222,
+      "time_utc": "2026-11-12T20:29:24Z",
+      "status": 1,
+      "gasUsed": 508450,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 5084507626750
+    },
+    {
+      "tx": "0x2ca9753b40deb5fa4da8bf87f2f2127fbe36f9b51ade3602f26ddfa880f703d4",
+      "what": "deposit(address,uint32,bytes32)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121223,
+      "time_utc": "2026-11-12T20:29:36Z",
+      "status": 1,
+      "gasUsed": 511879,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 5118797678185
+    },
+    {
+      "tx": "0xa9351249aafdcff2ea9c5dea5ac07e9a8aa2656b7fdc17337be55307e8b0581b",
+      "what": "depositETH(uint32,bytes32)",
+      "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "block": 12121224,
+      "time_utc": "2026-11-12T20:29:48Z",
+      "status": 1,
+      "gasUsed": 469970,
+      "effectiveGasPrice_wei": 10000015,
+      "fee_wei": 4699707049550
+    }
+  ],
+  "vaultState": {
+    "verifier": "0x2a098988600d87650Fb061FfAff08B97149Fa84D",
+    "updateImageId": "0x5f425420081746e3e77f3c94e7a44e7d0b3bdcc3cd4e114eaa07d7540fa282e3",
+    "releaseImageId": "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4",
+    "lezChainId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "zoneId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "programId": "0x3cb549f35aa0b8ba9e9f7864d85cb5b383d8f2950fbe79ec273e4feb0001d646",
+    "cfgId": "0xda620b16999ff986739727aef71641d74f04e745fd197693ed1211b8f2fc0118",
+    "minReleaseDelay": "86400 [8.64e4]",
+    "admin": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+    "pendingAdmin": "0x0000000000000000000000000000000000000000",
+    "freezer": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+    "feeRecipient": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+    "g2State": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "depositRoot": "0x88031a1cde4ab9bbbc7c9320070e80487b8e531c47ecb02c82ad0080fd810394",
+    "depositCount": "5",
+    "exitRoot": "0xc6f67e02e6e4e1bdefb994c6098953f34636ba2b6ca20a4721d2b26a886722ff",
+    "exitCount": "0",
+    "globalDepositsFrozen": "false",
+    "globalReleasesFrozen": "false",
+    "globalCapState": "86400 [8.64e4]\n100000000000 [1e11]\n100000000000 [1e11]\n1330000000 [1.33e9]\n0",
+    "DEPOSIT_LEAF_TAG": "0x9e8d098bfe4f2807258ba6b200534afcacae50702d4735cb40a3f31e9bea950c",
+    "CFG_TAG": "0x26e962302b1dc9417c466ff56ef206a578cd054a0a099172cff8b80460ab5a45",
+    "computeCfgId_check": "0xda620b16999ff986739727aef71641d74f04e745fd197693ed1211b8f2fc0118",
+    "runtimeSize": 22721,
+    "usdcRuntimeSize": 2367
+  },
+  "tokens": {
+    "USDC": {
+      "address": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e",
+      "tokenConfig(registered,depFrozen,relFrozen,decimals,releaseDelay,denoms,depositFees,withdrawFees,accruedFees)": [
+        "true",
+        "false",
+        "false",
+        "6",
+        "86400 [8.64e4]",
+        "[100000000 [1e8], 1000000000 [1e9], 10000000000 [1e10]]",
+        "[0, 0, 0]",
+        "[0, 0, 0]",
+        "0"
+      ],
+      "relayFeeMenu": [
+        "[500000 [5e5], 1000000 [1e6]]",
+        "[5000000 [5e6], 10000000 [1e7]]",
+        "[50000000 [5e7], 100000000 [1e8]]"
+      ],
+      "capState(window,depCap,relCap,depUsed,relUsed)": [
+        "86400 [8.64e4]",
+        "50000000000 [5e10]",
+        "50000000000 [5e10]",
+        "1300000000 [1.3e9]",
+        "0"
+      ],
+      "capWeight": "1000000000000000000 [1e18]",
+      "releaseDelayState": [
+        "86400 [8.64e4]",
+        "0",
+        "0",
+        "0"
+      ],
+      "counters_denom0(deposits,claims,burns,releases)": [
+        "3",
+        "0",
+        "0",
+        "0"
+      ],
+      "counters_denom1": [
+        "1",
+        "0",
+        "0",
+        "0"
+      ],
+      "vaultBalance": "1300000000 [1.3e9]",
+      "minter": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+      "name": "\"RFP-022 Demo USDC (no value)\"",
+      "symbol": "\"dUSDC\"",
+      "decimals": "6"
+    },
+    "ETH": {
+      "address": "0x0000000000000000000000000000000000000000",
+      "tokenConfig(registered,depFrozen,relFrozen,decimals,releaseDelay,denoms,depositFees,withdrawFees,accruedFees)": [
+        "true",
+        "false",
+        "false",
+        "18",
+        "86400 [8.64e4]",
+        "[10000000000000000 [1e16], 100000000000000000 [1e17], 1000000000000000000 [1e18]]",
+        "[0, 0, 0]",
+        "[0, 0, 0]",
+        "0"
+      ],
+      "relayFeeMenu": [
+        "[50000000000000 [5e13], 100000000000000 [1e14]]",
+        "[500000000000000 [5e14], 1000000000000000 [1e15]]",
+        "[5000000000000000 [5e15], 10000000000000000 [1e16]]"
+      ],
+      "capState(window,depCap,relCap,depUsed,relUsed)": [
+        "86400 [8.64e4]",
+        "5000000000000000000 [5e18]",
+        "5000000000000000000 [5e18]",
+        "10000000000000000 [1e16]",
+        "0"
+      ],
+      "capWeight": "3000000000 [3e9]",
+      "releaseDelayState": [
+        "86400 [8.64e4]",
+        "0",
+        "0",
+        "0"
+      ],
+      "counters_denom0(deposits,claims,burns,releases)": [
+        "1",
+        "0",
+        "0",
+        "0"
+      ],
+      "counters_denom1": [
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "vaultBalance_wei": "10000000000000000"
+    }
+  },
+  "deposits": [
+    {
+      "label": "C_V100A",
+      "token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "denomIndex": 0,
+      "commitment": "0x3526387494d14b26f388be0566fd27c743709d16c47203f0968b949ea883370b",
+      "leafIndex": 0,
+      "rootAfter": "0x8668e0fe9dc41ba38b043ac80d624db959433791f791b181efc4512836e15b60",
+      "tx": "0x220a9257ddfe6f9ee11d80f6be2fcc6a12c84f3f68ed37aaa79a7998b7e47bac",
+      "block": 12121220,
+      "time_utc": "2026-11-12T20:29:00Z",
+      "isDepositRoot(rootAfter)": "true"
+    },
+    {
+      "label": "C_V100B",
+      "token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "denomIndex": 0,
+      "commitment": "0xb291628f77d31eb09bb4076d42db0117f76b3a3aaaee3888df078fe1547e4d89",
+      "leafIndex": 1,
+      "rootAfter": "0x96496dce2eab1aff297423aff79240ce744b532b9b753b54ab4cda6d8b9f9e9f",
+      "tx": "0x110800c5a720fc1e1dde9097ba6b80498ba3ca894af13b98ca1d0c5a21bcabf6",
+      "block": 12121221,
+      "time_utc": "2026-11-12T20:29:12Z",
+      "isDepositRoot(rootAfter)": "true"
+    },
+    {
+      "label": "C_V1000",
+      "token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "denomIndex": 1,
+      "commitment": "0xcbb24950fe34ecc43c18fc299a6535f12a55fbfe333ba61a76aaf95958910696",
+      "leafIndex": 2,
+      "rootAfter": "0xdcca8add92dcaa102c2725c126a2e85d5b39b9ac81678f052d9927ca5c88a992",
+      "tx": "0x779e97d1e80519fd3ccbb480f7d1960f4bdcf37ebfc18e23cf392fd04c3e25ff",
+      "block": 12121222,
+      "time_utc": "2026-11-12T20:29:24Z",
+      "isDepositRoot(rootAfter)": "true"
+    },
+    {
+      "label": "C_P100",
+      "token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "denomIndex": 0,
+      "commitment": "0xd7d6996cde989fcc0ad5277536e95c23c7eb39434fa542310ed7109d4aecfe25",
+      "leafIndex": 3,
+      "rootAfter": "0xffebf92892c55cbb9f14db7bf0bfab6eea62a10c549c44391cc66377bc69dba6",
+      "tx": "0x2ca9753b40deb5fa4da8bf87f2f2127fbe36f9b51ade3602f26ddfa880f703d4",
+      "block": 12121223,
+      "time_utc": "2026-11-12T20:29:36Z",
+      "isDepositRoot(rootAfter)": "true"
+    },
+    {
+      "label": "C_VETH",
+      "token": "0x0000000000000000000000000000000000000000",
+      "denomIndex": 0,
+      "commitment": "0x805438345af1dbd3ff69d56656a1db676787ca4219eac56138293db4748cab53",
+      "leafIndex": 4,
+      "rootAfter": "0x88031a1cde4ab9bbbc7c9320070e80487b8e531c47ecb02c82ad0080fd810394",
+      "tx": "0xa9351249aafdcff2ea9c5dea5ac07e9a8aa2656b7fdc17337be55307e8b0581b",
+      "block": 12121224,
+      "time_utc": "2026-11-12T20:29:48Z",
+      "isDepositRoot(rootAfter)": "true"
+    }
+  ],
+  "date": "2026-11-12",
+  "lez": {
+    "sequencer": "local LEZ 0.4 standalone sequencer seq2 on the test machine, 127.0.0.1:3250 (not public)",
+    "runDir": "run/sepolia1",
+    "fundingAccount_F": "6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV",
+    "tokenProgram": "843j3VtFpsP5715MjgMQgpvRSUwE1kh6Bh2gTNiPrh4X",
+    "tokenImageId": "633555cc0d90901139f0bf541fe2f32912f969579e829e9d6acab2def083ab5d",
+    "bridgeProgram": "55yo6Et5XtzSLFYNe9gjQhhBhd3X4LcidsUaPanw6q9o",
+    "bridgeImageId": "234c6659e008329ea92aac4a625e6d7d33a1118e7869090a90f05ed4fa26c61b",
+    "programIdBytes32": "0x3cb549f35aa0b8ba9e9f7864d85cb5b383d8f2950fbe79ec273e4feb0001d646",
+    "immutable": true,
+    "deployBlocks": {
+      "token": "1237-1241",
+      "bridge": "1242-1248"
+    },
+    "privateAccount_V": "DMv13rBBeDRPpcJUea7Buts4xwhx3C4EA13zWVBi2HJ1",
+    "publicAccount_P": "HPqQSHYDmQ9Ma9ySWFFeGZDqN7fCiVnFrqzH8ag29BzW",
+    "bridgeInitialised": false,
+    "note": "Bridge NOT initialised (no init / init-attested), no wrapped token created: the next step runs init-attested."
+  },
+  "verifierChecks": {
+    "VERSION": "3.0.0",
+    "SELECTOR": "0x73c457ba",
+    "CONTROL_ROOT_0": "0x41af18736dc9d7921c859fc95ac84da5",
+    "CONTROL_ROOT_1": "0x561f8c992a424deb37ccdf4e19c0e7db",
+    "BN254_CONTROL_ID": "0x04446e66d300eb7fb45c9726bb53c793dda407a62e9601618bb43c5c14657ac0",
+    "matches": "risc0-circuit-recursion 4.0.5 ALLOWED_CONTROL_ROOT a54dc85a...8c1f56 and BN254_IDENTITY_CONTROL_ID (byte-reversed); bad seal reverts SelectorMismatch(0xdeadbeef,0x73c457ba)",
+    "notChecked": "bytecode vs risc0-ethereum source"
+  },
+  "imageIds": {
+    "release": "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4",
+    "releaseNote": "G3 RELEASE_GUEST_ID from a local non-reproducible build on the test machine (target-attest, 2026-11-12 14:10), release_guest.bin sha256 4238085e159037073ecfa83db6872fe2ed46aa481e912d79ba6ff7b2c507fe05",
+    "update": "0x5f425420081746e3e77f3c94e7a44e7d0b3bdcc3cd4e114eaa07d7540fa282e3",
+    "updateNote": "PLACEHOLDER keccak256(\"RFP022/demo/no-update-image\"): no exits possible"
+  },
+  "constructorArgs": [
+    "0x2a098988600d87650Fb061FfAff08B97149Fa84D",
+    "0x5f425420081746e3e77f3c94e7a44e7d0b3bdcc3cd4e114eaa07d7540fa282e3",
+    "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4",
+    "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "0x3cb549f35aa0b8ba9e9f7864d85cb5b383d8f2950fbe79ec273e4feb0001d646",
+    "0x0000000000000000000000000000000000000000000000000000000000000000",
+    86400,
+    "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+    "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+    "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F"
+  ],
+  "emptyDepositRoot": "0xc6f67e02e6e4e1bdefb994c6098953f34636ba2b6ca20a4721d2b26a886722ff",
+  "commitmentUsedCheck": "eth_call deposit(dUSDC,0,C_V100A) and depositETH(0,C_VETH) both revert 0x7b000717 CommitmentUsed(); fresh commitment estimates 427090 gas",
+  "attestedClaimInputs": {
+    "vault": "0xA34adbe8413838668b0521230A4d96C6B7e91484",
+    "chainId": 11155111,
+    "slotIndex": 83,
+    "depositRoot": "0x88031a1cde4ab9bbbc7c9320070e80487b8e531c47ecb02c82ad0080fd810394",
+    "slotKey": "0xcc872c95ba998c95918c52e9d801f1cbe7b21b0b9777c867831df82669230dfc",
+    "lastDepositExecBlock": 12121224,
+    "lastDepositExecBlockHash": "0xa40d4ae084f870a14a514301eb3a356d8cfcb0d6a24680647567e7c6591d0c6f",
+    "lastDepositBeaconSlot": 11565149,
+    "lastDepositEpoch": 361410,
+    "fork": "gloas (anchor by block hash + header RLP)",
+    "finality": {
+      "observedFinalizedAtUtc": "2026-11-12T20:43:13Z",
+      "finalizedBlockSeen": 12121226,
+      "beaconFinalizedCheckpoint": {
+        "epoch": "361411",
+        "root": "0x536d5f2c47ef9376734f65244de548d1c3bbe43f89ddc850bba130a37858e6b0"
+      },
+      "beaconFinalizedHeaderSlot": "11565152",
+      "beaconFinalizedRoot": "0x536d5f2c47ef9376734f65244de548d1c3bbe43f89ddc850bba130a37858e6b0",
+      "proofSampleBlock": 12121226,
+      "note": "init the attestation instance at a finalized checkpoint AFTER slot 11565149 (epoch 361410); the first finalized checkpoint covering it is epoch 361411 (start slot 11565152)"
+    },
+    "getProofEndpoints": {
+      "https://ethereum-sepolia-rpc.publicnode.com": {
+        "ok": true,
+        "value": "0x1",
+        "accountNodes": 8,
+        "storageNodes": 3,
+        "storageHash": "0x3cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143"
+      },
+      "https://11155111.rpc.thirdweb.com": {
+        "ok": true,
+        "value": "0x1",
+        "accountNodes": 8,
+        "storageNodes": 3,
+        "storageHash": "0x3cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143"
+      },
+      "https://sepolia.drpc.org": {
+        "ok": false,
+        "error": "HTTP Error 400: Bad Request"
+      },
+      "https://rpc.sepolia.org": {
+        "ok": false,
+        "error": "HTTP Error 404: Not Found"
+      },
+      "https://1rpc.io/sepolia": {
+        "ok": true,
+        "value": "0x1",
+        "accountNodes": 8,
+        "storageNodes": 3,
+        "storageHash": "0x3cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143"
+      }
+    }
+  },
+  "sampleGetProof_latest": {
+    "vault": "0xA34adbe8413838668b0521230A4d96C6B7e91484",
+    "slotIndex": 83,
+    "slotKey": "0xcc872c95ba998c95918c52e9d801f1cbe7b21b0b9777c867831df82669230dfc",
+    "blockNumber": 12121234,
+    "blockHash": "0x1c6c15ed3a49c0c60c8b538fab1cb7c1e7c19baac937b832745f9ebb370eb504",
+    "stateRoot": "0x98cb6058a0aeb3fa8dd9291f092ab13f8c120d9b3a46d91cbb12cb391cb366bf",
+    "timestamp": 1794515508,
+    "endpoints": {
+      "https://ethereum-sepolia-rpc.publicnode.com": {
+        "ok": true,
+        "value": "0x1",
+        "accountNodes": 8,
+        "storageNodes": 3,
+        "storageHash": "0x3cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143"
+      },
+      "https://11155111.rpc.thirdweb.com": {
+        "ok": true,
+        "value": "0x1",
+        "accountNodes": 8,
+        "storageNodes": 3,
+        "storageHash": "0x3cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143"
+      },
+      "https://sepolia.drpc.org": {
+        "ok": false,
+        "error": "HTTP Error 400: Bad Request"
+      },
+      "https://rpc.sepolia.org": {
+        "ok": false,
+        "error": "HTTP Error 404: Not Found"
+      },
+      "https://1rpc.io/sepolia": {
+        "ok": true,
+        "value": "0x1",
+        "accountNodes": 8,
+        "storageNodes": 3,
+        "storageHash": "0x3cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143"
+      }
+    },
+    "proof": {
+      "address": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "balance": "0x2386f26fc10000",
+      "codeHash": "0xc5526abce5777626a44ab69d1148cc71011b33710a39940797889530f3b7c5ab",
+      "nonce": "0x1",
+      "storageHash": "0x3cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143",
+      "accountProof": [
+        "0xf90211a0642ba30d46909ff8a42d08aa3d482139bb53234b9fc88f9eb08cbf75c00505f0a0041cac51469bfb189aa82159f3940c7a2609aeba9d2b49b74f4c70938bc53364a039160c53dc1a39902166c868da2c2a75310fb8f1a383ebf65b27c5f2d6a908aca00468a9d25b431d94ad6e5b409ac55eaaef763898099d3fd17f9050987093525da0c4edc0f5ca1bb48b6eebae0663ec31eb602bcbb24df9c9d1f287b1dde5b0b78aa06a252e92d47b10da9e35d27b7a061e4618129168f250e3681448ed564abb830da05bffd2ce1274e91806ad2ba2202dc06cbe951be63fe8c2c2850197c439d6fe10a0ce7e65d72a017ef109bad3170a07cc824518a5007be077d5f56cd8bd9cfa4299a0b9f24d62696dcef70e262c834ed8fd56037f11ff1b120368aa38749d2a245a27a098dc9002bf20965e7d1d23778d107e7d05e34ed7f23be096019ac57ba62db7baa02ac329781faceba4df5f7d1ca26bb1bcbc693a5d997654460ca9280c38bcd2d0a04af56fd02456196bf06cb97ff52e11a7e4b919a3770db2582c5bddf6c07b098ba0e8c309437c41c3d756c23a49898e49dd078c67a01048c7bfec0c04eff73013e9a0941c8c95b0e2c161f76eeb7f2de65e2ffbe5498723f915ad9f04267a5c1fcaf1a0278ecb493d6baa883bd7d0d6a4e0702f65b84c5370c4aadfbab27c108190328fa0b2c2caba142d8e81d96c4dd6f5247fbc9f18adaf92083f1fe1c693dfd8be2e8180",
+        "0xf90211a0aeec26e9b4bdad71612181e231b89a04523a9587b78a51e57309647041873fb7a0b767ca608dac720a73c5c93caa00f3f0e84e9965c275a7dfe03432c1526de83ca0ddbda4aafcc888a9e7eb26dd6681e299905aa17884b30d83959a9e05bf14dc8aa00bc7b4f9f241e02bc31d72980ff1f0298b5c314b77f2bccf263094dd7ca15293a02776eb805283a2877d93b8b43f13be4494b89c35da97e46f9964189c0a207b70a02dd7710aa066f09aa633bab7e342437345d4d1f354e5c5790c04459598beb753a0ab1604e55edbe6c0a301541493bd0a75a538a15da7b3db55c0e62d450d7ba36da0d92c8d0a689293365296c36d452d7e783a261639676f694ba6f1faa703962e85a0c7e0d4fb7a2303d84e296f9f089e8ec1a8df8804642598e1886c7184985b8e43a02062ddafe5d1a0b8a2d54fbe9bb14795722ecd3936e01a83435d3bbd198fa409a032d73ce84373a221103520a801d52b2702afffe5c9d5242fbbc7d93b5d3061bca01608f21e0a7d31f7f49674df0b00259b73f531ec248ba13d4a28f74a67100d2ba045d728ba2ca4504137a1675ec969f0ac5b056b4636878cef15df2a3e62d0d074a0d09f83f0d9b59eb8d029c8a63ff30e6c1a8a557d93c3de4d43596f53500f4adaa0450cf7a9bfddabe6d5bb048eda8e16167444cba89ff0b13085a327c70990ef8ba0753ab39f4742371e978de40b482b099a646af0d9fdaa1c8821b8ccb5e423e0aa80",
+        "0xf90211a07e008013a9bbefa7d8693eceb027296d4abf5c267b2ea2105eb8be3f4a8f467ea00a2b52f21f653eb875f02c796a99c52f6092c4a3d4cb77ac86abf172614d3880a072c7c4e99cc5396222d6c0b856a7735c95fa030d32cb1454c0911faffa0b613aa01b2175cb20748313cc5cdf7896d26efa0b930584f8659201a85016917f53dfc0a0c6d3f71bc5cc5ed3bc7a0597d69304509a0474d6cf4d167253698e4a12113ecfa038385b77e5f81aa0d5bc9dc825d983ea5e53480e26365b87fcb5760f19ba1410a076acfb37a30fac3896063bdcd1b94c7b29a765e2db2f425258e4910dd97f85e6a05eb7f03dd94caa86d4f0a02a76a0c9bf81a637146cad05cead57a85e05577cd1a01009d3051f037f6b61da94b260d769476f67ef6230e2ea0905b658df3da49bbea081c68965fb574f87589d95875469475ef7d0c2893e846624e1f6b66e16c5ebaea0ca4b3177ef9b5b7372ef2be28ab85bf14bfdae994db603f7792805de0c21c817a08162cc852bb53bca8ec56eeb85223ff1ea9af2db191cd549e425888eef8b867aa0b93750b80913e598cd68fc3bc2b2aca074b9268da7b21c33c8b8b140834d81cda0cfc77deec5f4e6fec243110dea4c6dc3f458bff4b9ca5ca7305404a1927a892fa0820138f56afec8ebb198d5e46509042126ed2cd2bd9741981dd3248bc46c663ba0dbd9fdd832aaac55964ae33f0a2a2e6860e4b7083428811a0e6552dffce1160680",
+        "0xf90211a056c75189619e876da782501408d725b8372ffc6f39f863ae7374c32406634511a02d80b756d874c56a5e6c1763767dd3bd2a23dfad91d00754a1b61c4ac9a83d9ba0c76ca9da678ce1a3358f468326a39eb760825927dbc3c91b40b545e0d1194c70a064159a65a274374ebdaa93da02dd2340d09e248582ff3d711511da18f4700441a05d8b0763be8191e6c2ee6bdcf8d03f2287cc1c65e3f12ef1115a8e3039db0758a087500f24902d117f541633eb0622cedb604ea4c5afb561648656290d1f73032aa0faf27140ce85c76889993036b232d0e28ce802cbb2bae254d6ae85eff50bc199a06092b7fe940e7c3b1c79a52f0b6f2cb04e8c3ebfffff830a4b0d278225be3e0ca0b49335234e576265ab492346dd43dba190a5c3581988b6fa4ca50549f9c523caa0938326c14047703e4a37a66fcab0b1e1f1ec92d8ca47946035ad705ca27fe2fda0fe7ed4cb653c6f0ac68cef5d8faf8e272ad5d8ba12def3a5758cea3faf990d62a0bf0faf64eeec5690f35ffc9a3c9fe7006aa55db737597004de2296f76e7c6be8a0aac2b514a1a3fc07ec6091a937f493361cc544b72a02850b20e66b89d874b99ca0c8f16ea5e4257d0bc7e821bbff8795bb8f8ea9096d8b09c9d06b720958b05b6ea015fd49c98e404c674a368c7dd6fca967b0b5067793d55dc3abe7116b9a35bc10a095ba9b9bdd3666de70afdd36512b6fa9e0158e701a28120b8bf88619ad48089e80",
+        "0xf90211a0391daf133fa3167bb74a049657f5dbda4ff3d93c0c65963aaf42681b05ad1363a0d40f8ffa7763868b10b7381f26ca3858d1294dc230cf0a4d2a01f625f19ac3a4a01e480d98e3d0433e34a709c3fb3e06b64d94bf69cc24019682575fc46a491602a00faa2893cf70c5edb6eb5553db5bd083cc8934ce8933033562a64f54efc8f1c0a03dd2c529c935b3fc9f975a5a97f37497d6f5d5bf2c5ffd7500dc12592cbce9f7a0dfd01c2f1e2e04678186ca2612a884bcd5feb0a599a495bd719f7d250e43ad78a0bb08943d23edc5398c809b0270e2b37742184fbd6eb20f9b9a605e125b4d66eea075428f2edb0ccfc19150a4032594fab54596e1355103da0f8be503965c0c3d96a05699a3cea3081249bae830815aa913d9c4573a1dd690d698da133cef5ac77502a02a3506c5a097b9aaa28a6e489a6ead074c9216a2ad8c1c731dfbeec3bf565d04a0e12a6a52ddb19dd4d051dcc05e559684f1f15522e1a625783fa810aa0e9cbeeea0f4539821d443d3a95cd15f3977ce1f2a1af22376e249bb031c84b67e4d4ea726a0372cff5fe544b70a7481b87a637633e965d359e6722a3e4968371942ec07899ca0e95cc8371947487ab2f1b8b0c153f008a2c6af6a7ad43a2c58dd00e5a37e6ec7a0d635d2b153b5d9ae7da80a2bf44a8913498b6bbe502f39bf992bb5f2527b25cea0af85340c8afe248c701441331f34ca2b32f663c4a4c119b450bcd85657599f5580",
+        "0xf90211a0b54b96a71419c99d8f0c2dc7130a004d041476a2ab8b200fc5c25cba4e2f8139a01a62b4249b93cdbeefa1f2dfa018c7d17576599f5e790c7cfb63b6e192cecfada09fcabbe7279a02f81827fff28391ca20a9b920bd527a8ca96dad1587fa787224a0ffe9b79a3261c5d2265dc87028ad428265dce2f890a2d9a2ff61120a2c3db4a0a05524a6190074b6a7833b36e074af3c8659793b2df1565220e03dbee49530ddd3a0a4a4930aa22cfbcc4d24a6fbd53bc42a47437c29e9d97adb731bbf9afe4987d4a093eda30dea3898e75c19d3f6012c19ddd3cbe24a18bd84c5013cdb89248df17ca094a7ae435ed04f5ccbc86e88205350a538fba45b87c367e34976139cc8158f3ba0d4fe262620e3f0a3fb305b706f4b16120f17439d4b248bc70139cc73b01b28eea06bc070e9526c5a9a67b0cc2a0bf6b3a7b456fcdf90a57adcb6c1cc30b82c1a59a07821935a678c4ac9728326b94df667a571b8fbf744802df005c2e2c973f99c41a0e60ec396fa89bcf12fcd2c66bd7055b2d18844be4e227bb7a758d489b0a3eb6da082d2e06f91f8336f91e781f1668b32944dcfcf20b802dafad0186328e0b64867a0ff954329a8491549c980f7e94f69f58a900d59174e95852a6020d7e3f0ba0393a051101c4c04d7e6d9c5c405775e29ce4fbab928044b975709969079d0f7529755a0d4ac5b543e3a8ff9c80f638c9a10188ed4b20ef4c0baa1a9a0c010c19c7ecc9480",
+        "0xf90171a0664136623c53bfaf96c7a31c48f142c0c93828ad21efc4bc56db51f258a4438fa08d698b6c5469287d15451475a7acd07941fb5dfab5a5f5e7be5aaa945f129677a0342fd851bb9fc182f737bd0b824c476d86e100c4b0c6eb44be2075544d50683780a08d5b186e347e1e25abdf4332650f2934869737cc20441111b657df12bc1c39fca057686c73d751a9f95395d4fdf958f852c102a9cb074a28e56674cf14bcaa5cf1a09dfc037d9b860d8a499756a02f18912ef33541ce2fd8ac80e3ae1b9ba164c82180a03af912b6d7238e8defa70a8bf71367cadcf161bc55c292749f6866a1b2718db4a084a91d7d03f91d8fd033883ae13d3d9ab417fb61fbacb42a3e509b76eff16b96a07bb1448f2cfef7c45e5ba036f2261707348cf47f618f87708e20701c4df64c9580a0a955533b51fe2b3fc67c0897246567064426d6e08cc55a41b3d2b70b760de3bda0043af6f927d60b95b616286180ada190b48699d6285571623d3bec7ebd97a015808080",
+        "0xf86d9d3ee59167d282bf3a0199a8efedc19460d2846bbb02fa55f8e5f94d4014b84df84b01872386f26fc10000a03cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143a0c5526abce5777626a44ab69d1148cc71011b33710a39940797889530f3b7c5ab"
+      ],
+      "storageProof": [
+        {
+          "key": "0xcc872c95ba998c95918c52e9d801f1cbe7b21b0b9777c867831df82669230dfc",
+          "value": "0x1",
+          "proof": [
+            "0xf90211a022c69cb5576fbeb87c60e92a61e7997cadcb031aff0bb3168c8012852070ac93a0d58b5d770a5d72791a69f95a879a22f9b119ad147816633a7ae601c116a73b4ba00e5f3b71dfb38482df2b4919ec21de22a446f2709c7ff82bcfcd7070ae226a01a09f6899d1cb53094921da286e79ecaad779b47496bba8c1f9546511cebd60cf25a017cb95cc965d928144aef7838517a243e06997f7b10af51c28104988b037f19fa0c0cabeca3128740dbe307c173c6b9af377e8cb4c4ae5e5415e525f7f2cff8d45a025836b3e3ca8bbba1b269af8a838aba50204065bd0a5a66b6ad6abba6679505da01bc941911c374e6aea5c30beb4fb47d8edd449ec58583ee708f4129a219c48c5a0c11b15786a20854f47de125611ed980affb4b58feb0cf018f4d563154d20088da041cb316e9eb5c451ca582565f5e08203358b483ab7823b1ebdb962a742741408a080dfd325049cea4205eb2e12786bd849b87a952259a0c6a0322fbbb890d54a07a0a4ff71fda39501d020bbcd04239d3ae0487db053d4145b51db2f42b6267a1d58a040b2d4d80fe7bcb24a0fd509a30f59b61617db22ed720117b67de6e1222b6efaa01f887f7a87181ebf5785f50edacc227f325c83ace0ea1ca21397874043543c6ea055feda67e904f4550ce90d82c4463bb834aa0aef9aed3c9d1e16a3e538cf25ffa0b0ac547751a1d429e8f51c59919b4d6bb825637a73c3bac7ad21ecd9af9c160a80",
+            "0xf8718080a0776dd50972d63605c2d5075d1b0a2c406f0b6e32ef79515c69a8f70a69b9f40d8080808080808080a0558e619eb1a836d711b7222c5911835ddf0a9c19ece34430a9c7d43a80472d6aa0b1fb6e227a30ee5b6847d274eeb6f98340c43b0b5252bc88088235c1bc2de55880808080",
+            "0xe2a0203205c3660f6ad9873ce985bbaed906d3a26ae3b22c5c6bfe11882531d4f99201"
+          ]
+        }
+      ]
+    },
+    "proofFrom": "https://ethereum-sepolia-rpc.publicnode.com"
+  },
+  "sampleGetProof_finalized": {
+    "vault": "0xA34adbe8413838668b0521230A4d96C6B7e91484",
+    "slotIndex": 83,
+    "slotKey": "0xcc872c95ba998c95918c52e9d801f1cbe7b21b0b9777c867831df82669230dfc",
+    "blockNumber": 12121226,
+    "blockHash": "0x5545e9c01555bf74d6eedb6007190a8b7a33311b3489cc3d74d6edc0ab98c9b1",
+    "stateRoot": "0x13c573cc401bb6360f51e5d8725611361fbd84a693b2b696d6fa3e67b70016f0",
+    "timestamp": 1794515412,
+    "endpoints": {
+      "https://ethereum-sepolia-rpc.publicnode.com": {
+        "ok": false,
+        "error": {
+          "code": 4444,
+          "message": "distance to target block exceeds maximum proof window"
+        }
+      },
+      "https://11155111.rpc.thirdweb.com": {
+        "ok": true,
+        "value": "0x1",
+        "accountNodes": 8,
+        "storageNodes": 3,
+        "storageHash": "0x3cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143"
+      },
+      "https://sepolia.drpc.org": {
+        "ok": false,
+        "error": "HTTP Error 400: Bad Request"
+      },
+      "https://rpc.sepolia.org": {
+        "ok": false,
+        "error": "HTTP Error 404: Not Found"
+      },
+      "https://1rpc.io/sepolia": {
+        "ok": false,
+        "error": "HTTP Error 400: Bad Request"
+      }
+    },
+    "proof": {
+      "accountProof": [
+        "0xf90211a023821f45b3af4709f876e0d4e376dd0982424cc873bc2f82bcac404fdb23f19ba0f19c54e58b9c40b60147bfbb7b97da4cbad96bc3fdc0c38e5bbaa4bc5c6103a9a098261860fa946dc1f5d7392795305465949bc7de6aca5a3e10ba200855c5dc23a0bb78629076a8eed5024fc68c03be4e9d2e4d66986f9686f906a53855cf53404ba073c0c3b8df636d318f9376600aeb0acec85306e916aa16448ffa93c5f476c7f3a0ceedd16fbdac967eb9fe91bd4b0867a5a3d655165141b4b65de22edce44ab5eda01ec2e842d8d0cc6e79a83256203b62d22ea30bb38a518f7f9633908736bf7876a05f763e63c9a63c6d3997ef4e8f197c6b17d0212a47cdfcc03a1236b2d88da5a8a0b35ed9fab4a20586f913d777b7b081b4c5fb942f185c45f4818d6e08e4c78ca8a08beed8f5b0247dfedfb26592ed3f91e18429e88ecf5e347b2be63d533034e0bca0bc1bbfd157fba63c54cee49232faad41be41e14c4cc71db25d8eb9989a7e68f4a0db7b7c0a35ef66ce8e80c7ac246dd6d801354cf855116f5b0776826cc4ddaab8a00345379b8f394d5aa20eb351caaa48fdc080254372a7c26fb10950354eb5fd2ba0c62386297e0ba944aea164447ce6f09bc2edd2958e4404985d67601a12d76d15a03ce03110d96a7d5033ff0464c117bd7699f9f10443fa756f5360632b5fb79ef7a0b15267b5d7d1630de7a5756d44eda77654f65c5a9cb719fd316d16661692a69b80",
+        "0xf90211a0f73b6a72c81feca7465725224fd06454097f64e7a42efbf6cea20bc445a894eca0e4f55d854a5c0f609bde384dfa4f7294b327002a953c5b3a542c7f0373d29f73a0432080821eb4d9a388c880e80c72887bff02428dee95fdfba7c83c9bcedde6fea0b84eae983e2763bf1462b52d283fe5946a895779a677e06b945c916ae5b9d2d0a0f8d7c7b341d5361e1ad62165db25e79e5e6426c2c0ad7a752387663cff3a5921a001a46164169b6239452952f66bb159df27c06921eb229184529e8aabd44e2129a0fd00de512196541f06a033c69ada129b274e2d6d1758a5c110caee58f0cf5884a045c381dac4b27608d288bc437e80b513c3e93c587e8b30d9f3fcaf24255e5ed4a03bf7fb0b92f7485f98909df42723740b3e17277f0a64565a7275e6f9fdead3aea09296dfd9e24ed7310ba46f88975b67f51cba9353bb0471b4c3db10c2a141f331a0fed7b08bb07fa58cbf455a9266d902d913cf331cabe386b6f6f2ac7cd4ddcf88a076c6e851594a57848b873cb1fe30281d177672f42c0f8cdbc9e8b5a5189afb71a07ee3f76e12a54e3aa4ad54cdb1e6013f24bda3dbdb5fe95671c79fb41eab62afa0d3bc27c2d872a44dd54165bf39d9865a21b468177883c314b2b75fc487a7dc42a046a416a6f2de0175f0089576c71585b746a996bc07247685e435fdd18bb6110fa02de8b77e91d05c2ad74145c7aa92d152f686dd9429cdb73ab1358dabf0dfa05080",
+        "0xf90211a0350c125b4884a0583462861ef4718d5a10bb759861c6ec34d4eabb48d1abb286a00a2b52f21f653eb875f02c796a99c52f6092c4a3d4cb77ac86abf172614d3880a072c7c4e99cc5396222d6c0b856a7735c95fa030d32cb1454c0911faffa0b613aa08a5634f82372c3914bcee00c0b911f8051342ffa9b2051dc9f95d7b5dd86ac70a0c6d3f71bc5cc5ed3bc7a0597d69304509a0474d6cf4d167253698e4a12113ecfa038385b77e5f81aa0d5bc9dc825d983ea5e53480e26365b87fcb5760f19ba1410a076acfb37a30fac3896063bdcd1b94c7b29a765e2db2f425258e4910dd97f85e6a05eb7f03dd94caa86d4f0a02a76a0c9bf81a637146cad05cead57a85e05577cd1a01009d3051f037f6b61da94b260d769476f67ef6230e2ea0905b658df3da49bbea081c68965fb574f87589d95875469475ef7d0c2893e846624e1f6b66e16c5ebaea0ca4b3177ef9b5b7372ef2be28ab85bf14bfdae994db603f7792805de0c21c817a0fc960e2762ee3b1c1543a4e107f067b1fecca31eeae3cad5613b67358e9444f0a0b93750b80913e598cd68fc3bc2b2aca074b9268da7b21c33c8b8b140834d81cda0cfc77deec5f4e6fec243110dea4c6dc3f458bff4b9ca5ca7305404a1927a892fa0820138f56afec8ebb198d5e46509042126ed2cd2bd9741981dd3248bc46c663ba0dbd9fdd832aaac55964ae33f0a2a2e6860e4b7083428811a0e6552dffce1160680",
+        "0xf90211a056c75189619e876da782501408d725b8372ffc6f39f863ae7374c32406634511a02d80b756d874c56a5e6c1763767dd3bd2a23dfad91d00754a1b61c4ac9a83d9ba0c76ca9da678ce1a3358f468326a39eb760825927dbc3c91b40b545e0d1194c70a064159a65a274374ebdaa93da02dd2340d09e248582ff3d711511da18f4700441a05d8b0763be8191e6c2ee6bdcf8d03f2287cc1c65e3f12ef1115a8e3039db0758a087500f24902d117f541633eb0622cedb604ea4c5afb561648656290d1f73032aa0faf27140ce85c76889993036b232d0e28ce802cbb2bae254d6ae85eff50bc199a06092b7fe940e7c3b1c79a52f0b6f2cb04e8c3ebfffff830a4b0d278225be3e0ca0b49335234e576265ab492346dd43dba190a5c3581988b6fa4ca50549f9c523caa0938326c14047703e4a37a66fcab0b1e1f1ec92d8ca47946035ad705ca27fe2fda0fe7ed4cb653c6f0ac68cef5d8faf8e272ad5d8ba12def3a5758cea3faf990d62a0bf0faf64eeec5690f35ffc9a3c9fe7006aa55db737597004de2296f76e7c6be8a0aac2b514a1a3fc07ec6091a937f493361cc544b72a02850b20e66b89d874b99ca0c8f16ea5e4257d0bc7e821bbff8795bb8f8ea9096d8b09c9d06b720958b05b6ea015fd49c98e404c674a368c7dd6fca967b0b5067793d55dc3abe7116b9a35bc10a0ddd1e7cdc2434b975c612080212b57cdfb4a5bf4037cb5c9af68f797205ada2d80",
+        "0xf90211a0391daf133fa3167bb74a049657f5dbda4ff3d93c0c65963aaf42681b05ad1363a0d40f8ffa7763868b10b7381f26ca3858d1294dc230cf0a4d2a01f625f19ac3a4a01e480d98e3d0433e34a709c3fb3e06b64d94bf69cc24019682575fc46a491602a00faa2893cf70c5edb6eb5553db5bd083cc8934ce8933033562a64f54efc8f1c0a03dd2c529c935b3fc9f975a5a97f37497d6f5d5bf2c5ffd7500dc12592cbce9f7a0dfd01c2f1e2e04678186ca2612a884bcd5feb0a599a495bd719f7d250e43ad78a020588af70f337bec83a49b1c61959365db0f3b59ad48c071b98d7fcc12ed8f83a075428f2edb0ccfc19150a4032594fab54596e1355103da0f8be503965c0c3d96a05699a3cea3081249bae830815aa913d9c4573a1dd690d698da133cef5ac77502a02a3506c5a097b9aaa28a6e489a6ead074c9216a2ad8c1c731dfbeec3bf565d04a0e12a6a52ddb19dd4d051dcc05e559684f1f15522e1a625783fa810aa0e9cbeeea0f4539821d443d3a95cd15f3977ce1f2a1af22376e249bb031c84b67e4d4ea726a0372cff5fe544b70a7481b87a637633e965d359e6722a3e4968371942ec07899ca0e95cc8371947487ab2f1b8b0c153f008a2c6af6a7ad43a2c58dd00e5a37e6ec7a0d635d2b153b5d9ae7da80a2bf44a8913498b6bbe502f39bf992bb5f2527b25cea0af85340c8afe248c701441331f34ca2b32f663c4a4c119b450bcd85657599f5580",
+        "0xf90211a0b54b96a71419c99d8f0c2dc7130a004d041476a2ab8b200fc5c25cba4e2f8139a01a62b4249b93cdbeefa1f2dfa018c7d17576599f5e790c7cfb63b6e192cecfada09fcabbe7279a02f81827fff28391ca20a9b920bd527a8ca96dad1587fa787224a0ffe9b79a3261c5d2265dc87028ad428265dce2f890a2d9a2ff61120a2c3db4a0a05524a6190074b6a7833b36e074af3c8659793b2df1565220e03dbee49530ddd3a0a4a4930aa22cfbcc4d24a6fbd53bc42a47437c29e9d97adb731bbf9afe4987d4a093eda30dea3898e75c19d3f6012c19ddd3cbe24a18bd84c5013cdb89248df17ca094a7ae435ed04f5ccbc86e88205350a538fba45b87c367e34976139cc8158f3ba0d4fe262620e3f0a3fb305b706f4b16120f17439d4b248bc70139cc73b01b28eea06bc070e9526c5a9a67b0cc2a0bf6b3a7b456fcdf90a57adcb6c1cc30b82c1a59a07821935a678c4ac9728326b94df667a571b8fbf744802df005c2e2c973f99c41a0e60ec396fa89bcf12fcd2c66bd7055b2d18844be4e227bb7a758d489b0a3eb6da082d2e06f91f8336f91e781f1668b32944dcfcf20b802dafad0186328e0b64867a0ff954329a8491549c980f7e94f69f58a900d59174e95852a6020d7e3f0ba0393a051101c4c04d7e6d9c5c405775e29ce4fbab928044b975709969079d0f7529755a0d4ac5b543e3a8ff9c80f638c9a10188ed4b20ef4c0baa1a9a0c010c19c7ecc9480",
+        "0xf90171a0664136623c53bfaf96c7a31c48f142c0c93828ad21efc4bc56db51f258a4438fa08d698b6c5469287d15451475a7acd07941fb5dfab5a5f5e7be5aaa945f129677a0342fd851bb9fc182f737bd0b824c476d86e100c4b0c6eb44be2075544d50683780a08d5b186e347e1e25abdf4332650f2934869737cc20441111b657df12bc1c39fca057686c73d751a9f95395d4fdf958f852c102a9cb074a28e56674cf14bcaa5cf1a09dfc037d9b860d8a499756a02f18912ef33541ce2fd8ac80e3ae1b9ba164c82180a03af912b6d7238e8defa70a8bf71367cadcf161bc55c292749f6866a1b2718db4a084a91d7d03f91d8fd033883ae13d3d9ab417fb61fbacb42a3e509b76eff16b96a07bb1448f2cfef7c45e5ba036f2261707348cf47f618f87708e20701c4df64c9580a0a955533b51fe2b3fc67c0897246567064426d6e08cc55a41b3d2b70b760de3bda0043af6f927d60b95b616286180ada190b48699d6285571623d3bec7ebd97a015808080",
+        "0xf86d9d3ee59167d282bf3a0199a8efedc19460d2846bbb02fa55f8e5f94d4014b84df84b01872386f26fc10000a03cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143a0c5526abce5777626a44ab69d1148cc71011b33710a39940797889530f3b7c5ab"
+      ],
+      "address": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+      "balance": "0x2386f26fc10000",
+      "codeHash": "0xc5526abce5777626a44ab69d1148cc71011b33710a39940797889530f3b7c5ab",
+      "nonce": "0x1",
+      "storageHash": "0x3cf37ed082f5c16f6f32f95ceaddd9c6068ce375213f2984369919ac147c9143",
+      "storageProof": [
+        {
+          "key": "0xcc872c95ba998c95918c52e9d801f1cbe7b21b0b9777c867831df82669230dfc",
+          "proof": [
+            "0xf90211a022c69cb5576fbeb87c60e92a61e7997cadcb031aff0bb3168c8012852070ac93a0d58b5d770a5d72791a69f95a879a22f9b119ad147816633a7ae601c116a73b4ba00e5f3b71dfb38482df2b4919ec21de22a446f2709c7ff82bcfcd7070ae226a01a09f6899d1cb53094921da286e79ecaad779b47496bba8c1f9546511cebd60cf25a017cb95cc965d928144aef7838517a243e06997f7b10af51c28104988b037f19fa0c0cabeca3128740dbe307c173c6b9af377e8cb4c4ae5e5415e525f7f2cff8d45a025836b3e3ca8bbba1b269af8a838aba50204065bd0a5a66b6ad6abba6679505da01bc941911c374e6aea5c30beb4fb47d8edd449ec58583ee708f4129a219c48c5a0c11b15786a20854f47de125611ed980affb4b58feb0cf018f4d563154d20088da041cb316e9eb5c451ca582565f5e08203358b483ab7823b1ebdb962a742741408a080dfd325049cea4205eb2e12786bd849b87a952259a0c6a0322fbbb890d54a07a0a4ff71fda39501d020bbcd04239d3ae0487db053d4145b51db2f42b6267a1d58a040b2d4d80fe7bcb24a0fd509a30f59b61617db22ed720117b67de6e1222b6efaa01f887f7a87181ebf5785f50edacc227f325c83ace0ea1ca21397874043543c6ea055feda67e904f4550ce90d82c4463bb834aa0aef9aed3c9d1e16a3e538cf25ffa0b0ac547751a1d429e8f51c59919b4d6bb825637a73c3bac7ad21ecd9af9c160a80",
+            "0xf8718080a0776dd50972d63605c2d5075d1b0a2c406f0b6e32ef79515c69a8f70a69b9f40d8080808080808080a0558e619eb1a836d711b7222c5911835ddf0a9c19ece34430a9c7d43a80472d6aa0b1fb6e227a30ee5b6847d274eeb6f98340c43b0b5252bc88088235c1bc2de55880808080",
+            "0xe2a0203205c3660f6ad9873ce985bbaed906d3a26ae3b22c5c6bfe11882531d4f99201"
+          ],
+          "value": "0x1"
+        }
+      ]
+    },
+    "proofFrom": "https://11155111.rpc.thirdweb.com"
+  },
+  "spend": {
+    "fees_wei": 511724079194299,
+    "deposited_wei": 10000000000000000,
+    "balanceBefore": "5.5",
+    "balanceAfter": "5.489488275920805701"
+  }
+}

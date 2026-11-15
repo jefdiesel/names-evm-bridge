@@ -1,0 +1,129 @@
+{
+ "network": "sepolia",
+ "beacon_endpoint": "https://lodestar-sepolia.chainsafe.io",
+ "el_endpoint": "https://ethereum-sepolia-rpc.publicnode.com",
+ "chain_id": 11155111,
+ "fetched_utc": "2026-11-12T15:00:34+00:00",
+ "genesis_validators_root": "0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078",
+ "genesis_time": 1655733600,
+ "fork_schedule": [
+  {
+   "previous_version": "0x90000069",
+   "current_version": "0x90000069",
+   "epoch": "0"
+  },
+  {
+   "previous_version": "0x90000069",
+   "current_version": "0x90000070",
+   "epoch": "50"
+  },
+  {
+   "previous_version": "0x90000070",
+   "current_version": "0x90000071",
+   "epoch": "100"
+  },
+  {
+   "previous_version": "0x90000071",
+   "current_version": "0x90000072",
+   "epoch": "56832"
+  },
+  {
+   "previous_version": "0x90000072",
+   "current_version": "0x90000073",
+   "epoch": "132608"
+  },
+  {
+   "previous_version": "0x90000073",
+   "current_version": "0x90000074",
+   "epoch": "222464"
+  },
+  {
+   "previous_version": "0x90000074",
+   "current_version": "0x90000075",
+   "epoch": "272640"
+  },
+  {
+   "previous_version": "0x90000075",
+   "current_version": "0x90000076",
+   "epoch": "353024"
+  },
+  {
+   "previous_version": "0x90000076",
+   "current_version": "0x08000000",
+   "epoch": "18446744073709551615"
+  }
+ ],
+ "finality_update": {
+  "fork": "gloas",
+  "json_version": "gloas",
+  "attested_slot": 11563488,
+  "finalized_slot": 11563424,
+  "signature_slot": 11563489,
+  "signature_period": 1411,
+  "ssz_bytes": 1448,
+  "finalized_execution_block_hash": "0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1",
+  "participation": 509
+ },
+ "storage": {
+  "contract": "0x58Cc85b8D04EA49cC6DBd3CbFFd00B4B8D6cb3ef",
+  "mapping_slot_index": 203,
+  "mapping_key": "0xce672ed0dc29e25537be0defe5d9f5fda6021998c3aef3a29aa43a52d7313df3",
+  "relayed_in_block": 12116935,
+  "relay_tx": "0x8e7f2af2da27d7dda986b31e06fada25a3ae571423e0a7d91ac8396ceb7020c6",
+  "block_number": 12119519,
+  "block_hash": "0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1",
+  "state_root": "0x29752df333b7d6bd4d99219b299ab40b9bd2ca488849dd2344a6085fc287c647",
+  "raw_header_from_debug_api": false,
+  "slot_key": "0x4cd52750e4fc393f9bb4ad1efdb4cbe3e9de0379e51dbc148da8c429956e09b5",
+  "proof_endpoint": "https://sepolia.rpc.thirdweb.com",
+  "value": "0x1",
+  "account_proof_nodes": 8,
+  "storage_proof_nodes": 5
+ },
+ "updates": [
+  {
+   "period": 1410,
+   "fork": "gloas",
+   "fork_digest": "669e6c11",
+   "ssz_bytes": 26424,
+   "attested_slot": 11550784,
+   "finalized_slot": 11550720,
+   "signature_slot": 11550785,
+   "participation": 509
+  },
+  {
+   "period": 1411,
+   "fork": "gloas",
+   "fork_digest": "669e6c11",
+   "ssz_bytes": 26424,
+   "attested_slot": 11558976,
+   "finalized_slot": 11558912,
+   "signature_slot": 11558977,
+   "participation": 509
+  }
+ ],
+ "bootstrap_prev_period": {
+  "block_root": "0x9129503439dc5ff72b63ae9093c0e4dee4f7130614be88c7ab837244208a8f78",
+  "slot": 11550720,
+  "period": 1410,
+  "fork": "gloas",
+  "ssz_bytes": 25472,
+  "endpoint": "http://unstable.sepolia.beacon-api.nimbus.team",
+  "root_cross_checked_with": [
+   "https://ethereum-sepolia-beacon-api.publicnode.com",
+   "https://lodestar-sepolia.chainsafe.io"
+  ]
+ },
+ "bootstrap_same_period": {
+  "block_root": "0xf54bd3575c05c7d83ee53dcef9bbfd98720b39e0be93aa9707a22dce8f2225d3",
+  "slot": 11558912,
+  "period": 1411,
+  "fork": "gloas",
+  "ssz_bytes": 25472,
+  "endpoint": "http://unstable.sepolia.beacon-api.nimbus.team",
+  "root_cross_checked_with": [
+   "https://ethereum-sepolia-beacon-api.publicnode.com",
+   "https://lodestar-sepolia.chainsafe.io"
+  ]
+ }
+}

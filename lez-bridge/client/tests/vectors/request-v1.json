@@ -1,0 +1,232 @@
+{
+  "format": "Logos bridge deposit request",
+  "version": 1,
+  "hrp": "logosdep",
+  "spec": "web/deposit/README.md, section \"Deposit request format, v1\"",
+  "warning": "The commitments below are SHA-256 hashes of public labels; no deposit secret exists for them. Never deposit to them.",
+  "valid": [
+    {
+      "name": "sepolia demo v2, 0.01 ETH (denomination 1 of 3)",
+      "request": {
+        "version": 1,
+        "chainId": "11155111",
+        "vault": "0x8c8b2664de28e5287158db4db65d448638871b74",
+        "token": "0x0000000000000000000000000000000000000000",
+        "denomIndex": 0,
+        "amount": "10000000000000000",
+        "commitment": "0x962f9a3ffc44690aac8d3d0ea8af24ff63b54b58624534c10dee46b139dfdb0f"
+      },
+      "payloadHex": "010000000000aa36a78c8b2664de28e5287158db4db65d448638871b74000000000000000000000000000000000000000000072386f26fc10000962f9a3ffc44690aac8d3d0ea8af24ff63b54b58624534c10dee46b139dfdb0f",
+      "string": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z",
+      "length": 159
+    },
+    {
+      "name": "sepolia demo v2, 100 dUSDC",
+      "request": {
+        "version": 1,
+        "chainId": "11155111",
+        "vault": "0x8c8b2664de28e5287158db4db65d448638871b74",
+        "token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+        "denomIndex": 0,
+        "amount": "100000000",
+        "commitment": "0xc3151049b536194e935bf261d8f841244921fe2892826663238327362cb3dbf3"
+      },
+      "payloadHex": "010000000000aa36a78c8b2664de28e5287158db4db65d448638871b74ac207b9bfebf3ef7c26297ea6abadeeccc4aa71e000405f5e100c3151049b536194e935bf261d8f841244921fe2892826663238327362cb3dbf3",
+      "string": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3ka9vypaehl4l8mmuyc5haf4t4hhve392w8sqqszltcgqcv23qjd4xcv5ay6m7fsa37zpy3yjrl3gj2pxvcersvnnvt9nm0esssqx5l",
+      "length": 155
+    },
+    {
+      "name": "sepolia demo v2, 10,000 dUSDC (denomination 3 of 3)",
+      "request": {
+        "version": 1,
+        "chainId": "11155111",
+        "vault": "0x8c8b2664de28e5287158db4db65d448638871b74",
+        "token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+        "denomIndex": 2,
+        "amount": "10000000000",
+        "commitment": "0x910140139fc3c687e14887a1b731e4397df0078990108880f9a1a102fde24a44"
+      },
+      "payloadHex": "010000000000aa36a78c8b2664de28e5287158db4db65d448638871b74ac207b9bfebf3ef7c26297ea6abadeeccc4aa71e020502540be400910140139fc3c687e14887a1b731e4397df0078990108880f9a1a102fde24a44",
+      "string": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3ka9vypaehl4l8mmuyc5haf4t4hhve392w8szq5p9gzlyqzgszsqnnlpudplpfzr6rde3usuhmuq83xgppzyqlxs6zqhauf9yghjrv5d",
+      "length": 156
+    },
+    {
+      "name": "bounds: chain 1, index 255, amount 2^256-1",
+      "request": {
+        "version": 1,
+        "chainId": "1",
+        "vault": "0xffffffffffffffffffffffffffffffffffffffff",
+        "token": "0x00000000000000000000000000000000000000ff",
+        "denomIndex": 255,
+        "amount": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+        "commitment": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "payloadHex": "010000000000000001ffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000ffff20ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "string": "logosdep1qyqqqqqqqqqqqq0lllllllllllllllllllllllllllllllcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqplllyrlllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllln99l9p",
+      "length": 199
+    },
+    {
+      "name": "bounds: chain 2^64-1, amount 1, commitment 1",
+      "request": {
+        "version": 1,
+        "chainId": "18446744073709551615",
+        "vault": "0x0000000000000000000000000000000000000001",
+        "token": "0x0000000000000000000000000000000000000000",
+        "denomIndex": 0,
+        "amount": "1",
+        "commitment": "0x0000000000000000000000000000000000000000000000000000000000000001"
+      },
+      "payloadHex": "01ffffffffffffffff000000000000000000000000000000000000000100000000000000000000000000000000000000000001010000000000000000000000000000000000000000000000000000000000000001",
+      "string": "logosdep1q8llllllllllllcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqgqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqyqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqgk424n0",
+      "length": 150
+    }
+  ],
+  "lenient": [
+    {
+      "name": "full link (request in the fragment)",
+      "input": "https://deposit.example/#logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z",
+      "expect": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z"
+    },
+    {
+      "name": "link with request= in the fragment",
+      "input": "https://deposit.example/app/#request=logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z",
+      "expect": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z"
+    },
+    {
+      "name": "surrounding whitespace and newline",
+      "input": "  logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z\n",
+      "expect": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z"
+    },
+    {
+      "name": "wrapped across lines by a chat app",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqq\nqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60g\r\nw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z",
+      "expect": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z"
+    },
+    {
+      "name": "all uppercase (as in a QR code)",
+      "input": "LOGOSDEP1QYQQQQQQQZ4RDFUV3VNXFH3GU558ZKXMFKM963YX8ZR3KAQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQU3CDUN0CYQQP930NGLLC3RFP2KG60GW4ZHJFLMRK494SCJ9XNQSMMJXKYUALKC02AXS7Z",
+      "expect": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z"
+    },
+    {
+      "name": "zero-width space pasted inside",
+      "input": "logosdep1q​yqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z",
+      "expect": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z"
+    }
+  ],
+  "invalid": [
+    {
+      "name": "one character changed",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxqfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z",
+      "error": "checksum"
+    },
+    {
+      "name": "two characters swapped",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxf3hgu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z",
+      "error": "checksum"
+    },
+    {
+      "name": "last character dropped",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7",
+      "error": "checksum"
+    },
+    {
+      "name": "bech32 (not bech32m) checksum",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc0lpkumq",
+      "error": "checksum"
+    },
+    {
+      "name": "mixed case",
+      "input": "logosdep1qyqqqqqqqz4RDFUV3VNXFH3GU558ZKXMFKM963YX8ZR3KAQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQU3CDUN0CYQQP930NGLLC3RFP2KG60GW4ZHJFLMRK494SCJ9XNQSMMJXKYUALKC02AXS7Z",
+      "error": "case"
+    },
+    {
+      "name": "other prefix",
+      "input": "logosdap1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc04nz2hp",
+      "error": "hrp"
+    },
+    {
+      "name": "character not in the bech32 set (b)",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfb3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z",
+      "error": "charset"
+    },
+    {
+      "name": "space inside (strict decoder)",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8 zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc02axs7z",
+      "error": "charset"
+    },
+    {
+      "name": "too long",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc0qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqf750lv",
+      "error": "length"
+    },
+    {
+      "name": "version 2",
+      "input": "logosdep1qgqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc09xrqtq",
+      "error": "version"
+    },
+    {
+      "name": "version 0",
+      "input": "logosdep1qqqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc005982m",
+      "error": "version"
+    },
+    {
+      "name": "one extra byte at the end",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc0qqlu7a7p",
+      "error": "trailing"
+    },
+    {
+      "name": "last commitment byte missing",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkcttxx5s",
+      "error": "length"
+    },
+    {
+      "name": "amount length 0",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqztzlx3ll3zxjz4v357sa290ynlk8d2ttp3y2dxpphhydvfemlds7r096am",
+      "error": "amount"
+    },
+    {
+      "name": "amount length 33",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqyy3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc05c0gg8",
+      "error": "amount"
+    },
+    {
+      "name": "amount with a leading zero byte",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpqqz8phjdlqsqqyk97drllzydy92erfap6527f8lvw65kkrzg56vzr0wg6cnnh7mpud5ptz3",
+      "error": "amount"
+    },
+    {
+      "name": "zero commitment",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq589c2c",
+      "error": "commitment"
+    },
+    {
+      "name": "zero vault",
+      "input": "logosdep1qyqqqqqqqz4rdfcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc0zcna04",
+      "error": "vault"
+    },
+    {
+      "name": "chain id 0",
+      "input": "logosdep1qyqqqqqqqqqqqqyv3vnxfh3gu558zkxmfkm963yx8zr3kaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqu3cdun0cyqqp930ngllc3rfp2kg60gw4zhjflmrk494scj9xnqsmmjxkyualkc0rc6upu",
+      "error": "chain"
+    },
+    {
+      "name": "non-zero padding bits",
+      "input": "logosdep1qyqqqqqqqz4rdfuv3vnxfh3gu558zkxmfkm963yx8zr3ka9vypaehl4l8mmuyc5haf4t4hhve392w8sqqszltcgqcv23qjd4xcv5ay6m7fsa37zpy3yjrl3gj2pxvcersvnnvt9nm0e3dx5nfd",
+      "error": "padding"
+    }
+  ],
+  "bip350": {
+    "note": "Official BIP-350 bech32m vectors: the checksum layer must accept these (hrp and 5-bit words only).",
+    "valid": [
+      "A1LQFN3A",
+      "a1lqfn3a",
+      "abcdef1l7aum6echk45nj3s0wdvt2fg8x9yrzpqzd3ryx",
+      "split1checkupstagehandshakeupstreamerranterredcaperredlc445v",
+      "?1v759aa"
+    ],
+    "mutatedMustFail": [
+      "a1lqfn3q",
+      "abcdef1l7aum6echk45nj3s0wdvt2fg8x9yrzpqzd3ryq"
+    ]
+  }
+}

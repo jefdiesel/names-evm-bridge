@@ -1,0 +1,101 @@
+{
+ "network": "mainnet",
+ "beacon_endpoint": "https://lodestar-mainnet.chainsafe.io",
+ "el_endpoint": null,
+ "chain_id": 1,
+ "fetched_utc": "2026-11-12T15:01:51+00:00",
+ "genesis_validators_root": "0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95",
+ "genesis_time": 1606824023,
+ "fork_schedule": [
+  {
+   "previous_version": "0x00000000",
+   "current_version": "0x00000000",
+   "epoch": "0"
+  },
+  {
+   "previous_version": "0x00000000",
+   "current_version": "0x01000000",
+   "epoch": "74240"
+  },
+  {
+   "previous_version": "0x01000000",
+   "current_version": "0x02000000",
+   "epoch": "144896"
+  },
+  {
+   "previous_version": "0x02000000",
+   "current_version": "0x03000000",
+   "epoch": "194048"
+  },
+  {
+   "previous_version": "0x03000000",
+   "current_version": "0x04000000",
+   "epoch": "269568"
+  },
+  {
+   "previous_version": "0x04000000",
+   "current_version": "0x05000000",
+   "epoch": "364032"
+  },
+  {
+   "previous_version": "0x05000000",
+   "current_version": "0x06000000",
+   "epoch": "411392"
+  },
+  {
+   "previous_version": "0x06000000",
+   "current_version": "0x07000000",
+   "epoch": "18446744073709551615"
+  },
+  {
+   "previous_version": "0x07000000",
+   "current_version": "0x08000000",
+   "epoch": "18446744073709551615"
+  }
+ ],
+ "finality_update": {
+  "fork": "fulu",
+  "json_version": "fulu",
+  "attested_slot": 15639329,
+  "finalized_slot": 15639264,
+  "signature_slot": 15639330,
+  "signature_period": 1909,
+  "ssz_bytes": 2076,
+  "finalized_execution_block_hash": "0xfba5c8b519815f5906ce94ca7c6996e5eeb7a2bce27e4f40374462cbbcbf8c58",
+  "participation": 507
+ },
+ "updates": [
+  {
+   "period": 1908,
+   "fork": "fulu",
+   "fork_digest": "8c9f62fe",
+   "ssz_bytes": 26922,
+   "attested_slot": 15631887,
+   "finalized_slot": 15631808,
+   "signature_slot": 15631888,
+   "participation": 512
+  },
+  {
+   "period": 1909,
+   "fork": "fulu",
+   "fork_digest": "8c9f62fe",
+   "ssz_bytes": 26920,
+   "attested_slot": 15638676,
+   "finalized_slot": 15638592,
+   "signature_slot": 15638677,
+   "participation": 509
+  }
+ ],
+ "bootstrap_same_period": {
+  "block_root": "0xac2640b8ecc79d6bcc78739596b77ff778c6f8f96794a043a4df0eb3cff69f6a",
+  "slot": 15639232,
+  "period": 1909,
+  "fork": "fulu",
+  "ssz_bytes": 25672,
+  "endpoint": "https://lodestar-mainnet.chainsafe.io",
+  "root_cross_checked_with": [
+   "https://ethereum-beacon-api.publicnode.com"
+  ]
+ },
+ "bootstrap_prev_period": null
+}

@@ -1,0 +1,792 @@
+# VERSIONS.toml: the one declared truth for every version that must line up.
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+# `node scripts/check-versions.mjs` reads this file and the real sources (every Cargo.lock and
+# Cargo.toml, the deployment registries, the docs and scripts listed under [[pin]], and with
+# `--onchain` the contracts on Sepolia) and fails on any disagreement. Rule (AGENTS.md, "Version
+# alignment"): no deploy, no pin, no proving run meant for a chain and no dependency bump unless the
+# check passes; a bump changes this file in the same commit.
+#
+# Every value carries its source: `{ v = "...", src = "..." }`. Sources name a file in this
+# repository, a crate's own source (crates.io), an on-chain read (date, endpoint) or an advisory.
+#
+# Format: a strict TOML subset, parsed by the checker itself (no dependencies): [table],
+# [[array.of.tables]], key = "string" | 'literal' | integer | true/false | [array] | { inline }.
+# One key per line; no multi-line strings or arrays. Any other line is an error.
+#
+# Roles (fixed names; each workspace below has one or more):
+#   lez_chain   the LEZ chain's own verifier (LEZ's own lock; not a workspace here)
+#   lez_host    host code that makes or checks receipts for LEZ (the CLI): its recursion circuit
+#               (control root) must equal lez_chain's, or LEZ refuses its private claims
+#   lez_guests  LEZ programs (bridge, token, attestation, probe guests)
+#   eth_guests  guests whose image ids a vault pins (G2-lite outbound, G3 release)
+#   eth_provers hosts that prove eth_guests for a vault: their risc0 tuple gives the Groth16
+#               selector, which must equal the deployment's verifier selector
+#   research    executor-only measurement tools; no receipt goes to any chain
+#   none        no risc0 crate allowed
+
+schema = 1
+# The deployment the code in this tree builds for: workspace checks compare against its roles.
+builds_for = "next"
+# The deployment the module and the deposit page default to.
+live = "v3"
+
+[walk]
+# Directories the checker never walks for Cargo files (fixtures are test inputs of the checker).
+skip = ["scripts/fixtures"]
+
+[lez.rc3]
+tag = { v = "v0.4.0-rc3", src = "lez-bridge/Cargo.toml (lee_core tag); AGENTS.md 'LEZ version'" }
+commit = { v = "bafd07be0701398f9bc435f73ab05e9a7936c301", src = "git ls-remote logos-execution-zone refs/tags/v0.4.0-rc3 (2026-11-15); lez-bridge/Cargo.lock source line" }
+
+# Control root and BN254 control id of each risc0-circuit-recursion version (the crate's
+# src/control_id.rs, ALLOWED_CONTROL_ROOT and BN254_IDENTITY_CONTROL_ID, read 2026-11-15). Two
+# versions with one control root accept each other's succinct receipts; across roots they refuse.
+[[recursion]]
+version = "4.0.4"
+control_root = "a54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56"
+bn254_control_id = "c07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404"
+src = "risc0-circuit-recursion 4.0.4 src/control_id.rs (crates.io)"
+
+[[recursion]]
+version = "4.0.5"
+control_root = "a54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56"
+bn254_control_id = "c07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404"
+src = "risc0-circuit-recursion 4.0.5 src/control_id.rs (crates.io); vault/DEPLOYMENTS.md v1 verifier checks"
+
+[[recursion]]
+version = "4.1.0"
+control_root = "e6feef13db7aed4a731c7b0852de1f5c89b137726073f625d05333184d3a551d"
+bn254_control_id = "de81d091ba14062acb5023b3b36deee95624e3fd47475cb7ff64aed5f9eac20a"
+src = "risc0-circuit-recursion 4.1.0 src/control_id.rs (crates.io); equals the 3.1.0 verifier's CONTROL_ROOT_0/1 read 2026-11-15"
+
+# The Groth16 selector a prover produces: the first 4 bytes of Groth16ReceiptVerifierParameters'
+# digest, which hashes the control root, the BN254 control id (risc0-circuit-recursion) and the
+# verifying key (risc0-groth16; 3.0.4 and 3.0.5 share one key, 3.0.6 has another). Only tuples
+# read from crate source are listed; any other tuple fails as undeclared.
+[[prover]]
+risc0_zkvm = "3.0.5"
+risc0_circuit_recursion = ["4.0.4", "4.0.5"]
+risc0_groth16 = ["3.0.4", "3.0.5"]
+selector = "0x73c457ba"
+params_digest = "73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc"
+src = "risc0-zkvm 3.0.5 and 3.0.6 src/receipt/groth16.rs test groth16_receipt_verifier_parameters_is_stable; outbound_host ids printed GROTH16_SELECTOR=0x73c457ba (research/outbound-public-measure-2026-11-15.md)"
+
+[[prover]]
+risc0_zkvm = "3.1.0"
+risc0_circuit_recursion = ["4.1.0"]
+risc0_groth16 = ["3.0.6"]
+selector = "0xe71e6620"
+params_digest = "e71e6620a834f4d8dc1998476b865a9a6437a14474f9442cf8664f9ec22a5eee"
+src = "risc0-zkvm 3.1.0 src/receipt/groth16.rs test groth16_receipt_verifier_parameters_is_stable (crates.io, 2026-11-15)"
+
+# Known-bad versions. A hit fails unless an [[accepted]] entry below covers it (then it warns).
+# Crate entries apply to the roles that make or check receipts (`roles`): a guest's risc0-zkvm is
+# only its guest library, and a receipt's soundness is the prover's and the verifier's (the release
+# guest stays on 3.0.5 under the 3.1.0 provers: commit 3d3649a, public-demo/v4/BUILD-outbound.txt).
+[[known_bad]]
+id = "GHSA-g6qg-9j8p-7j87"
+kind = "crate"
+crate = "risc0-zkvm"
+below = "3.1.0"
+roles = ["eth_provers", "lez_host", "lez_chain"]
+src = "risc0/risc0 advisory, critical, published 2026-11-11: risc0-zkvm < 3.1.0, risc0-circuit-recursion < 4.1.0, risc0-groth16 < 3.0.6 (gh api repos/risc0/risc0/security-advisories)"
+
+[[known_bad]]
+id = "GHSA-g6qg-9j8p-7j87"
+kind = "crate"
+crate = "risc0-circuit-recursion"
+below = "4.1.0"
+roles = ["eth_provers", "lez_host", "lez_chain"]
+src = "same advisory"
+
+[[known_bad]]
+id = "GHSA-g6qg-9j8p-7j87"
+kind = "crate"
+crate = "risc0-groth16"
+below = "3.0.6"
+roles = ["eth_provers", "lez_host", "lez_chain"]
+src = "same advisory"
+
+[[known_bad]]
+id = "GHSA-mm6c-35cm-g4x2"
+kind = "verifier"
+below = "3.1.0"
+src = "risc0/risc0-ethereum advisory, critical, published 2026-11-11: RiscZeroGroth16Verifier.sol < 3.1.0 accepts forged claims"
+
+# Known, accepted misalignments. Each prints as WARN with its reason; nothing passes silently.
+# Fields: check (finding class), id (advisory id, optional), deployment / role / workspace / file
+# (globs with *, optional); all given fields must match.
+[[accepted]]
+check = "known-bad"
+id = "GHSA-g6qg-9j8p-7j87"
+role = "lez_*"
+reason = "LEZ v0.4.0-rc3 pins risc0-zkvm 3.0.5 (recursion 4.0.4); the LEZ chain checks these receipts itself and refuses receipts from another control root, so the LEZ side stays on LEZ's version until LEZ moves. No Ethereum verifier checks them."
+
+[[accepted]]
+check = "known-bad"
+deployment = "v2"
+reason = "v2 as deployed (2026-11-13): immutable; its update image is a placeholder, so no receipt can ever be accepted by it."
+
+[[accepted]]
+check = "known-bad"
+deployment = "v3"
+reason = "v3 as deployed (2026-11-14): its verifier is operator-attested (no zk proof checked on chain) and its g2State is zero, so it can take no update."
+
+[[accepted]]
+check = "g2-zero"
+deployment = "v2"
+reason = "v2 as deployed: initialG2State zero, and its update image is a placeholder anyway (vault/DEPLOYMENTS.md)."
+
+[[accepted]]
+check = "g2-zero"
+deployment = "v3"
+reason = "v3 as deployed: initialG2State zero, so it accepts no update and can never release (found 2026-11-15, vault/DEPLOYMENTS.md 'How v3 differs')."
+
+[[accepted]]
+check = "control-root"
+deployment = "v3"
+role = "lez_host"
+reason = "lez-bridge.v3 (sha256 40296ea6…, built at c9ec880 with recursion 4.1.0) makes no receipt: it serves v3's public operations only (relay co-sign, root attester, public claims). A PRIVATE claim on v3 needs a CLI on LEZ rc3's recursion 4.0.4: one built from lez-bridge/Cargo.lock since branch lez-host-lock (cli/tests/lez_receipts.rs), never lez-bridge.v3."
+
+[[accepted]]
+check = "script-known-bad"
+file = "vault/script/SepoliaDeploy.s.sol"
+reason = "v2's deploy script, kept as the record: it hard-pins the 3.0.0 verifier. Never use it for a new vault."
+
+# ---------------------------------------------------------------------------------------------
+# Deployments. Roles hold the risc0 versions each part was (or will be) built with.
+
+[deployments.v2]
+label = "Sepolia demo vault v2 (2026-11-13), deposits only"
+status = "deployed"
+lez = "rc3"
+chain_id = 11155111
+web_id = "sepolia-demo-v2"
+vault = { v = "0x8C8b2664De28e5287158db4DB65D448638871b74", src = "vault/DEPLOYMENTS.md v2; vault/deployments/sepolia-demo-v2.json" }
+vault_create_block = { v = 12122976, src = "vault/DEPLOYMENTS.md v2 (create tx block)" }
+cfg_id = { v = "0x7f1ab05e910781ef1c6bd7747b8221372377dc785bc09e303e687d2d4f284b11", src = "cfgId() read 2026-11-15 (Tenderly)" }
+program_id = { v = "0xfff8054169fcabf078493cfda8214d14f03a7294be509dfd9180d29e33fde910", src = "programId() read 2026-11-15; base58 of JECKB…nUx7" }
+desk = { v = "0x77E37E1D6e886d8fb988496B9c2EfF3E78e27DF2", src = "vault/DEPLOYMENTS.md DepositDesk in front of v2" }
+update_image = { v = "0x5f425420081746e3e77f3c94e7a44e7d0b3bdcc3cd4e114eaa07d7540fa282e3", elf_sha256 = "", src = "updateImageId() read 2026-11-15 = keccak256('RFP022/demo/no-update-image'), a placeholder: no ELF" }
+release_image = { v = "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4", elf_sha256 = "4238085e159037073ecfa83db6872fe2ed46aa481e912d79ba6ff7b2c507fe05", src = "releaseImageId() read 2026-11-15; ELF: vault/DEPLOYMENTS.md v1 (build of 2026-11-12)" }
+genesis_g2_state = { v = "0x0000000000000000000000000000000000000000000000000000000000000000", src = "g2State() read 2026-11-15" }
+# Updates the vault has accepted (each moves g2State on from the genesis state); --onchain fails
+# when g2State() is not the genesis state and this is 0. Raise it with the update's record.
+g2_updates = { v = 0, src = "vault/DEPLOYMENTS.md: no update ever accepted" }
+
+[deployments.v2.verifier]
+kind = "risc0-groth16"
+address = { v = "0x2a098988600d87650Fb061FfAff08B97149Fa84D", src = "verifier() of the v2 vault, read 2026-11-15" }
+version = { v = "3.0.0", src = "VERSION() read 2026-11-15" }
+selector = { v = "0x73c457ba", src = "SELECTOR() read 2026-11-15" }
+control_root = { v = "a54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56", src = "CONTROL_ROOT_0/1 read 2026-11-15, byte-reversed" }
+bn254_control_id = { v = "c07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404", src = "BN254_CONTROL_ID read 2026-11-15, byte-reversed" }
+
+# v2 has two LEZ sides at one program id: the public demo chain (rc3, since 2026-11-13) and the
+# retired local sequencer seq2 (rc1).
+[[deployments.v2.lez_side]]
+name = "public"
+module_entry = "bridge-test-network"
+bridge_program = { v = "JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7", src = "modules/lez_bridge/rust-lib/deployments.json" }
+token_program = { v = "3gF78HRJNCfabkWFiszahVVacq181aU8SSGua8Cj9ZE4", src = "public-demo/RUNBOOK.md (not published) §11" }
+bridge_image = { v = "7758856ee542f70ee70a696a975caa45088e46a94d4b61471b6a87c7faa2675f", src = "public-demo/v3/BUILD.txt (live v2 check)" }
+token_image = { v = "a3ab615cd9ac3288606e3b74f3586b7edcc304bd80671d8835634c979821487b", src = "public-demo/v3/BUILD.txt (live v2 check)" }
+
+[[deployments.v2.lez_side]]
+name = "seq2"
+module_entry = "sepolia-demo-v2"
+bridge_program = { v = "JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7", src = "vault/deployments/sepolia-demo-v2.json" }
+token_program = { v = "4VScJ7mtwaanQ5gcSZZw2iAMHYAbLrVmbYKwEGx2eSex", src = "vault/deployments/sepolia-demo-v2.json" }
+bridge_image = { v = "249a19c6386bfab7b70018312585f4555d9a302cd972308ea4b1a77db74f0129", src = "vault/deployments/sepolia-demo-v2.json lezImages (rc1)" }
+token_image = { v = "633555cc0d90901139f0bf541fe2f32912f969579e829e9d6acab2def083ab5d", src = "vault/deployments/sepolia-demo-v2.json lezImages (rc1)" }
+
+[deployments.v2.roles.lez_chain]
+risc0_zkvm = { v = "3.0.5", src = "LEZ v0.4.0-rc3 Cargo.lock at bafd07be (read 2026-11-15)" }
+risc0_circuit_recursion = { v = "4.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
+risc0_groth16 = { v = "3.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
+
+[deployments.v2.roles.eth_guests]
+risc0_zkvm = { v = "3.0.5", src = "git show 5e2ce69:lez-bridge/methods/release_guest/Cargo.lock (the v2 build commit)" }
+
+[deployments.v2.roles.eth_provers]
+risc0_zkvm = { v = "3.0.5", src = "git show 5e2ce69:lez-bridge/release/Cargo.lock (no proof was ever made for v2)" }
+risc0_circuit_recursion = { v = "4.0.5", src = "git show 5e2ce69:lez-bridge/release/Cargo.lock" }
+risc0_groth16 = { v = "3.0.5", src = "git show 5e2ce69:lez-bridge/release/Cargo.lock" }
+
+[deployments.v3]
+label = "Sepolia demo vault v3 (2026-11-14), operator-attested, can never release"
+status = "deployed"
+lez = "rc3"
+chain_id = 11155111
+web_id = "sepolia-demo-v3"
+build_commit = { v = "c9ec880fe03735b23a144489b644bf5fe07408eb", src = "public-demo/v3/BUILD.txt" }
+vault = { v = "0x26af59855b99a8af199361289A5Ed6088729E60E", src = "vault/DEPLOYMENTS.md v3" }
+vault_create_block = { v = 12134824, src = "vault/DEPLOYMENTS.md v3" }
+cfg_id = { v = "0x9a37708a79334bbce6946e4dab4d9f6530538e867fcec10083b05b7d19f20d15", src = "cfgId() read 2026-11-15 (Tenderly)" }
+program_id = { v = "0x363397603aee2f10bc26aad792cd96692e8bda7faa7c952879564513c822e5af", src = "programId() read 2026-11-15; base58 of 4eaeK…mXCvr" }
+desk = { v = "0x6b7F38D05751b1ed432a0A0d377A63cFB8c4DBc5", src = "vault/DEPLOYMENTS.md v3" }
+update_image = { v = "0x6b96962992970cf6e6a2164175fb1c74092077af4f6b9b95bf95c14eb5921bd6", elf_sha256 = "e0c63b3804c626fa96678fa9e2e2e2d363ed4465e5b6a4cf0b87178be6f41f7a", src = "updateImageId() read 2026-11-15; public-demo/v3/BUILD.txt UPDATE_IMAGE_ID_TRUSTED_TIP; ELF sha256 public-demo/prove/prove-outbound-rc3.sh ELF_SHA" }
+release_image = { v = "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4", elf_sha256 = "b8177673a2daec88fa5a528ecaeef6588e1f73cc2ed868b66a24c335026ff8fc", src = "releaseImageId() read 2026-11-15; public-demo/v3/BUILD.txt RELEASE_IMAGE_ID; ELF sha256 of the c9ec880 canonical release_guest.bin (public-demo/v4/BUILD-outbound.txt, 'previous canonical release guest'). The image id hashes the loaded program, not the file: v2's ELF (4238085e…) and v4's (2353c51e…) differ in bytes and give the same id" }
+genesis_g2_state = { v = "0x0000000000000000000000000000000000000000000000000000000000000000", src = "g2State() read 2026-11-15" }
+g2_updates = { v = 0, src = "vault/DEPLOYMENTS.md: v3 can take no update" }
+
+[deployments.v3.verifier]
+kind = "demo-attested"
+address = { v = "0xBF416525287D958043e69219CeAdcdF421803948", src = "verifier() of the v3 vault, read 2026-11-15" }
+version = { v = "", src = "DemoAttestedVerifier has no VERSION()" }
+selector = { v = "", src = "DemoAttestedVerifier has no SELECTOR(); it refuses seals that start with 0x73c457ba" }
+kind_text = { v = "demo-attested: an operator checked the proof off chain; NOT trustless", src = "KIND() read 2026-11-15" }
+
+[[deployments.v3.lez_side]]
+name = "public"
+module_entry = "bridge-test-network-v3"
+bridge_program = { v = "4eaeK3yiqATXhpCEYEFMMtjUn1bS7HLxPwfrH31mXCvr", src = "public-demo/RUNBOOK.md (not published) §16" }
+token_program = { v = "5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7", src = "public-demo/RUNBOOK.md (not published) §16" }
+bridge_image = { v = "0dabbd6c4c3035d1824c7d5ccb958ab93e3d57871bfd1efea76ab72718ef9ffa", elf_sha256 = "8914861af35f1193c5a2d309ddfd1f5f041a6781d5baafab0509f7b60e4b9d24", src = "public-demo/v3/BUILD.txt; read on chain 2026-11-14 (RUNBOOK §16)" }
+token_image = { v = "ac175cb59bff0f5e59d51b566552546087f082a9bcea9571b705633f031eafba", elf_sha256 = "7704844f97a96dbef20cf76804f05129de5239f9b4b8fa9629c0d54a778edfa6", src = "public-demo/v3/BUILD.txt; read on chain 2026-11-14 (RUNBOOK §16)" }
+
+[deployments.v3.roles.lez_chain]
+risc0_zkvm = { v = "3.0.5", src = "LEZ v0.4.0-rc3 Cargo.lock at bafd07be (read 2026-11-15)" }
+risc0_circuit_recursion = { v = "4.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
+risc0_groth16 = { v = "3.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
+
+# The v3 CLI and programs were built --locked from lez-bridge/Cargo.lock at c9ec880.
+[deployments.v3.roles.lez_host]
+risc0_zkvm = { v = "3.0.5", src = "git show c9ec880:lez-bridge/Cargo.lock" }
+risc0_circuit_recursion = { v = "4.1.0", src = "git show c9ec880:lez-bridge/Cargo.lock" }
+risc0_groth16 = { v = "3.0.6", src = "git show c9ec880:lez-bridge/Cargo.lock" }
+
+[deployments.v3.roles.eth_guests]
+risc0_zkvm = { v = "3.0.5", src = "git show c9ec880:lez-bridge/methods/outbound_guest_trusted_tip/Cargo.lock" }
+
+[deployments.v3.roles.eth_provers]
+risc0_zkvm = { v = "3.0.5", src = "git show c9ec880:lez-bridge/outbound/Cargo.lock" }
+risc0_circuit_recursion = { v = "4.0.5", src = "git show c9ec880:lez-bridge/outbound/Cargo.lock" }
+risc0_groth16 = { v = "3.0.5", src = "git show c9ec880:lez-bridge/outbound/Cargo.lock" }
+
+[deployments.next]
+label = "v4, the next vault (not deployed): real RISC Zero verifier, non-zero genesis state"
+status = "planned"
+lez = "rc3"
+chain_id = 11155111
+web_id = ""
+vault = { v = "", src = "not deployed; fill in after the deploy and run --onchain again" }
+vault_create_block = { v = 0, src = "not deployed" }
+cfg_id = { v = "", src = "not deployed" }
+program_id = { v = "", src = "not deployed" }
+desk = { v = "", src = "not deployed" }
+build_commit = { v = "adc0bcacc2ca7827c6836f061cf11727c81b3533", src = "public-demo/v4/BUILD-outbound.txt (the v4 canonical outbound build)" }
+update_image = { v = "0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017", elf_sha256 = "cf06043dd43f99c185b9995050854ae9f30479c071937a0de00c656a81604fe7", risc0_zkvm = "3.1.0", src = "public-demo/v4/BUILD-outbound.txt UPDATE_IMAGE_ID_TRUSTED_TIP (G2-lite trusted tip, feature unchecked-private); public-demo/prove/prove-outbound-rc3.sh" }
+release_image = { v = "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4", elf_sha256 = "2353c51e8366f2379a0acf703257a15a6eff449575e17b12e55e6700ea102d8a", risc0_zkvm = "3.0.5", src = "public-demo/v4/BUILD-outbound.txt RELEASE_IMAGE_ID (release guest unchanged, on 3.0.5)" }
+genesis_g2_state = { v = "", src = "outbound_host genesis --block <tip before the bridge's Initialize>: must be non-zero (AGENTS.md Conventions); --deployment next fails until it is set" }
+g2_updates = { v = 0, src = "not deployed" }
+
+[deployments.next.verifier]
+kind = "risc0-groth16"
+address = { v = "0x8c915b5071206C6E328BC18529586c513408aB3b", src = "GHSA-mm6c-35cm-g4x2 (patched Sepolia verifier); code read 2026-11-15 (Tenderly)" }
+version = { v = "3.1.0", src = "VERSION() read 2026-11-15" }
+selector = { v = "0xe71e6620", src = "SELECTOR() read 2026-11-15" }
+control_root = { v = "e6feef13db7aed4a731c7b0852de1f5c89b137726073f625d05333184d3a551d", src = "CONTROL_ROOT_0/1 read 2026-11-15, byte-reversed (= risc0-circuit-recursion 4.1.0)" }
+bn254_control_id = { v = "de81d091ba14062acb5023b3b36deee95624e3fd47475cb7ff64aed5f9eac20a", src = "BN254_CONTROL_ID read 2026-11-15, byte-reversed" }
+
+[deployments.next.roles.lez_chain]
+risc0_zkvm = { v = "3.0.5", src = "LEZ v0.4.0-rc3 Cargo.lock at bafd07be (read 2026-11-15); the judge demo kit's lock at 96a0a502 has the same three" }
+risc0_circuit_recursion = { v = "4.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
+risc0_groth16 = { v = "3.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
+risc0_build = { v = "3.0.5", src = "LEZ v0.4.0-rc3 Cargo.lock" }
+
+[deployments.next.roles.lez_host]
+risc0_zkvm = { v = "3.0.5", src = "= lez_chain; lez-bridge/Cargo.toml =3.0.5" }
+risc0_circuit_recursion = { v = "4.0.4", src = "= lez_chain (LEZ refuses receipts from another control root); lez-bridge/cli/Cargo.toml =4.0.4; test lez-bridge/cli/tests/lez_receipts.rs" }
+risc0_groth16 = { v = "3.0.4", src = "= lez_chain; lez-bridge/cli/Cargo.toml =3.0.4" }
+
+[deployments.next.roles.lez_guests]
+risc0_zkvm = { v = "3.0.5", src = "= lez_chain" }
+risc0_build = { v = "3.0.5", src = "= lez_chain" }
+
+[deployments.next.roles.eth_guests]
+risc0_zkvm = { v = "3.1.0", src = "the G2-lite guests' Cargo.lock since adc0bca; a workspace with `image` takes that image's risc0_zkvm instead (the release guest: 3.0.5)" }
+
+[deployments.next.roles.eth_provers]
+risc0_zkvm = { v = "3.1.0", src = "GHSA-g6qg-9j8p-7j87 fixed version; the 3.1.0 verifier needs receipts from risc0-zkvm 3.1.0; public-demo/v4/BUILD-outbound.txt host line" }
+risc0_circuit_recursion = { v = "4.1.0", src = "risc0-zkvm 3.1.0 Cargo.toml" }
+risc0_groth16 = { v = "3.0.6", src = "risc0-zkvm 3.1.0 Cargo.toml" }
+risc0_build = { v = "3.0.7", src = "risc0-zkvm 3.1.0 Cargo.toml (risc0-build 3.0.7)" }
+
+[deployments.next.roles.research]
+risc0_zkvm = { v = "3.0.5", src = "= lez_chain (they link lee_core)" }
+
+# ---------------------------------------------------------------------------------------------
+# Toolchains (checked against the files under [[pin]]).
+
+[toolchain]
+rust = { v = "1.98.1", src = "lez-bridge/rust-toolchain.toml; LEZ v0.4.0-rc3 rust-toolchain.toml" }
+rzup = { v = "0.5.0", src = ".github/workflows/judge-demo.yml; scripts/judge-demo.sh" }
+risc0_rust = { v = "1.97.0", src = ".github/workflows/judge-demo.yml" }
+cargo_risczero = { v = "3.0.5", src = ".github/workflows/judge-demo.yml (= LEZ rc3's risc0-zkvm)" }
+foundry = { v = "v1.5.1", src = ".github/workflows/ci.yml" }
+solc = { v = "0.8.28", src = "vault/foundry.toml (the same at 5e2ce69 and c9ec880)" }
+optimizer_runs = { v = 200, src = "vault/foundry.toml" }
+
+[judge_demo]
+kit_url = { v = "https://github.com/jefdiesel/logos-execution-zone.git", src = "scripts/judge-demo.sh KIT_URL" }
+kit_commit = { v = "96a0a50232203ceae0cb8e69ef564d2d4a5d34a1", src = "scripts/judge-demo.sh KIT_COMMIT (branch testnet-0.4: LEZ v0.4.0-rc3 + the kit's patches)" }
+
+# ---------------------------------------------------------------------------------------------
+# Workspaces: every Cargo.lock in the tree must be listed; every Cargo.toml belongs to the
+# workspace with the longest matching path. `image`: the deployment image this guest builds (its
+# risc0_zkvm overrides the role's). `private = true`: not in the public export (a missing
+# private workspace prints SKIP; a missing public one fails).
+
+[[workspace]]
+path = "lez-bridge"
+roles = ["lez_host", "lez_guests"]
+
+[[workspace]]
+path = "lez-bridge/methods/attest_guest"
+roles = ["lez_guests"]
+
+[[workspace]]
+path = "lez-bridge/methods/attest_probe_guest"
+roles = ["lez_guests"]
+
+[[workspace]]
+path = "lez-bridge/methods/outbound_guest"
+roles = ["eth_guests"]
+
+[[workspace]]
+path = "lez-bridge/methods/outbound_guest_trusted_tip"
+roles = ["eth_guests"]
+image = "update_image"
+
+[[workspace]]
+path = "lez-bridge/methods/release_guest"
+roles = ["eth_guests"]
+image = "release_image"
+
+[[workspace]]
+path = "lez-bridge/outbound"
+roles = ["eth_provers"]
+
+[[workspace]]
+path = "lez-bridge/release"
+roles = ["eth_provers"]
+
+# The Groth16 wrap (outbound_wrap): compresses eth_provers' succinct receipts for the 3.1.0 verifier.
+[[workspace]]
+path = "lez-bridge/outbound/wrap"
+roles = ["eth_provers"]
+
+[[workspace]]
+path = "lez-bridge/attest/cycles"
+roles = ["research"]
+
+[[workspace]]
+path = "lez-bridge/attest/lcbench"
+roles = ["research"]
+
+[[workspace]]
+path = "lez-bridge/methods/lc_bench_blst"
+roles = ["research"]
+
+[[workspace]]
+path = "lez-bridge/methods/lc_bench_fast"
+roles = ["research"]
+
+[[workspace]]
+path = "lez-bridge/methods/lc_bench_zk"
+roles = ["research"]
+
+[[workspace]]
+path = "modules/lez_bridge/rust-lib"
+roles = ["none"]
+
+[[workspace]]
+path = "attest-spike"
+roles = ["research"]
+
+[[workspace]]
+path = "attest-spike/methods/guest-consensus"
+roles = ["research"]
+
+[[workspace]]
+path = "attest-spike/methods/guest-inclusion"
+roles = ["research"]
+
+[[workspace]]
+path = "attest-spike/methods/guest-inclusion-sw"
+roles = ["research"]
+
+[[workspace]]
+path = "colab/src/rfp022-gpu-bench (not published)"
+roles = ["research"]
+private = true
+
+[[workspace]]
+path = "colab/src/rfp022-gpu-bench/methods/guest-bn (not published)"
+roles = ["research"]
+private = true
+
+[[workspace]]
+path = "colab/src/rfp022-gpu-bench/methods/guest-consensus (not published)"
+roles = ["research"]
+private = true
+
+[[workspace]]
+path = "colab/src/rfp022-gpu-bench/methods/release_guest (not published)"
+roles = ["research"]
+private = true
+
+# ---------------------------------------------------------------------------------------------
+# Pins: a value written in a doc or script must equal the declared one. `re` has one capture
+# group; every match in the file is compared (at least one must exist). A value shown abbreviated
+# (`0x6bcbd714…72a4`) matches by its prefix and suffix. `private = true`: not exported (SKIP when
+# missing).
+
+[[pin]]
+file = "lez-bridge/rust-toolchain.toml"
+re = 'channel = "([^"]+)"'
+value = "toolchain.rust"
+
+[[pin]]
+file = ".github/workflows/judge-demo.yml"
+re = 'cargo install rzup --version ([0-9.]+)'
+value = "toolchain.rzup"
+
+[[pin]]
+file = ".github/workflows/judge-demo.yml"
+re = 'rzup install rust ([0-9.]+)'
+value = "toolchain.risc0_rust"
+
+[[pin]]
+file = ".github/workflows/judge-demo.yml"
+re = 'rzup install cargo-risczero ([0-9.]+)'
+value = "toolchain.cargo_risczero"
+
+[[pin]]
+file = "scripts/judge-demo.sh"
+re = 'cargo install rzup --version ([0-9.]+)'
+value = "toolchain.rzup"
+
+[[pin]]
+file = "scripts/judge-demo.sh"
+re = 'rzup install cargo-risczero ([0-9.]+)'
+value = "toolchain.cargo_risczero"
+
+[[pin]]
+file = "scripts/judge-demo.sh"
+re = 'KIT_COMMIT=\$\{KIT_COMMIT:-([0-9a-f]{40})\}'
+value = "judge_demo.kit_commit"
+
+[[pin]]
+file = "scripts/judge-demo.sh"
+re = 'KIT_URL=\$\{KIT_URL:-([^}]+)\}'
+value = "judge_demo.kit_url"
+
+[[pin]]
+file = ".github/workflows/ci.yml"
+re = 'foundry-toolchain@v1\s+with:\s+version: (v[0-9.]+)'
+value = "toolchain.foundry"
+
+[[pin]]
+file = "vault/foundry.toml"
+re = 'solc_version = "([^"]+)"'
+value = "toolchain.solc"
+
+[[pin]]
+file = "vault/foundry.toml"
+re = 'optimizer_runs = ([0-9]+)'
+value = "toolchain.optimizer_runs"
+
+# v2
+[[pin]]
+file = "vault/script/SepoliaDeploy.s.sol"
+re = 'address constant VERIFIER = (0x[0-9a-fA-F]{40})'
+value = "deployments.v2.verifier.address"
+deploy_script = "v2"
+
+[[pin]]
+file = "vault/script/SepoliaDeploy.s.sol"
+re = 'SELECTOR\(\) == bytes4\((0x[0-9a-f]{8})\)'
+value = "deployments.v2.verifier.selector"
+
+[[pin]]
+file = "vault/script/SepoliaDeploy.s.sol"
+re = 'bytes32 constant RELEASE_IMAGE_ID = (0x[0-9a-f]{64})'
+value = "deployments.v2.release_image"
+
+[[pin]]
+file = "vault/deployments/sepolia-demo-v2.json"
+json = "vault"
+value = "deployments.v2.vault"
+
+[[pin]]
+file = "vault/deployments/sepolia-demo-v2.json"
+json = "verifier"
+value = "deployments.v2.verifier.address"
+
+[[pin]]
+file = "vault/deployments/sepolia-demo-v2.json"
+json = "updateImageId"
+value = "deployments.v2.update_image"
+
+[[pin]]
+file = "vault/deployments/sepolia-demo-v2.json"
+json = "releaseImageId"
+value = "deployments.v2.release_image"
+
+[[pin]]
+file = "vault/deployments/sepolia-demo-v2.json"
+json = "programId"
+value = "deployments.v2.program_id"
+
+[[pin]]
+file = "vault/deployments/sepolia-demo-v2.json"
+json = "cfgId"
+value = "deployments.v2.cfg_id"
+
+[[pin]]
+file = "vault/deployments/sepolia-demo-v2.json"
+json = "lezImages.bridge"
+value = "deployments.v2.lez_side.seq2.bridge_image"
+
+[[pin]]
+file = "vault/deployments/sepolia-demo-v2.json"
+json = "lezImages.token"
+value = "deployments.v2.lez_side.seq2.token_image"
+
+[[pin]]
+file = "lez-bridge/scripts/e2e-recovery.sh"
+re = 'BRIDGE_IMAGE=([0-9a-f]{64})'
+value = "deployments.v2.lez_side.seq2.bridge_image"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v2"
+re = '\| `BridgeVault` v2 \| `(0x[0-9a-fA-F]{40})`'
+value = "deployments.v2.vault"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v2"
+re = '\| `releaseImageId_` \| `([0-9a-fx.…]+)`'
+value = "deployments.v2.release_image"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v2"
+re = '\| `updateImageId_` \| `([0-9a-fx.…]+)`'
+value = "deployments.v2.update_image"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v2"
+re = '\| `cfgId` \| `(0x[0-9a-f]{64})`'
+value = "deployments.v2.cfg_id"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v2"
+re = '\| `programId_` \| `(0x[0-9a-f]{64})`'
+value = "deployments.v2.program_id"
+
+[[pin]]
+file = "DESIGN.md"
+re = 'RiscZeroGroth16Verifier` v3\.0\.0 at `(0x[0-9a-fA-F]{40})`'
+value = "deployments.v2.verifier.address"
+
+# v3
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v3"
+re = '\| `BridgeVault` \| `(0x[0-9a-fA-F]{40})`'
+value = "deployments.v3.vault"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v3"
+re = '\| `DemoAttestedVerifier` \| `(0x[0-9a-fA-F]{40})`'
+value = "deployments.v3.verifier.address"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v3"
+re = '\| `cfgId\(\)` \| `(0x[0-9a-f]{64})`'
+value = "deployments.v3.cfg_id"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v3"
+re = '\| `programId\(\)` \| `(0x[0-9a-f]{64})`'
+value = "deployments.v3.program_id"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v3"
+re = '\| `updateImageId\(\)` \| `(0x[0-9a-f]{64})`'
+value = "deployments.v3.update_image"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v3"
+re = '\| `releaseImageId\(\)` \| `(0x[0-9a-f]{64})`'
+value = "deployments.v3.release_image"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v3"
+re = '\| `g2State\(\)` \| `(0x[0-9a-f]{64})`'
+value = "deployments.v3.genesis_g2_state"
+
+[[pin]]
+file = "vault/DEPLOYMENTS.md"
+section = "## Sepolia DEMO vault v3"
+re = '\| DepositDesk v3 \| `(0x[0-9a-fA-F]{40})`'
+value = "deployments.v3.desk"
+
+[[pin]]
+file = "public-demo/v3/BUILD.txt"
+re = '^commit: ([0-9a-f]{40})'
+value = "deployments.v3.build_commit"
+private = true
+
+[[pin]]
+file = "public-demo/v3/BUILD.txt"
+re = '^UPDATE_IMAGE_ID_TRUSTED_TIP=(0x[0-9a-f]{64})'
+value = "deployments.v3.update_image"
+private = true
+
+[[pin]]
+file = "public-demo/v3/BUILD.txt"
+re = '^RELEASE_IMAGE_ID=(0x[0-9a-f]{64})'
+value = "deployments.v3.release_image"
+private = true
+
+[[pin]]
+file = "public-demo/v3/BUILD.txt"
+re = '^([0-9a-f]{64}) v3: bridge_guest\.bin'
+value = "deployments.v3.lez_side.public.bridge_image"
+private = true
+
+[[pin]]
+file = "public-demo/v3/BUILD.txt"
+re = '^([0-9a-f]{64}) v3: token_guest\.bin'
+value = "deployments.v3.lez_side.public.token_image"
+private = true
+
+[[pin]]
+file = "public-demo/v3/BUILD.txt"
+re = '^([0-9a-f]{64})  bridge_guest\.bin'
+value = "deployments.v3.lez_side.public.bridge_image.elf_sha256"
+private = true
+
+[[pin]]
+file = "public-demo/v3/BUILD.txt"
+re = '^([0-9a-f]{64})  token_guest\.bin'
+value = "deployments.v3.lez_side.public.token_image.elf_sha256"
+private = true
+
+[[pin]]
+file = "public-demo/v3/BUILD.txt"
+re = '^([0-9a-f]{64}) live v2 \(check\): bridge_guest\.bin'
+value = "deployments.v2.lez_side.public.bridge_image"
+private = true
+
+[[pin]]
+file = "public-demo/v3/BUILD.txt"
+re = '^([0-9a-f]{64}) live v2 \(check\): token_guest\.bin'
+value = "deployments.v2.lez_side.public.token_image"
+private = true
+
+[[pin]]
+file = "public-demo/V3-PLAN.md"
+re = 'UPDATE_IMAGE_ID=(0x[0-9a-f]{64})'
+value = "deployments.v3.update_image"
+private = true
+
+[[pin]]
+file = "public-demo/V3-PLAN.md"
+re = 'RELEASE_IMAGE_ID=(0x[0-9a-f]{64})'
+value = "deployments.v3.release_image"
+private = true
+
+[[pin]]
+file = "public-demo/V3-PLAN.md"
+re = 'bridge `([0-9a-f]{64})`, token'
+value = "deployments.v3.lez_side.public.bridge_image"
+private = true
+
+# next (v4)
+[[pin]]
+file = "public-demo/prove/prove-outbound-rc3.sh"
+re = '^IMAGE_DEFAULT=(0x[0-9a-f]{64})'
+value = "deployments.next.update_image"
+private = true
+
+[[pin]]
+file = "public-demo/prove/prove-outbound-rc3.sh"
+re = '^ELF_SHA=([0-9a-f]{64})'
+value = "deployments.next.update_image.elf_sha256"
+private = true
+
+[[pin]]
+file = "public-demo/v4/BUILD-outbound.txt"
+re = '^commit: ([0-9a-f]{40})'
+value = "deployments.next.build_commit"
+private = true
+
+[[pin]]
+file = "public-demo/v4/BUILD-outbound.txt"
+re = '^UPDATE_IMAGE_ID_TRUSTED_TIP=(0x[0-9a-f]{64})'
+value = "deployments.next.update_image"
+private = true
+
+[[pin]]
+file = "public-demo/v4/BUILD-outbound.txt"
+re = '^RELEASE_IMAGE_ID=(0x[0-9a-f]{64})'
+value = "deployments.next.release_image"
+private = true
+
+[[pin]]
+file = "public-demo/v4/BUILD-outbound.txt"
+re = '^([0-9a-f]{64})  elf/outbound_guest_trusted_tip\.bin'
+value = "deployments.next.update_image.elf_sha256"
+private = true
+
+[[pin]]
+file = "public-demo/v4/BUILD-outbound.txt"
+re = '^([0-9a-f]{64})  elf/release_guest\.bin'
+value = "deployments.next.release_image.elf_sha256"
+private = true
+
+[[pin]]
+file = "public-demo/v4/BUILD-outbound.txt"
+re = '^GROTH16_SELECTOR=(0x[0-9a-f]{8})'
+value = "deployments.next.verifier.selector"
+private = true
+
+[[pin]]
+file = "public-demo/v4/BUILD-outbound.txt"
+re = '^host: risc0-zkvm ([0-9.]+),'
+value = "deployments.next.roles.eth_provers.risc0_zkvm"
+private = true
+
+[[pin]]
+file = "public-demo/v4/BUILD-outbound.txt"
+re = 'risc0-circuit-recursion ([0-9.]+),'
+value = "deployments.next.roles.eth_provers.risc0_circuit_recursion"
+private = true
+
+[[pin]]
+file = "public-demo/v4/BUILD-outbound.txt"
+re = 'risc0-groth16 ([0-9.]+),'
+value = "deployments.next.roles.eth_provers.risc0_groth16"
+private = true
+
+[[pin]]
+file = "public-demo/v4/BUILD-outbound.txt"
+re = 'previous canonical release guest .*\(sha256 ([0-9a-f]{64})\)'
+value = "deployments.v3.release_image.elf_sha256"
+private = true

@@ -1,0 +1,16 @@
+[package]
+name = "attest_methods"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# The RFP-021 guests as embedded ELFs for deployment by the CLI: the attestation program
+# (methods/attest_guest) and the reference consumer (methods/attest_probe_guest). Each guest is
+# its own workspace with its own [patch] set (RISC Zero BLS/SHA forks, LEZ keccak), and
+# risc0-build builds each in that workspace, exactly as attest/cycles does. Kept apart from
+# bridge_methods so building the bridge guests never builds BLS for RISC-V.
+[build-dependencies]
+risc0-build = "3.0.5"
+
+[package.metadata.risc0]
+methods = ["../../methods/attest_guest", "../../methods/attest_probe_guest"]

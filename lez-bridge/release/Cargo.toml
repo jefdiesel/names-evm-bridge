@@ -1,0 +1,12 @@
+# G3 (release proof): release/core is the statement, release/host the EXECUTOR-ONLY tests, cycle
+# counts and cross-language fixture generator. Its own workspace (excluded from lez-bridge's),
+# like attest/cycles: the host needs risc0-zkvm's "prove" feature for the in-process executor
+# (ExecutorImpl), which must not leak into the bridge workspace. Nothing here proves.
+[workspace]
+resolver = "3"
+members = ["core", "host"]
+
+# Same keccak patch as the bridge workspace: the host links bridge_core (lee_core) to check that
+# release_core's formulas equal the bridge's.
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }

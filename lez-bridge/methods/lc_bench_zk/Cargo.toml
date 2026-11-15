@@ -1,0 +1,32 @@
+[package]
+name = "lc_bench_zk"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+# Spike guest (branch lc-cycles), EXECUTOR ONLY: the attestation program's update path with phase
+# marks, then the signature check replayed three ways on zkcrypto bls12_381 (Helios's own method;
+# without its redundant G2 check; from uncompressed key witnesses), SSZ-branch binding and SHA-256
+# controls. Same [patch] set as methods/attest_guest, so the numbers are the program's.
+[workspace]
+
+[dependencies]
+eth_attest = { path = "../../attest/program", features = ["cycle-marks"] }
+lcbench_common = { path = "../../attest/lcbench/common" }
+lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std", "unstable"] }
+borsh = "1.5.7"
+# Same versions Helios 0.12.0 uses.
+bls12_381 = { version = "0.8.0", features = ["experimental"] }
+sha2 = "0.9"
+
+[patch.crates-io]
+bls12_381 = { git = "https://github.com/risc0/zkcrypto-bls12_381", tag = "bls12_381/v0.8.0-risczero.1" }
+sha2-v0-9-9 = { git = "https://github.com/risc0/RustCrypto-hashes", package = "sha2", tag = "sha2-v0.9.9-risczero.0" }
+sha2-v0-10-9 = { git = "https://github.com/risc0/RustCrypto-hashes", package = "sha2", tag = "sha2-v0.10.9-risczero.0" }
+ethereum_hashing = { git = "https://github.com/ncitron/ethereum_hashing", rev = "7ee70944ed4fabe301551da8c447e4f4ae5e6c35" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

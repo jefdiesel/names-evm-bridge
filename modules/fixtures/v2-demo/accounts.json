@@ -1,0 +1,184 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "accounts": [
+      {
+        "account": "3w6KALxeqfdxpidqRygcXkegsbRzV8ihReUs3vBazXjP",
+        "kind": "private",
+        "path": "/"
+      },
+      {
+        "account": "2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC",
+        "kind": "private",
+        "path": "/0"
+      },
+      {
+        "account": "6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV",
+        "kind": "public",
+        "path": ""
+      },
+      {
+        "account": "8Kv9wz7RP7R6Kjx87JnPUJvuV61VXjLcRUA6BqLynSt",
+        "kind": "public",
+        "path": "/2"
+      },
+      {
+        "account": "UAHapETaNm8CS8HDsTUSLawkx2Mn14ozzrayXQ4s4xC",
+        "kind": "public",
+        "path": "/3/0"
+      },
+      {
+        "account": "j5NdNA16uHN4GTRYSmozRaEbfrgcQBg8rG4M5664knF",
+        "kind": "public",
+        "path": "/"
+      },
+      {
+        "account": "nEpMDhx6YhWiNLKcxHsuE7FkU5QsSHMgZFWkkdYJ4LE",
+        "kind": "public",
+        "path": "/0/0"
+      },
+      {
+        "account": "uyKu5u2sSWD6UeP9igTUwsPPKbMjWGgTn3rN2q8SW2c",
+        "kind": "public",
+        "path": "/2/1"
+      },
+      {
+        "account": "2Reh3ogFmqKUhHpMp8qE2KS4uJVtVTpRpuhWNW4UFLL2",
+        "kind": "public",
+        "path": "/0/3"
+      },
+      {
+        "account": "2a1fTFNQyyjaq4kGFkXqvVEAeA9EuaAXfZ6HfQWaWccT",
+        "kind": "public",
+        "path": "/0/0/0/0"
+      },
+      {
+        "account": "2dvYheqFQ97MymBjJyysd8gdyz6CpVEb4y5FZiVpohSZ",
+        "kind": "public",
+        "path": "/3"
+      },
+      {
+        "account": "3fYdwLZkbGbcKfixrfuPb53QtAvYFZttdGQa3uupspWS",
+        "kind": "public",
+        "path": "/0/0/1/0"
+      },
+      {
+        "account": "3srCMsYXwG6UiDjCL2CWunF3rJoCZbFMvEskL8YwgFRg",
+        "kind": "public",
+        "path": "/1/1"
+      },
+      {
+        "account": "42d9w8HRdfaCDXT4d3HfmSBie9iaEfbKhSyESRXazZPu",
+        "kind": "public",
+        "path": "/0/1/1"
+      },
+      {
+        "account": "46j72UgTgRNjtdxYL2r8e8bSfhAE75KLRQWmRY9oLkuU",
+        "kind": "public",
+        "path": "/1/0/1"
+      },
+      {
+        "account": "4VScJ7mtwaanQ5gcSZZw2iAMHYAbLrVmbYKwEGx2eSex",
+        "kind": "public",
+        "path": "/1"
+      },
+      {
+        "account": "4VhxvwLN5n3u3rZbsz2VNFVavLwc1niNvgxq8JJ15veK",
+        "kind": "public",
+        "path": "/0/0/1"
+      },
+      {
+        "account": "4fnuFzUuacmeWQ5GBym1zkcQCdmyUk5jUjz3zstScvvq",
+        "kind": "public",
+        "path": "/1/2"
+      },
+      {
+        "account": "4w8Akecxiay7Q85w34hPNzrKX4GqfyW2APjfbF2ZmuDx",
+        "kind": "public",
+        "path": "/0/1/0/0"
+      },
+      {
+        "account": "6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f",
+        "kind": "public",
+        "path": "/0"
+      },
+      {
+        "account": "6WvEQ5XdE7v8YZ3QnfYfPbtwu5xjnrkNi16x7uYi8diS",
+        "kind": "public",
+        "path": "/0/1"
+      },
+      {
+        "account": "7VDaNr8MGJrtpGruCJcp9huQz5s4n7VtwN1b1nAsBr5y",
+        "kind": "public",
+        "path": "/1/1/0"
+      },
+      {
+        "account": "7X6qT8x3zACXayW92t9U7M2CVzLkAYTsxp4NR2kSA1LL",
+        "kind": "public",
+        "path": "/2/0"
+      },
+      {
+        "account": "7Yn47mvooArLreiZMFUQNGHapxFJUqpGZrHc6mgRAbuk",
+        "kind": "public",
+        "path": "/0/0/2"
+      },
+      {
+        "account": "Bid4NMkmf9YZzY39WBs3fTs2z4hkFfKXzeKfVhCYLrv3",
+        "kind": "public",
+        "path": "/1/0"
+      },
+      {
+        "account": "C2zo8KDVbtAChLhyynWffDqJeYMny1zUS9WvSjrhLpTm",
+        "kind": "public",
+        "path": "/0/1/0"
+      },
+      {
+        "account": "C3FWBoT3Gv4CHt4ZdACyFDZs5tVyPdFoLmv5hB88LiAz",
+        "kind": "public",
+        "path": "/4"
+      },
+      {
+        "account": "CDkSgnmuRbdiCVLp6cVTbKRanvxsTJAUhrXEo2PU7CSr",
+        "kind": "public",
+        "path": "/1/0/0/0"
+      },
+      {
+        "account": "CswQqK9jzUHf5sraiM8G9HfgMT2bcJ8GhVpbAA9trwQ6",
+        "kind": "public",
+        "path": "/0/0/0/0/0"
+      },
+      {
+        "account": "E8JUnR9KQEkXiaXm7fMRUeWzcT1G9fHppWRS5pLgD7xX",
+        "kind": "public",
+        "path": "/0/2"
+      },
+      {
+        "account": "FBqNAwJs9T4eNDw9pQXxXrLZNcnR1sTnnBEYzhudLQZJ",
+        "kind": "public",
+        "path": "/0/0/0/1"
+      },
+      {
+        "account": "GG66c7ekYZLwuk2NDiReVRgSW2YojhgeMj8ZFQLyTXoy",
+        "kind": "public",
+        "path": "/1/0/0"
+      },
+      {
+        "account": "GVa1sj498DLS9KK26GVtXFdinzRj9L4ZCGFRG6gkfWxF",
+        "kind": "public",
+        "path": "/0/2/0"
+      },
+      {
+        "account": "GxFvzFgWgL5CwgoPz3aCgd4k37AVwNz2jT77dqn4trYS",
+        "kind": "public",
+        "path": "/2/0/0"
+      },
+      {
+        "account": "JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7",
+        "kind": "public",
+        "path": "/0/0/0"
+      }
+    ],
+    "suggested": "3w6KALxeqfdxpidqRygcXkegsbRzV8ihReUs3vBazXjP"
+  }
+}

@@ -1,0 +1,15 @@
+{
+ "default": "demo-v1-public",
+ "deployments": [
+  {
+   "name": "demo-v1-public",
+   "chain_id": 11155111,
+   "vault": "0x26af59855b99a8af199361289A5Ed6088729E60E",
+   "vault_create_block": 12134824,
+   "desk": "0x6b7F38D05751b1ed432a0A0d377A63cFB8c4DBc5",
+   "cfg_id": "0x9a37708a79334bbce6946e4dab4d9f6530538e867fcec10083b05b7d19f20d15",
+   "bridge_program": "4eaeK3yiqATXhpCEYEFMMtjUn1bS7HLxPwfrH31mXCvr",
+   "token_program": "5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7"
+  }
+ ]
+}

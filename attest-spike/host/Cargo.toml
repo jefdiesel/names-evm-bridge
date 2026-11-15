@@ -1,0 +1,24 @@
+[package]
+name = "host"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+methods = { path = "../methods" }
+attest-common = { path = "../common" }
+# "prove" only brings in the in-process executor (ExecutorImpl). This host never proves.
+risc0-zkvm = { version = "=3.0.5", features = ["prove"] }
+# Native cross-check of the same Helios code before running it in the guest.
+helios-consensus-core = { git = "https://github.com/a16z/helios", rev = "2af9b41887e069144ee56cd710f3ddca195473f8" }
+ethereum_ssz = "0.9"
+tree_hash = "0.10"
+alloy-primitives = "1"
+alloy-trie = { version = "0.9", features = ["ethereum"] }
+alloy-rlp = "0.3"
+# Same version Helios links natively; used for the subgroup-check probe.
+bls12_381 = { version = "0.8.0", features = ["experimental"] }
+sha2 = "0.9"
+serde_json = "1"
+hex = "0.4"
+anyhow = "1"

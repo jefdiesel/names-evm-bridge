@@ -1,0 +1,800 @@
+judge-demo 2026-11-14 22:28:56  repo e3e5887  Linux x86_64
+work <work>  run <work>/run-20261114-222856
+
+------------------------------------------------------------------------------------------
+STEP 1. Prerequisites
+------------------------------------------------------------------------------------------
+  platform Linux/x86_64
+  this CPU lacks the adx instructions (Intel(R) Xeon(R) CPU E5-2680 v3 @ 2.50GHz): the LEZ kit's sequencer and wallet link upstream's prebuilt rapidsnark library (a Logos node dependency, not this repository's code), which needs ADX and BMI2, and stop with "Illegal instruction" here. Run on an x86-64 CPU that lists adx and bmi2 in /proc/cpuinfo, or on an arm64 machine; or rerun with --rapidsnark-from-source to build rapidsnark here without assembly (needs cmake and m4)
+  --rapidsnark-from-source: step 3 builds rapidsnark v0.0.8 from source WITHOUT assembly on this machine and links the kit's sequencer and wallet against it
+  disk: 1688 GB free in <work> (the builds take about 12 GB; keep 25 GB free for the first run)
+  memory: 121 GB (8 GB or more recommended for the builds)
+  git: git version 2.53.0
+  cargo: cargo 1.100.0 (3acc79c0c 2026-11-05)
+  forge: forge Version: 1.5.1-v1.5.1
+  anvil: anvil Version: 1.5.1-v1.5.1
+  python3: Python 3.14.4
+  rzup: rzup 0.5.0
+PASS: step 1. Prerequisites
+
+------------------------------------------------------------------------------------------
+STEP 2. Fetch the LEZ 0.4 testnet kit (public branch testnet-0.4, pinned commit 96a0a502)
+------------------------------------------------------------------------------------------
+$ git init -q <work>/build/kit
+$ git -C <work>/build/kit remote add origin https://github.com/jefdiesel/logos-execution-zone.git
+$ git -C <work>/build/kit fetch -q --depth 1 origin 96a0a50232203ceae0cb8e69ef564d2d4a5d34a1
+$ git -C <work>/build/kit -c advice.detachedHead=false checkout -q FETCH_HEAD
+  kit at 96a0a50232203ceae0cb8e69ef564d2d4a5d34a1
+PASS: step 2. Fetch the LEZ 0.4 testnet kit (public branch testnet-0.4, pinned commit 96a0a502)
+
+------------------------------------------------------------------------------------------
+STEP 3. Build the kit's sequencer and wallet (LEZ v0.4.0-rc3 + kit patches; cached after the first run)
+------------------------------------------------------------------------------------------
+$ git clone -q --depth 1 --branch v0.0.8 --recurse-submodules --shallow-submodules https://github.com/iden3/rapidsnark <work>/build/rapidsnark-src
+Note: switching to '2921b0eb33369f4d329a6902e97959246b802e6c'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+$ (cd <work>/build/rapidsnark-src && CC="cc -std=gnu17" ./build_gmp.sh host_noasm && CXXFLAGS="-include cstdint" make host_noasm)    (GMP with --disable-assembly, rapidsnark with USE_ASM=NO)
+  rapidsnark: built from source without assembly here; RAPIDSNARK_LIB_DIR=<work>/build/rapidsnark-noasm
+$ P=<work>/build/kit-bin CARGO_TARGET_DIR=<work>/build/target-kit LEZ_BUILD_WRAP="nice -n 10" <work>/build/kit/testnet/sequencer/build.sh
+== building from <work>/build/kit at 96a0a5023220 (first build: 15-60 min, about 5 GB in <work>/build/target-kit)
+  sequencer: cargo build -p sequencer_service --features standalone,prove (log: <work>/build/kit-bin/logs/build-sequencer.log)
+  sequencer: built in 860 s
+  wallet: cargo build -p wallet --features lee/prove (log: <work>/build/kit-bin/logs/build-wallet.log)
+  wallet: built in 264 s
+PASS: step 3. Build the kit's sequencer and wallet (LEZ v0.4.0-rc3 + kit patches; cached after the first run)
+
+------------------------------------------------------------------------------------------
+STEP 4. Build the bridge: lez-bridge CLI, outbound host (executor only), vault
+------------------------------------------------------------------------------------------
+$ (cd lez-bridge && CARGO_TARGET_DIR=<work>/build/target-bridge nice -n 10 cargo build --release -j 12 -p lez_bridge_cli)
+$ (cd lez-bridge/outbound && CARGO_TARGET_DIR=<work>/build/target-outbound nice -n 10 cargo build --release -j 12 -p outbound_host)
+$ git -C <repo> submodule update --init --recursive vault/lib/forge-std vault/lib/openzeppelin-contracts
+Submodule 'vault/lib/forge-std' (https://github.com/foundry-rs/forge-std) registered for path 'vault/lib/forge-std'
+Submodule 'vault/lib/openzeppelin-contracts' (https://github.com/OpenZeppelin/openzeppelin-contracts) registered for path 'vault/lib/openzeppelin-contracts'
+Cloning into '<repo>/vault/lib/forge-std'...
+Cloning into '<repo>/vault/lib/openzeppelin-contracts'...
+Submodule path 'vault/lib/forge-std': checked out 'f3dae6e6ee381f25eb6a246f7da9b85c91a68219'
+Submodule path 'vault/lib/openzeppelin-contracts': checked out '69c8def5f222ff96f2b5beff05dfba996368aa79'
+Submodule 'lib/erc4626-tests' (https://github.com/a16z/erc4626-tests.git) registered for path 'vault/lib/openzeppelin-contracts/lib/erc4626-tests'
+Submodule 'lib/forge-std' (https://github.com/foundry-rs/forge-std) registered for path 'vault/lib/openzeppelin-contracts/lib/forge-std'
+Submodule 'lib/halmos-cheatcodes' (https://github.com/a16z/halmos-cheatcodes) registered for path 'vault/lib/openzeppelin-contracts/lib/halmos-cheatcodes'
+Cloning into '<repo>/vault/lib/openzeppelin-contracts/lib/erc4626-tests'...
+Cloning into '<repo>/vault/lib/openzeppelin-contracts/lib/forge-std'...
+Cloning into '<repo>/vault/lib/openzeppelin-contracts/lib/halmos-cheatcodes'...
+Submodule path 'vault/lib/openzeppelin-contracts/lib/erc4626-tests': checked out '8b1d7c2ac248c33c3506b1bff8321758943c5e11'
+Submodule path 'vault/lib/openzeppelin-contracts/lib/forge-std': checked out 'ae570fec082bfe1c1f45b0acca4a2b4f84d345ce'
+Submodule 'lib/ds-test' (https://github.com/dapphub/ds-test) registered for path 'vault/lib/openzeppelin-contracts/lib/forge-std/lib/ds-test'
+Cloning into '<repo>/vault/lib/openzeppelin-contracts/lib/forge-std/lib/ds-test'...
+Submodule path 'vault/lib/openzeppelin-contracts/lib/forge-std/lib/ds-test': checked out 'e282159d5170298eb2455a6c05280ab5a73a4ef0'
+Submodule path 'vault/lib/openzeppelin-contracts/lib/halmos-cheatcodes': checked out 'c0d865508c0fee0a11b97732c5e90f9cad6b65a5'
+$ (cd vault && forge build)
+  CLI 1fa9e317a3bf8d0c…  outbound host 94288724058e384b…
+$ <work>/build/target-outbound/release/outbound_host ids
+UPDATE_IMAGE_ID_TRUSTED_TIP=0x332dc4ab7be9c905b0790914737c2888eeb4a8cc720573e85ee4cc9c81b5aa43
+UPDATE_IMAGE_ID_RELEASE=0x96bcff057182298b3800433116b0384a3532ff7a4b61ebd2cf915e1b455246c6
+RELEASE_IMAGE_ID=0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dc
+PRIVACY_CIRCUIT_ID=0x631f0c96572a86ce63d1b9c4e98c8383cabb016b3c852017101452b992cf0c38
+PASS: step 4. Build the bridge: lez-bridge CLI, outbound host (executor only), vault
+
+------------------------------------------------------------------------------------------
+STEP 5. Bring up a throwaway LEZ rc3 chain with the kit
+  label: throwaway LEZ 0.4 (v0.4.0-rc3) chain you run yourself: one standalone sequencer, no Logos Blockchain anchoring, LEZ's published test genesis keys; not a Logos network, not the LEZ 0.4 bridge test network
+------------------------------------------------------------------------------------------
+$ SEQ_BIN=… WALLET_BIN=… <work>/build/kit/testnet/up.sh --genesis-key default --port 6440 --block-time 5 --home <work>/run-20261114-222856/kit
+== using prebuilt binaries: <work>/build/kit-bin/bin/sequencer_service, <work>/build/kit-bin/bin/wallet (no build)
+setup done: genesis default, block time 5s, home <work>/run-20261114-222856/kit/chain/home
+started pid 1077863, height {"jsonrpc":"2.0","id":1,"result":1}
+  listens TCP 127.0.0.1:6441
+  listens TCP 127.0.0.1:6440
+
+LEZ 0.4 test network is up (a chain you run yourself; not the Logos testnet).
+  RPC          http://127.0.0.1:6440  (bound to 127.0.0.1:6440)
+  height       2, a block every 5s
+  operator     Public/6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV  balance 10000000000000  (genesis: default)
+  home         <work>/run-20261114-222856/kit
+  the operator key is LEZ's published test key: anyone can spend these funds
+
+Try it:
+  <work>/build/kit/testnet/wallet.sh --home <work>/run-20261114-222856/kit account get --account-id Public/6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV
+  <work>/build/kit/testnet/wallet.sh --home <work>/run-20261114-222856/kit account new public --label alice      # prints alice's account id and "pk <hex>"
+  <work>/build/kit/testnet/wallet.sh --home <work>/run-20261114-222856/kit auth-transfer send --from Public/6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV --to-pk <alice's pk> --amount 1000000
+  curl -s -X POST http://127.0.0.1:6440/ -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"getLastBlockId","params":[]}'
+Status: <work>/build/kit/testnet/status.sh --home <work>/run-20261114-222856/kit   Stop: <work>/build/kit/testnet/down.sh --home <work>/run-20261114-222856/kit   Check everything: <work>/build/kit/testnet/smoke.sh --home <work>/run-20261114-222856/kit
+PASS: step 5. Bring up a throwaway LEZ rc3 chain with the kit
+
+------------------------------------------------------------------------------------------
+STEP 6. Start a local Ethereum node (anvil)
+  label: local Ethereum node (anvil), not Sepolia
+------------------------------------------------------------------------------------------
+$ anvil --host 127.0.0.1 --port 6450 --silent &
+  anvil pid 1078324, chain id 31337
+PASS: step 6. Start a local Ethereum node (anvil)
+
+------------------------------------------------------------------------------------------
+STEP 7. LEZ: fund the demo account P from the genesis account, deploy the token and bridge programs
+  label: P is the demo operator: bridge admin, freezer and root attestor
+------------------------------------------------------------------------------------------
+$ R=<work>/run-20261114-222856/roundtrip RESUME=1 STOP_AFTER=programs SEQ=http://127.0.0.1:6440 ETH_RPC=http://127.0.0.1:6450 lez-bridge/scripts/e2e-roundtrip.sh
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+run <work>/run-20261114-222856/roundtrip, anvil account 0x90F79bf6EB2c4f870365E785982E1f101E93b906, CLI 1fa9e317a3bf8d0c…, host <work>/build/target-outbound/release/outbound_host
+
+## 23:15:16 LEZ: wallet, the genesis account F, and our own public account P funded from it
+✅All looks good!
+Imported public account Public/6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV
+Generated new account with account_id Public/DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y at path /0
+With pk <public key>
+Transaction hash is 4ece6bc16a08594c3bd5f529cb48830d2d9a48c42d005328ea72d3f68b49ac60
+Transaction is included in block 3
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyB …
+F=6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV P=DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+
+## 23:15:28 LEZ: G2 starts at block 4 (before our programs exist); deploy the token and bridge programs
+image id a2412c89f9434a908ef19a9393c94329b3a320b6bdea7c1c2547cb7517c0a52a
+deploying 404056 bytes in 4 segment(s) at header Gn9iy9J2rVQHR7uNA2GW17AjTtqByY2cSmuLQNv93qVt
+Transaction hash is 985111f732df3da0780885b57767d8e52a0c43cd293576c4345cd7a33707f268
+Transaction is included in block 5
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: 69PypKATtqfmKV7ULwpwE7z9epM8a4wVD …
+Transaction hash is 48534640d2f5158d7ef7a55ad9d3795346f44ae434573fc47e6735fdb0b0d94e
+Transaction is included in block 8
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: GG4dvDzsWWrupAbFptaxB8BmuHfCexc9Z …
+Transaction hash is 0a729e2b6aafc23b48cc95d76a5fb618af86b2f74cf7041c71f401201a5316c4
+Transaction is included in block 10
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: JCDhQHjqxbFu4CoUTnR7WHf44mi91bGvo …
+Transaction hash is 81783b781c43c89915b6f3b05932bc4206a465cd6515962e942956da90ee4f9d
+Transaction is included in block 13
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: BdiAARfpV4caewxGPxxUCoWGbfqcx2vB9 …
+Transaction hash is 04802e63fe6cfe5110917201781d97c91db708a45e8efe51a71729bb931e1cf6
+Transaction is included in block 15
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: Gn9iy9J2rVQHR7uNA2GW17AjTtqByY2cS …
+immutable
+program Gn9iy9J2rVQHR7uNA2GW17AjTtqByY2cSmuLQNv93qVt
+image id 1980e477010b2adb3711d700182e0009837acbd2b5dd3d6ff8aea41ebf7a7dee
+deploying 581880 bytes in 6 segment(s) at header B1x1yjBJEDqfQLUy8NZLPX7M89myUR4PADQ129vDM1NV
+Transaction hash is 3353ba62acf3da21cfd20fe71b7140321b909efbd662864e4c027df19a6af50f
+Transaction is included in block 18
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: 4dET4vNWnvEkSYM5t6L9mRcqE2JxMpzVY …
+Transaction hash is 40443450e4f89c907143201736ac7a24a09e67a20cd23023e6f6eac03d9e623c
+Transaction is included in block 20
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: 3PTLpFsTfmajnvz2WsQfuBqxHumoiADH3 …
+Transaction hash is 0c165fafc1cc12dd9483a7b059bb8f24da4670e185d5db8d5d7f28c20c932fb8
+Transaction is included in block 22
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: 7mrh9fU1zor5VUCSNpuFjnfMKtXnb3FWm …
+Transaction hash is 00442e9806fbe4a4cf5a0aaab9a8c3ff6feaead19cd22babe72d3a84bf322fb5
+Transaction is included in block 25
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: DBPkvfkaat44AHhZNZYz8rZ9f6hmcxBxq …
+Transaction hash is d3df0e51a0bf5e9df8b7392dcd10f5c469d627690cecc97f8cf7533650703853
+Transaction is included in block 27
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: 88e8zG5HZgYYgV8zbx8LvUrQWmPrXGFew …
+Transaction hash is a1d4e3fe32d1743f3603f019d3a31491717df02e4b57ee7ec29a8613318febf7
+Transaction is included in block 30
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: 2pNVTbPV4FAuUESmYogdhs94NEHSJGpUb …
+Transaction hash is 4bbef6a79e23fd1020bc1d9fabcc8e2d289486fed1900da61c6c18923fef8723
+Transaction is included in block 32
+Transaction data is Public(PublicTransaction { message: TransactionMessage { public_context: PublicExecutionContext { actors: {Actor { account_id: B1x1yjBJEDqfQLUy8NZLPX7M89myUR4PA …
+immutable
+program B1x1yjBJEDqfQLUy8NZLPX7M89myUR4PADQ129vDM1NV
+stopped after step programs (STOP_AFTER)
+PASS: step 7. LEZ: fund the demo account P from the genesis account, deploy the token and bridge programs
+
+------------------------------------------------------------------------------------------
+STEP 8. Ethereum: G2 genesis state, then deploy the vault
+  label: vault with the TEST MockVerifier: mock-verified (it accepts a seal that is imageId | sha256(journal)); no real verifier, no Sepolia. The round-trip deploy has no deposit desk, so none is deployed
+------------------------------------------------------------------------------------------
+$ R=<work>/run-20261114-222856/roundtrip RESUME=1 STOP_AFTER=vault SEQ=http://127.0.0.1:6440 ETH_RPC=http://127.0.0.1:6450 lez-bridge/scripts/e2e-roundtrip.sh
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+run <work>/run-20261114-222856/roundtrip, anvil account 0x90F79bf6EB2c4f870365E785982E1f101E93b906, CLI 1fa9e317a3bf8d0c…, host <work>/build/target-outbound/release/outbound_host
+F=6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV P=DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+
+## 23:17:54 G2 genesis state at block 4 for bridge B1x1yjBJEDqfQLUy8NZLPX7M89myUR4PADQ129vDM1NV
+G2_STATE=0x31edc214baa5e469ccee450953492701ee18b4cda0e1ad76a2f1b786b834ea41
+tip 4 0xa7d4fd745ab0fa16da5ba73673f2536b401c284af8a78b438602685789088b02
+UPDATE_IMAGE_ID_TRUSTED_TIP=0x332dc4ab7be9c905b0790914737c2888eeb4a8cc720573e85ee4cc9c81b5aa43
+UPDATE_IMAGE_ID_RELEASE=0x96bcff057182298b3800433116b0384a3532ff7a4b61ebd2cf915e1b455246c6
+RELEASE_IMAGE_ID=0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dc
+PRIVACY_CIRCUIT_ID=0x631f0c96572a86ce63d1b9c4e98c8383cabb016b3c852017101452b992cf0c38
+
+## 23:17:54 Ethereum: deploy the round-trip vault (MockVerifier, updateImageId = G2-lite TrustedTip 0x332dc4ab7be9c905b0790914737c2888eeb4a8cc720573e85ee4cc9c81b5aa43, releaseImageId = G3 0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dc)
+stopped after step vault (STOP_AFTER)
+PASS: step 8. Ethereum: G2 genesis state, then deploy the vault
+
+------------------------------------------------------------------------------------------
+STEP 9. LEZ: wrapped USDC and ETH (minted only by the bridge), bridge init bound to the vault, token registry
+------------------------------------------------------------------------------------------
+$ R=<work>/run-20261114-222856/roundtrip RESUME=1 STOP_AFTER=setup SEQ=http://127.0.0.1:6440 ETH_RPC=http://127.0.0.1:6450 lez-bridge/scripts/e2e-roundtrip.sh
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+run <work>/run-20261114-222856/roundtrip, anvil account 0x90F79bf6EB2c4f870365E785982E1f101E93b906, CLI 1fa9e317a3bf8d0c…, host <work>/build/target-outbound/release/outbound_host
+F=6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV P=DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+vault 0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623 usdc 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad cfg 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def; g2State = genesis 0x31edc214baa5e469ccee450953492701ee18b4cda0e1ad76a2f1b786b834ea41; updateImageId = TrustedTip guest
+
+## 23:17:56 LEZ: wrapped USDC and ETH (mint authority = the bridge), init (stand-in attestor P), register both
+definition account 6u12weoxi8uek3Ta2ac5YeBiTLWTWkZFTvQ4jWZo5AdQ
+tx 021dd2498e1d17df9b98152a155c80db181900dab2f7756069567afc72281c43
+applied in block 35
+token 6u12weoxi8uek3Ta2ac5YeBiTLWTWkZFTvQ4jWZo5AdQ
+definition account 2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN
+tx 88b9d99dbc9d539cf4b38b38440dfdef4d703192e122f11e2485e294003518bf
+applied in block 38
+token 2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN
+lez chain id 0xf19632787e87b453ba591241bd3da31d1778f6fe6f5fde3b33ce4782ea4c1887
+zone id (root source) 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+cfg_id the bridge will derive 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def
+tx 8308d61b35d39647ab714da0633e00a1d2d247481d30510572c56764b6d02a12
+applied in block 40
+submitted in 221.3ms
+tx cf3cb22542392d7a03cec7bac70eb79d3f1e0c85330af32cb860aa89844523f7
+applied in block 42
+submitted in 241.6ms
+tx 2ea193f6bebb56e03ebbdcddec699e6c34d8629486b2915f3cadef42ae70d2c9
+applied in block 45
+stopped after step setup (STOP_AFTER)
+PASS: step 9. LEZ: wrapped USDC and ETH (minted only by the bridge), bridge init bound to the vault, token registry
+
+------------------------------------------------------------------------------------------
+STEP 10. Ethereum: deposits (six for P, one for a never-used LEZ account X)
+------------------------------------------------------------------------------------------
+$ R=<work>/run-20261114-222856/roundtrip RESUME=1 STOP_AFTER=deposits SEQ=http://127.0.0.1:6440 ETH_RPC=http://127.0.0.1:6450 lez-bridge/scripts/e2e-roundtrip.sh
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+run <work>/run-20261114-222856/roundtrip, anvil account 0x90F79bf6EB2c4f870365E785982E1f101E93b906, CLI 1fa9e317a3bf8d0c…, host <work>/build/target-outbound/release/outbound_host
+F=6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV P=DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+vault 0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623 usdc 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad cfg 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def; g2State = genesis 0x31edc214baa5e469ccee450953492701ee18b4cda0e1ad76a2f1b786b834ea41; updateImageId = TrustedTip guest
+
+## 23:18:58 Ethereum: 6 deposits for P (USDC 100, 100, 1000; ETH 0.01, 0.01, 0.1)
+deposit 0: token 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad denom 100000000 C 0xeea9400aa5a0d1026cdf0a88f759b6f7d090b6ff2a184308a07833a8bf78f5d5 tx 0xc24426688519d56a97a38d730e60bfcb24168374613de8560eaa8f081656f3ba
+deposit 1: token 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad denom 100000000 C 0xed6a9bfef3300f3776a46405977aea0234ef2cbc8df0d974d56b18f159e398b3 tx 0x64eacc419c3c7fddf93186dd6bcf0225d398a0004e71966141bbef8874423821
+deposit 2: token 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad denom 1000000000 C 0x509a2f4d79250f67b2c59edec168c214bc3d12616d861228b172078babbef129 tx 0x4c0961ed75c6d6ae850b2a7bd03400333e8fee2e72c1bfad1b886c872b7a8d91
+deposit 3: token 0x0000000000000000000000000000000000000000 denom 10000000000000000 C 0x740d6d0d4a2b18de8f7ffd5b666cc4718542e1ef03d65715eb24185bb5832dde tx 0x7ee1f7b0bda5793073735f31811fac9bc385c4e99b45b29ef9315c4f4086e5dd
+deposit 4: token 0x0000000000000000000000000000000000000000 denom 10000000000000000 C 0xba317c72034c076428d95c4d3945a594aac539c963240ea33c2e02dbe899c4d3 tx 0xbec003d97e169b7cb88b09a2d1f76144fbfa582b645b04d9a85df3e0982ce1eb
+deposit 5: token 0x0000000000000000000000000000000000000000 denom 100000000000000000 C 0x1b59fc0f6d6e75f679c6de1f474bee9a3776aa9c72740eeaa0c3cd91748de1dd tx 0x18a93c27452e2d569ab1c17ec621498cb05c15d1d6683486c08e3b4c813330fb
+stopped after step deposits (STOP_AFTER)
+$ lez-bridge wallet account new public    (X's own wallet; the key never leaves it)
+  X = 6ZC5LHRBEuDk6wAhXd69uo7Sj5jjy6ev3cNPosVTqc1D: ABSENT (never used)
+$ lez-bridge commitment --secret-file <X's deposit secret, mode 600> --dest 6ZC5LHRBEuDk6wAhXd69uo7Sj5jjy6ev3cNPosVTqc1D --eth-token 0x0000000000000000000000000000000000000000 --denom 10000000000000000 --cfg-id <hex>
+$ cast send 0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623 'depositETH(uint32,bytes32)' 0 0x993755687bb6d3500d2410702367f6d830b5113df874ebe379f9cbaf53573117 --value 10100000000000000   (anvil account 0)
+  X's deposit tx 0x01be3f0c46cae991a2f7e8f446d6ea874d9de6683e6d37878f51c25319d425bf; vault depositCount 7
+PASS: step 10. Ethereum: deposits (six for P, one for a never-used LEZ account X)
+
+------------------------------------------------------------------------------------------
+STEP 11. LEZ: attest the deposit root, then P's six public claims and a refused repeat
+  label: operator-attested: the demo operator posts the vault root (here from a local anvil vault). Not the trustless path: the RFP-021 light client was proved on local chains only (rc3 and rc1; about 2 h per update), and does not run in this demo
+------------------------------------------------------------------------------------------
+$ R=<work>/run-20261114-222856/roundtrip RESUME=1 STOP_AFTER=claims SEQ=http://127.0.0.1:6440 ETH_RPC=http://127.0.0.1:6450 lez-bridge/scripts/e2e-roundtrip.sh
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+run <work>/run-20261114-222856/roundtrip, anvil account 0x90F79bf6EB2c4f870365E785982E1f101E93b906, CLI 1fa9e317a3bf8d0c…, host <work>/build/target-outbound/release/outbound_host
+F=6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV P=DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+vault 0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623 usdc 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad cfg 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def; g2State = genesis 0x31edc214baa5e469ccee450953492701ee18b4cda0e1ad76a2f1b786b834ea41; updateImageId = TrustedTip guest
+7 deposit leaves; vault root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+
+## 23:19:00 LEZ: record the vault root (stand-in attestor P), claim all 6 deposits into P (public)
+submitted in 283.1ms
+tx 39b3c315da91c63f85da7c797253361dda3642fb81c0de991c9f45bf00133de6
+applied in block 48
+deposit leaf 0 of 7
+root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+claim nullifier 0x98f1950c6ab60df9fd1e0b1f7b8b1a519280de19ef76b01437386a29f9482707
+recipient DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+submitted in 495.6ms
+tx 84fe2ade164e660ec61cd8cd578cc8bc24e22a735cd8d64b935f1773b7340925
+applied in block 50
+deposit leaf 1 of 7
+root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+claim nullifier 0xfffcc2015555e4ec58067c4b25dc4d44d02ce4093dc64e32eae93dc9b245051b
+recipient DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+submitted in 474.2ms
+tx a06d7dcb28f76e13165eeefc233b692e36675b106b74335d01be250e6a5f7fa0
+applied in block 53
+deposit leaf 2 of 7
+root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+claim nullifier 0x23d806060695e5d29ed4295489b9dcf33e67ebef7908fb138d051aad3ec83ce4
+recipient DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 1 = 1000000000
+submitted in 477.9ms
+tx 69b700ce66bb0e724814450a2f31b56ba856c279c0534e280d05c2375b4b6bbc
+applied in block 55
+deposit leaf 3 of 7
+root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+claim nullifier 0xea3109d4ad2859e0ae114cdb8ec7cf2a82583e9e7d0a78220b7ca1d3b05860be
+recipient DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 10000000000000000
+submitted in 524.8ms
+tx 04da2820da2a91e81b9e74a95e979f6a368ecacc6ec02ccd03a166466a2d7b22
+applied in block 58
+deposit leaf 4 of 7
+root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+claim nullifier 0xa7ca0320220d45c6c25830b8fa1116acb7b2395177271b5cee874519c584dd39
+recipient DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 10000000000000000
+submitted in 647.8ms
+tx e2a029c97f39e269b457b6ff5ead56276767d90dcdc8faaffaa86595c9865d68
+applied in block 61
+deposit leaf 5 of 7
+root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+claim nullifier 0x6f98bf3f3b62707402a1c2ccf4be57a9859972f2eada43fd44cf5ee1e5179864
+recipient DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 1 = 100000000000000000
+submitted in 456.5ms
+tx f0c3a46ec5ebcd62e5268d806652eefde5453e501fe4d856efd7e02e0fcd0f0b
+applied in block 63
+
+## 23:20:29 LEZ: claim deposit 0 again with the local pre-check off: included and reverted (G2 must skip it)
+deposit leaf 0 of 7
+root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+claim nullifier 0x98f1950c6ab60df9fd1e0b1f7b8b1a519280de19ef76b01437386a29f9482707
+recipient DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y (public claimer)
+pre-check SKIPPED (--no-precheck, tests only)
+
+thread 'main' (1) panicked at bridge/src/lib.rs:1089:13:
+claim refused
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+submitted in 329.9ms
+tx aa67c90c69e8b64e42590a6ea3689aec1eb44eb26e8cf1758b243b3e63f5f167
+Error: aa67c90c69e8b64e42590a6ea3689aec1eb44eb26e8cf1758b243b3e63f5f167 was included in block 66 but reverted
+stopped after step claims (STOP_AFTER)
+  X's deposit is leaf 6 of 7 under the attested root
+PASS: step 11. LEZ: attest the deposit root, then P's six public claims and a refused repeat
+
+------------------------------------------------------------------------------------------
+STEP 12. LEZ: relayed PUBLIC claim into X, which was never used and holds no LEZ
+  label: the claimer signs, the bridge's relay co-signs as fee payer; the relay is a demo-network convenience, not part of the trust-minimised design
+------------------------------------------------------------------------------------------
+  relay payer DsBSQxL4XQv6UZwLzy1mb12zipGxQuFmZUb5pCN4xQgx (a dedicated account: no bridge role)
+$ lez-bridge wallet auth-transfer send --from Public/6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV --to-pk <relay payer key> --amount 100000000    (genesis account F, in P's wallet)
+$ relayer.py --bind-payer    (a new payer, bound to this chain before it starts: it refuses an unbound payer)
+$ relayer.py on 127.0.0.1:6452 (public-demo/relayer/relayer.py; BRIDGE=B1x1yjBJEDqfQLUy8NZLPX7M89myUR4PADQ129vDM1NV PAYER=DsBSQxL4XQv6UZwLzy1mb12zipGxQuFmZUb5pCN4xQgx)
+  relay info: {"payer": "DsBSQxL4XQv6UZwLzy1mb12zipGxQuFmZUb5pCN4xQgx", "bridge": "B1x1yjBJEDqfQLUy8NZLPX7M89myUR4PADQ129vDM1NV", "max_gas": 250000, "max_fee": "2500000"}
+  X before: ABSENT (never used)
+$ lez-bridge claim --from 6ZC5LHRBEuDk6wAhXd69uo7Sj5jjy6ev3cNPosVTqc1D … --secret-file <X's deposit secret> --index 6 --relay http://127.0.0.1:6452/relay    (signed in X's wallet)
+claim nullifier 0x5a09c318c515046457923af62e05819632b4c1707c1b50683aab8614886ff227
+recipient 6ZC5LHRBEuDk6wAhXd69uo7Sj5jjy6ev3cNPosVTqc1D (public claimer)
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 10000000000000000
+relay http://127.0.0.1:6452/relay: fee payer DsBSQxL4XQv6UZwLzy1mb12zipGxQuFmZUb5pCN4xQgx, caps gas 250000, max_fee 2500000
+relayed claim: declared gas 189859, max_fee 2500000 (measured 151887 cycles), signed by the claimer
+relayed and submitted in 1.3s
+tx d81aa692e62703bb236b34798ba117921e433d577edbb24e56add86dbc67a5ef
+applied in block 71
+  relay payer native LEZ 100000000 -> 98768352: the relay paid the claim's fee, 1231648
+$ lez-bridge claim … --relay http://127.0.0.1:6452/relay    (the same deposit again)
+Error: deposit already claimed: its nullifier is spent; nothing sent
+  repeat refused (CLI pre-check), nothing sent
+PASS: step 12. LEZ: relayed PUBLIC claim into X, which was never used and holds no LEZ
+
+------------------------------------------------------------------------------------------
+STEP 13. LEZ: X's balances after the relayed claim
+------------------------------------------------------------------------------------------
+  X on chain: PRESENT nonce=1 native=0
+$ lez-bridge balances --token-program Gn9iy9J2rVQHR7uNA2GW17AjTtqByY2cSmuLQNv93qVt    (X's wallet)
+Public/6ZC5LHRBEuDk6wAhXd69uo7Sj5jjy6ev3cNPosVTqc1D  2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN  10000000000000000
+  X holds 0 native LEZ and 10000000000000000 units (0.01) of wrapped ETH
+PASS: step 13. LEZ: X's balances after the relayed claim
+
+------------------------------------------------------------------------------------------
+STEP 14. LEZ: burns (X burns its 0.01 wrapped ETH toward a fresh Ethereum address; P's first batch)
+  label: public burns on the throwaway chain; the never-used account pays its own burn fee from a top-up by the demo operator (the relay co-signs claims only)
+------------------------------------------------------------------------------------------
+  X's Ethereum recipient 0xd039cc59a7923eed58407524ec2b47dc1462a4db; exit commitment E = 0xe7865b379a842ef8348f2d4dac588ccbcbd9924457ba9e065b365d5adc892ee6 (the recipient is inside E, not on LEZ)
+$ lez-bridge wallet auth-transfer send --from Public/6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV --to-pk <X's public key> --amount 50000000    (the demo operator tops X up for its burn fee)
+  X native after the operator's top-up: 50000000
+$ lez-bridge burn --from 6ZC5LHRBEuDk6wAhXd69uo7Sj5jjy6ev3cNPosVTqc1D --definition 2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN --amount 10000000000000000 --exit 0xe7865b379a842ef8348f2d4dac588ccbcbd9924457ba9e065b365d5adc892ee6    (signed in X's wallet)
+submitted in 367.1ms
+tx 2b70f7c83564a6bc5a1b3832737d06e74733717d1329cd52545f4af377fff967
+applied in block 76
+  X paid its burn fee: 448848
+$ R=<work>/run-20261114-222856/roundtrip RESUME=1 STOP_AFTER=burns1 SEQ=http://127.0.0.1:6440 ETH_RPC=http://127.0.0.1:6450 lez-bridge/scripts/e2e-roundtrip.sh
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+run <work>/run-20261114-222856/roundtrip, anvil account 0x90F79bf6EB2c4f870365E785982E1f101E93b906, CLI 1fa9e317a3bf8d0c…, host <work>/build/target-outbound/release/outbound_host
+F=6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV P=DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+vault 0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623 usdc 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad cfg 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def; g2State = genesis 0x31edc214baa5e469ccee450953492701ee18b4cda0e1ad76a2f1b786b834ea41; updateImageId = TrustedTip guest
+7 deposit leaves; vault root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+cfg_id 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def
+vault 0xce3478a9e0167a6bc5716dc39dbbbfac38f27623
+chain 31337
+lez_chain_id 0xf19632787e87b453ba591241bd3da31d1778f6fe6f5fde3b33ce4782ea4c1887
+zone_id 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+admin DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+freezer DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+attestor DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+mint_frozen false
+burn_frozen false
+root_source stand-in
+sponsor_amount 0
+float 0
+token 0x261d8c5e9742e6f7f1076fa1f560894524e19cad def 6u12weoxi8uek3Ta2ac5YeBiTLWTWkZFTvQ4jWZo5AdQ denoms [100000000, 1000000000] claims [2, 1] burns [0, 0] claimed_value 1200000000 burned_value 0 registered true mint_frozen false burn_frozen false
+token 0x0000000000000000000000000000000000000000 def 2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN denoms [10000000000000000, 100000000000000000] claims [3, 1] burns [1, 0] claimed_value 130000000000000000 burned_value 10000000000000000 registered true mint_frozen false burn_frozen false
+
+## 23:21:38 LEZ: burns, batch 1: USDC 100 -> R0, USDC 1000 -> R1, ETH 0.01 x3 -> R2, R3, R4 (three 0.01 against two 0.01 claims: by value), then an odd burn of USDC 50 (reverted)
+submitted in 375.3ms
+tx ed8e7ca607207734ce76d24431d7ab07e5bc467abff83a47a89336475c79fa6d
+applied in block 79
+submitted in 372.4ms
+tx 1f1071bce1810e5ff98ad7fb2e2326edfe20183ed41bdae162258ff587767379
+applied in block 82
+submitted in 373.6ms
+tx 8b136fff681c7fa0580545c0718012a13258c665aee9156a4b31b197f33244be
+applied in block 84
+submitted in 361.7ms
+tx 44c8c5ba15c7d078a52951481521737b6d15798f3848b74f4229eb4e771b62d0
+applied in block 87
+submitted in 620.0ms
+tx 63612fec7140e76fc93361cface0208e327baa20d188cca024ef5e7f7b672cfe
+applied in block 90
+
+thread 'main' (1) panicked at bridge/src/lib.rs:1275:28:
+a burn is exactly one denomination
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+submitted in 369.8ms
+tx f1cc01d674274f149fd56265bf4780a5860f02bd35b13205f256ca3d8b8f56a9
+Error: f1cc01d674274f149fd56265bf4780a5860f02bd35b13205f256ca3d8b8f56a9 was included in block 92 but reverted
+stopped after step burns1 (STOP_AFTER)
+PASS: step 14. LEZ: burns (X burns its 0.01 wrapped ETH toward a fresh Ethereum address; P's first batch)
+
+------------------------------------------------------------------------------------------
+STEP 15. Outbound: G2-lite updates over the LEZ blocks, submitted to the vault
+  label: Simulated: proofs executed, not proved, and LEZ finality trusted (G2-lite TrustedTip and G3 guests run in RISC Zero's executor; the vault's MockVerifier accepts their mock seals)
+------------------------------------------------------------------------------------------
+$ R=<work>/run-20261114-222856/roundtrip RESUME=1 STOP_AFTER=submit1 SEQ=http://127.0.0.1:6440 ETH_RPC=http://127.0.0.1:6450 lez-bridge/scripts/e2e-roundtrip.sh
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+run <work>/run-20261114-222856/roundtrip, anvil account 0x90F79bf6EB2c4f870365E785982E1f101E93b906, CLI 1fa9e317a3bf8d0c…, host <work>/build/target-outbound/release/outbound_host
+F=6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV P=DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+vault 0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623 usdc 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad cfg 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def; g2State = genesis 0x31edc214baa5e469ccee450953492701ee18b4cda0e1ad76a2f1b786b834ea41; updateImageId = TrustedTip guest
+7 deposit leaves; vault root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+cfg_id 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def
+vault 0xce3478a9e0167a6bc5716dc39dbbbfac38f27623
+chain 31337
+lez_chain_id 0xf19632787e87b453ba591241bd3da31d1778f6fe6f5fde3b33ce4782ea4c1887
+zone_id 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+admin DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+freezer DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+attestor DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+mint_frozen false
+burn_frozen false
+root_source stand-in
+sponsor_amount 0
+float 0
+token 0x261d8c5e9742e6f7f1076fa1f560894524e19cad def 6u12weoxi8uek3Ta2ac5YeBiTLWTWkZFTvQ4jWZo5AdQ denoms [100000000, 1000000000] claims [2, 1] burns [1, 1] claimed_value 1200000000 burned_value 1100000000 registered true mint_frozen false burn_frozen false
+token 0x0000000000000000000000000000000000000000 def 2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN denoms [10000000000000000, 100000000000000000] claims [3, 1] burns [4, 0] claimed_value 130000000000000000 burned_value 40000000000000000 registered true mint_frozen false burn_frozen false
+batch 1 ends at LEZ block 92 (the reverted odd burn)
+
+## 23:22:55 G2-lite update 1: LEZ blocks 5..92, native run and the TrustedTip guest in the executor
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+JOURNAL=0x0000000000000000000000000000000000000000000000000000000000000020a29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def31edc214baa5e469ccee450953492701ee18b4cda0e1ad76a2f1b786b834ea410903e98da2ab4d645dbc8f86d5dd44a7666ae16ded31946fd410ed47b421d61b00000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002a00000000000000000000000000000000000000000000000000000000000000001f3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e0000000000000000000000000000000000000000000000000000000000000004000000000000000000000000261d8c5e9742e6f7f1076fa1f560894524e19cad00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000261d8c5e9742e6f7f1076fa1f560894524e19cad00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e7865b379a842ef8348f2d4dac588ccbcbd9924457ba9e065b365d5adc892ee6000000000000000000000000261d8c5e9742e6f7f1076fa1f560894524e19cad00000000000000000000000000000000000000000000000000000000000000009432be2eefd41de3f8956978537204e4a521491a24567e0cb162978cb7af66a8000000000000000000000000261d8c5e9742e6f7f1076fa1f560894524e19cad0000000000000000000000000000000000000000000000000000000000000001b384ee682be11f5fc6121e9c010453050a38a07719fe5b25d0ac6ffeb364024f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fd57bd258993d1d903c760d11aa70929fdcc1338dd451811920c356995bce2c2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009a295de90aa3d4bd4c2dbd33132c3cf67be4d067c57257d632656645c097f06f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c210c848bc2c15cae3f7b699ffd133b59982f04258dd4e8ed94d754f801c0060
+SEAL=0x332dc4ab7be9c905b0790914737c2888eeb4a8cc720573e85ee4cc9c81b5aa43b18037b6cbbb10cd6d4e4c17bc6860145d1378565e617b8b1fd50b28bdc860a2
+PREV_STATE=0x31edc214baa5e469ccee450953492701ee18b4cda0e1ad76a2f1b786b834ea41
+NEW_STATE=0x0903e98da2ab4d645dbc8f86d5dd44a7666ae16ded31946fd410ed47b421d61b
+blocks 5..92 (1015865 bytes), roots 1, claims [("261d8c5e9742e6f7f1076fa1f560894524e19cad", 0, 2), ("261d8c5e9742e6f7f1076fa1f560894524e19cad", 1, 1), ("0000000000000000000000000000000000000000", 0, 3), ("0000000000000000000000000000000000000000", 1, 1)], exits 6, nullifiers 7, private receipts 0
+executor: 6718100 user cycles, 10485760 total, 10 segments, 0 assumptions; journal equals the native one
+
+## 23:22:55 LEZ: burns, batch 2: USDC 100 -> R5, ETH 0.01 -> R6
+submitted in 333.8ms
+tx 55924560bdc9a75575f54d76d99c65b0c646d7f68d271d5185dcec9996a0389b
+applied in block 95
+submitted in 388.3ms
+tx 21446a3decb94ec053b3c8cc79966ae344030b087d9c742c8be5fb4576e4e094
+applied in block 97
+
+## 23:23:21 G2-lite update 2: LEZ blocks 93..97, from update 1's state (state chaining)
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+JOURNAL=0x0000000000000000000000000000000000000000000000000000000000000020a29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def0903e98da2ab4d645dbc8f86d5dd44a7666ae16ded31946fd410ed47b421d61b863fe231b68e391a4372952195d5a15d8efea9529e681ad3c6c5c1c4ae729d9700000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000261d8c5e9742e6f7f1076fa1f560894524e19cad000000000000000000000000000000000000000000000000000000000000000040333880397e1660db791061601a5df995e8561cfe42edde738d18f8088c526e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000bce0789a6df949843badb658498dabd0346d6a52524af283759bef83321fada3
+SEAL=0x332dc4ab7be9c905b0790914737c2888eeb4a8cc720573e85ee4cc9c81b5aa4341f3c573b610633cacf2888f2fa6e696cc9858bae417968d891217cf062ad6e5
+PREV_STATE=0x0903e98da2ab4d645dbc8f86d5dd44a7666ae16ded31946fd410ed47b421d61b
+NEW_STATE=0x863fe231b68e391a4372952195d5a15d8efea9529e681ad3c6c5c1c4ae729d97
+blocks 93..97 (4897 bytes), roots 0, claims [], exits 2, nullifiers 0, private receipts 0
+executor: 163463 user cycles, 262144 total, 1 segments, 0 assumptions; journal equals the native one
+cfg_id 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def
+vault 0xce3478a9e0167a6bc5716dc39dbbbfac38f27623
+chain 31337
+lez_chain_id 0xf19632787e87b453ba591241bd3da31d1778f6fe6f5fde3b33ce4782ea4c1887
+zone_id 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+admin DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+freezer DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+attestor DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+mint_frozen false
+burn_frozen false
+root_source stand-in
+sponsor_amount 0
+float 0
+token 0x261d8c5e9742e6f7f1076fa1f560894524e19cad def 6u12weoxi8uek3Ta2ac5YeBiTLWTWkZFTvQ4jWZo5AdQ denoms [100000000, 1000000000] claims [2, 1] burns [2, 1] claimed_value 1200000000 burned_value 1200000000 registered true mint_frozen false burn_frozen false
+token 0x0000000000000000000000000000000000000000 def 2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN denoms [10000000000000000, 100000000000000000] claims [3, 1] burns [5, 0] claimed_value 130000000000000000 burned_value 50000000000000000 registered true mint_frozen false burn_frozen false
+
+## 23:23:21 Ethereum: update 2 before update 1 is refused (reordered: its prevState is update 1's newState)
+refused as expected: StaleState
+
+## 23:23:21 Ethereum: a seal for another journal is refused
+refused as expected: BadSeal
+
+## 23:23:21 Ethereum: update 1
+update 1 tx 0x54ce18234fda69850051140151cb55543d1f147e421e5f757023958b8ce3326c gas 473630
+
+## 23:23:21 Ethereum: update 1 again is refused (stale)
+refused as expected: StaleState
+stopped after step submit1 (STOP_AFTER)
+  X's exit commitment is in G2 update 1's exits
+PASS: step 15. Outbound: G2-lite updates over the LEZ blocks, submitted to the vault
+
+------------------------------------------------------------------------------------------
+STEP 16. Ethereum: releases (P's seven exits, then X's)
+  label: Simulated: proofs executed, not proved, and LEZ finality trusted (G2-lite TrustedTip and G3 guests run in RISC Zero's executor; the vault's MockVerifier accepts their mock seals)
+------------------------------------------------------------------------------------------
+$ R=<work>/run-20261114-222856/roundtrip RESUME=1 STOP_AFTER=releases2 SEQ=http://127.0.0.1:6440 ETH_RPC=http://127.0.0.1:6450 lez-bridge/scripts/e2e-roundtrip.sh
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+run <work>/run-20261114-222856/roundtrip, anvil account 0x90F79bf6EB2c4f870365E785982E1f101E93b906, CLI 1fa9e317a3bf8d0c…, host <work>/build/target-outbound/release/outbound_host
+F=6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV P=DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+vault 0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623 usdc 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad cfg 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def; g2State = genesis 0x31edc214baa5e469ccee450953492701ee18b4cda0e1ad76a2f1b786b834ea41; updateImageId = TrustedTip guest
+7 deposit leaves; vault root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+cfg_id 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def
+vault 0xce3478a9e0167a6bc5716dc39dbbbfac38f27623
+chain 31337
+lez_chain_id 0xf19632787e87b453ba591241bd3da31d1778f6fe6f5fde3b33ce4782ea4c1887
+zone_id 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+admin DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+freezer DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+attestor DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+mint_frozen false
+burn_frozen false
+root_source stand-in
+sponsor_amount 0
+float 0
+token 0x261d8c5e9742e6f7f1076fa1f560894524e19cad def 6u12weoxi8uek3Ta2ac5YeBiTLWTWkZFTvQ4jWZo5AdQ denoms [100000000, 1000000000] claims [2, 1] burns [2, 1] claimed_value 1200000000 burned_value 1200000000 registered true mint_frozen false burn_frozen false
+token 0x0000000000000000000000000000000000000000 def 2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN denoms [10000000000000000, 100000000000000000] claims [3, 1] burns [5, 0] claimed_value 130000000000000000 burned_value 50000000000000000 registered true mint_frozen false burn_frozen false
+batch 1 ends at LEZ block 92 (the reverted odd burn)
+cfg_id 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def
+vault 0xce3478a9e0167a6bc5716dc39dbbbfac38f27623
+chain 31337
+lez_chain_id 0xf19632787e87b453ba591241bd3da31d1778f6fe6f5fde3b33ce4782ea4c1887
+zone_id 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+admin DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+freezer DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+attestor DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+mint_frozen false
+burn_frozen false
+root_source stand-in
+sponsor_amount 0
+float 0
+token 0x261d8c5e9742e6f7f1076fa1f560894524e19cad def 6u12weoxi8uek3Ta2ac5YeBiTLWTWkZFTvQ4jWZo5AdQ denoms [100000000, 1000000000] claims [2, 1] burns [2, 1] claimed_value 1200000000 burned_value 1200000000 registered true mint_frozen false burn_frozen false
+token 0x0000000000000000000000000000000000000000 def 2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN denoms [10000000000000000, 100000000000000000] claims [3, 1] burns [5, 0] claimed_value 130000000000000000 burned_value 50000000000000000 registered true mint_frozen false burn_frozen false
+
+## 23:23:22 check: vault counters after update 1 = the bridge as of LEZ block 92
+  0x261d8c5e9742e6f7f1076fa1f560894524e19cad d0: vault deposits 2 claims 2 burns 1 releases 0 | bridge claims 2 burns 1
+  0x261d8c5e9742e6f7f1076fa1f560894524e19cad d1: vault deposits 1 claims 1 burns 1 releases 0 | bridge claims 1 burns 1
+  0x261d8c5e9742e6f7f1076fa1f560894524e19cad: vault claimedValue 1200000000 burnedValue 1100000000 | bridge 1200000000 1100000000
+  0x0000000000000000000000000000000000000000 d0: vault deposits 3 claims 3 burns 4 releases 0 | bridge claims 3 burns 4
+  0x0000000000000000000000000000000000000000 d1: vault deposits 1 claims 1 burns 0 releases 0 | bridge claims 1 burns 0
+  0x0000000000000000000000000000000000000000: vault claimedValue 130000000000000000 burnedValue 40000000000000000 | bridge 130000000000000000 40000000000000000
+OK: vault counters = bridge counters at LAST1  [mock-verified: proofs executed, not proved; LEZ finality trusted for the test]
+6 exit leaves; exit root 0xf463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f4
+
+## 23:23:22 G3: release proofs for exits 0..3 in the executor (root = the vault's newest exit root)
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+ROOT=0xf463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f4
+NULLIFIER=0x9fec0cc43bb48e41c67317598e0da65cb4ad24cc7e455b0440a0ba3ec6bb6bee
+JOURNAL=0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854deff463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f49fec0cc43bb48e41c67317598e0da65cb4ad24cc7e455b0440a0ba3ec6bb6bee000000000000000000000000261d8c5e9742e6f7f1076fa1f560894524e19cad0000000000000000000000000000000000000000000000000000000005f5e100000000000000000000000000364cf5bd5e0569cc6656253cdd1e5591d512ca73000000000000000000000000f208e1b7b0cc836577c5e1176a8a7c22b5cfe43d000000000000000000000000000000000000000000000000000000000007a120
+SEAL=0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dc596afa3bd4e70d36eb2aacce56826f9e3272a8ecbf9b6a569a732dc274074fd3
+USER_CYCLES=36415
+
+## 23:23:23 Ethereum: a release before the delay is refused (releasable at 1794698621, now 1794698603)
+refused as expected: ReleaseTooEarly
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+ROOT=0xf463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f4
+NULLIFIER=0x7cba14ededd73e12b821d812e01173928cc1bbd5a9973ae7d71549e6c8522cd1
+JOURNAL=0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854deff463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f47cba14ededd73e12b821d812e01173928cc1bbd5a9973ae7d71549e6c8522cd1000000000000000000000000261d8c5e9742e6f7f1076fa1f560894524e19cad000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000748adf77eb5a2c1ab6340b674dfba4387db7b110000000000000000000000000f208e1b7b0cc836577c5e1176a8a7c22b5cfe43d00000000000000000000000000000000000000000000000000000000004c4b40
+SEAL=0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dcfb81bd69d3190e16f86df7b4c47f491c9f942eccb68305d5f6997369317e069b
+USER_CYCLES=36415
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+ROOT=0xf463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f4
+NULLIFIER=0x0acc3a3d8d3102515df98d9ca6d3d18e7b22b957633f10a3471ac5fd171b6456
+JOURNAL=0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854deff463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f40acc3a3d8d3102515df98d9ca6d3d18e7b22b957633f10a3471ac5fd171b64560000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002386f26fc10000000000000000000000000000da8173858fe41c624cd37a0e078e4996ad0a569700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+SEAL=0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dcf45ac29032def21f6620f8679ec6ef007d2d8a24cb542d94b17cfc3c544353b8
+USER_CYCLES=36395
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+ROOT=0xf463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f4
+NULLIFIER=0xa5e5e55e0a3e0a69c9bbbae4902f69c840be1b286b521d5a0a74f8655125c6b7
+JOURNAL=0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854deff463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f4a5e5e55e0a3e0a69c9bbbae4902f69c840be1b286b521d5a0a74f8655125c6b70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002386f26fc10000000000000000000000000000dd5215810d1821a044964c22a60ea9ed9229d7ba000000000000000000000000f208e1b7b0cc836577c5e1176a8a7c22b5cfe43d00000000000000000000000000000000000000000000000000005af3107a4000
+SEAL=0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dcb5b14cd79ff6635ab327e949043f81130d1381f7f431e8228d6aa256781de57d
+USER_CYCLES=36433
+
+## 23:23:43 Ethereum: releases (anyone submits; funds go where the proof says)
+exit 0 (0x261D8c5e9742e6f7f1076Fa1F560894524e19cad d0): candidates under the newest root 1, of which unreleased 1
+OK: exit 0 released (tx 0x8ffb1373a0964353ba3a61f45087794cf261cf3be3496160519c7793d226ee48): recipient 0x364cf5bd5e0569cc6656253cdd1e5591d512ca73 +99000000 (100000000 - withdraw fee 500000 - relay fee 500000), relayer 0xf208e1b7b0cc836577c5e1176a8a7c22b5cfe43d +500000 (relay fee 500000, on the menu), nullifier 0x9fec0cc43bb48e41c67317598e0da65cb4ad24cc7e455b0440a0ba3ec6bb6bee spent  [mock-verified: proofs executed, not proved; LEZ finality trusted for the test]
+exit 1 (0x261D8c5e9742e6f7f1076Fa1F560894524e19cad d1): candidates under the newest root 1, of which unreleased 1
+OK: exit 1 released (tx 0x97309ca4cc4dda5506189dfd35b71b3e8e99c7f28d5f356e5b3ab61c3a73e017): recipient 0x748adf77eb5a2c1ab6340b674dfba4387db7b110 +990000000 (1000000000 - withdraw fee 5000000 - relay fee 5000000), relayer 0xf208e1b7b0cc836577c5e1176a8a7c22b5cfe43d +5000000 (relay fee 5000000, on the menu), nullifier 0x7cba14ededd73e12b821d812e01173928cc1bbd5a9973ae7d71549e6c8522cd1 spent  [mock-verified: proofs executed, not proved; LEZ finality trusted for the test]
+exit 2 (0x0000000000000000000000000000000000000000 d0): candidates under the newest root 4, of which unreleased 4
+OK: exit 2 released (tx 0x1344099e6781be06f35f808af78a3c2eb2919e3c23375a218f17deede251d92b): recipient 0xda8173858fe41c624cd37a0e078e4996ad0a5697 +9950000000000000 (10000000000000000 - withdraw fee 50000000000000 - relay fee 0), no relay fee, nullifier 0x0acc3a3d8d3102515df98d9ca6d3d18e7b22b957633f10a3471ac5fd171b6456 spent  [mock-verified: proofs executed, not proved; LEZ finality trusted for the test]
+exit 3 (0x0000000000000000000000000000000000000000 d0): candidates under the newest root 4, of which unreleased 3
+OK: exit 3 released (tx 0xcb1a1fa5857072e757db7e3d20d57bb60a81d19f2558b1c598a3d8bc06b97cf2): recipient 0xdd5215810d1821a044964c22a60ea9ed9229d7ba +9850000000000000 (10000000000000000 - withdraw fee 50000000000000 - relay fee 100000000000000), relayer 0xf208e1b7b0cc836577c5e1176a8a7c22b5cfe43d +100000000000000 (relay fee 100000000000000, on the menu), nullifier 0xa5e5e55e0a3e0a69c9bbbae4902f69c840be1b286b521d5a0a74f8655125c6b7 spent  [mock-verified: proofs executed, not proved; LEZ finality trusted for the test]
+
+## 23:23:45 Ethereum: replaying exit 0's release is refused
+refused as expected: NullifierSpent
+
+## 23:23:45 Ethereum: exit 4's seal redirected to another recipient is refused
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+ROOT=0xf463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f4
+NULLIFIER=0x502b943bab8760f8335001889dce7829c44aa6931345b9aeb53e7acf3c767ef5
+JOURNAL=0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854deff463b8581bff497cd110fbe1eacbcab11deb8c289f3273f8545d4571927ac1f4502b943bab8760f8335001889dce7829c44aa6931345b9aeb53e7acf3c767ef50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000051936dd7b74f28772750c6513f3c10c4e6581c01000000000000000000000000f208e1b7b0cc836577c5e1176a8a7c22b5cfe43d0000000000000000000000000000000000000000000000000000000000000000
+SEAL=0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dcbaadc3d55e0f218cb19d817068675bd23c44b8aba65274b14da09161c733ea8c
+USER_CYCLES=36395
+refused as expected: BadSeal
+
+## 23:23:45 Ethereum: a relay fee not on the menu is refused
+refused as expected: RelayFeeNotOnMenu
+
+## 23:23:45 Ethereum: update 2 (prevState = update 1's newState)
+update 2 tx 0x1629a20ef2a39672ee9bd2a23eba1d891c1250e979292f5a6407f9029da5f4aa gas 199597
+
+## 23:23:45 check: vault counters after update 2 = the live bridge config (no LEZ operations since LAST2)
+  0x261d8c5e9742e6f7f1076fa1f560894524e19cad d0: vault deposits 2 claims 2 burns 2 releases 1 | bridge claims 2 burns 2
+  0x261d8c5e9742e6f7f1076fa1f560894524e19cad d1: vault deposits 1 claims 1 burns 1 releases 1 | bridge claims 1 burns 1
+  0x261d8c5e9742e6f7f1076fa1f560894524e19cad: vault claimedValue 1200000000 burnedValue 1200000000 | bridge 1200000000 1200000000
+  0x0000000000000000000000000000000000000000 d0: vault deposits 3 claims 3 burns 5 releases 2 | bridge claims 3 burns 5
+  0x0000000000000000000000000000000000000000 d1: vault deposits 1 claims 1 burns 0 releases 0 | bridge claims 1 burns 0
+  0x0000000000000000000000000000000000000000: vault claimedValue 130000000000000000 burnedValue 50000000000000000 | bridge 130000000000000000 50000000000000000
+OK: vault counters = live bridge counters  [mock-verified: proofs executed, not proved; LEZ finality trusted for the test]
+
+## 23:23:46 G3 + Ethereum: release exits 4, 5, 6 against the newest root
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+ROOT=0x3671fc48fc4b377e57969f1c0693c69649ee5ba6e5ba52b0adddf2d2d537f9da
+NULLIFIER=0x502b943bab8760f8335001889dce7829c44aa6931345b9aeb53e7acf3c767ef5
+JOURNAL=0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def3671fc48fc4b377e57969f1c0693c69649ee5ba6e5ba52b0adddf2d2d537f9da502b943bab8760f8335001889dce7829c44aa6931345b9aeb53e7acf3c767ef50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000051936dd7b74f28772750c6513f3c10c4e6581c01000000000000000000000000f208e1b7b0cc836577c5e1176a8a7c22b5cfe43d0000000000000000000000000000000000000000000000000000000000000000
+SEAL=0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dc29ca61c365f23bef8d94c935d4b99b8619cb81b8a65465407acd50b34876605f
+USER_CYCLES=36395
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+ROOT=0x3671fc48fc4b377e57969f1c0693c69649ee5ba6e5ba52b0adddf2d2d537f9da
+NULLIFIER=0x5c9fea96f1a7ba08d74871e12f2b19d2706f1858ecce4f393601824b56120b62
+JOURNAL=0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def3671fc48fc4b377e57969f1c0693c69649ee5ba6e5ba52b0adddf2d2d537f9da5c9fea96f1a7ba08d74871e12f2b19d2706f1858ecce4f393601824b56120b62000000000000000000000000261d8c5e9742e6f7f1076fa1f560894524e19cad0000000000000000000000000000000000000000000000000000000005f5e10000000000000000000000000016449d511af7055aeac838423f8967cee5fac814000000000000000000000000f208e1b7b0cc836577c5e1176a8a7c22b5cfe43d0000000000000000000000000000000000000000000000000000000000000000
+SEAL=0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dcc651c562e9fbf9c8a3d5bdb5640ef25d0094faed6e33b7a2b7fd14caa0128315
+USER_CYCLES=36416
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+ROOT=0x3671fc48fc4b377e57969f1c0693c69649ee5ba6e5ba52b0adddf2d2d537f9da
+NULLIFIER=0xb89cba2867f835d98f3e1642e4b503f5a12eed3143c453a3d35aa1ec153e8883
+JOURNAL=0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def3671fc48fc4b377e57969f1c0693c69649ee5ba6e5ba52b0adddf2d2d537f9dab89cba2867f835d98f3e1642e4b503f5a12eed3143c453a3d35aa1ec153e88830000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002386f26fc10000000000000000000000000000bb7a191e6ed1e51707ed4071ffc0008321d8ba2d000000000000000000000000f208e1b7b0cc836577c5e1176a8a7c22b5cfe43d0000000000000000000000000000000000000000000000000000000000000000
+SEAL=0xe8e36594094c67487e71f2e60ebc21cc979adb0acf7db09ec3df182532c564dc9e783bb3bf1ebab032bb388c2b01d1a38cfc74451207e13dd83f080e64b4b33b
+USER_CYCLES=36396
+exit 4 (0x0000000000000000000000000000000000000000 d0): candidates under the newest root 5, of which unreleased 3
+OK: exit 4 released (tx 0x480f7cd5ca6a6d2f712843b617bb7d76e369ea56fca3ad8657c2693203abc3ab): recipient 0x51936dd7b74f28772750c6513f3c10c4e6581c01 +9950000000000000 (10000000000000000 - withdraw fee 50000000000000 - relay fee 0), no relay fee, nullifier 0x502b943bab8760f8335001889dce7829c44aa6931345b9aeb53e7acf3c767ef5 spent  [mock-verified: proofs executed, not proved; LEZ finality trusted for the test]
+exit 5 (0x261D8c5e9742e6f7f1076Fa1F560894524e19cad d0): candidates under the newest root 2, of which unreleased 1
+OK: exit 5 released (tx 0x13b5ae509046727da4be76ba2de2c67003d66d5fed8b6c5df67cd0404b8477a0): recipient 0x16449d511af7055aeac838423f8967cee5fac814 +99500000 (100000000 - withdraw fee 500000 - relay fee 0), no relay fee, nullifier 0x5c9fea96f1a7ba08d74871e12f2b19d2706f1858ecce4f393601824b56120b62 spent  [mock-verified: proofs executed, not proved; LEZ finality trusted for the test]
+exit 6 (0x0000000000000000000000000000000000000000 d0): candidates under the newest root 5, of which unreleased 2
+OK: exit 6 released (tx 0x104738ee01d89d24b02ff82c5c7356316b69babef8c9bd509a4c4b0cb38c149b): recipient 0xbb7a191e6ed1e51707ed4071ffc0008321d8ba2d +9950000000000000 (10000000000000000 - withdraw fee 50000000000000 - relay fee 0), no relay fee, nullifier 0xb89cba2867f835d98f3e1642e4b503f5a12eed3143c453a3d35aa1ec153e8883 spent  [mock-verified: proofs executed, not proved; LEZ finality trusted for the test]
+stopped after step releases2 (STOP_AFTER)
+$ outbound_host release --secret <X's exit secret> --eth-dest 0xd039cc59a7923eed58407524ec2b47dc1462a4db --token 0x0000000000000000000000000000000000000000 --denom 10000000000000000 … --relayer 0x0000000000000000000000000000000000000000 --relay-fee 0
+ROOT=0x3671fc48fc4b377e57969f1c0693c69649ee5ba6e5ba52b0adddf2d2d537f9da
+NULLIFIER=0x224087314d86290a811afc0e35f029ca8baf5978b4b04654e18c469f2735947c
+USER_CYCLES=36393
+$ cast send 0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623 'release(bytes,bytes32,bytes32,address,uint32,address,address,uint256)' <seal> 0x3671fc48fc4b377e57969f1c0693c69649ee5ba6e5ba52b0adddf2d2d537f9da 0x224087314d86290a811afc0e35f029ca8baf5978b4b04654e18c469f2735947c 0x0000000000000000000000000000000000000000 0 0xd039cc59a7923eed58407524ec2b47dc1462a4db 0x0000000000000000000000000000000000000000 0   (anvil account 0)
+  X's release tx 0xa373bef46c916ade1fa30deab01b1e109a1b56cee9472932daaac72cc4cef992: recipient 0xd039cc59a7923eed58407524ec2b47dc1462a4db +9950000000000000 wei (0.01 ETH - 0.5% withdraw fee), nullifier spent
+PASS: step 16. Ethereum: releases (P's seven exits, then X's)
+
+------------------------------------------------------------------------------------------
+STEP 17. Final balances reconciled on both sides
+  label: Simulated: proofs executed, not proved, and LEZ finality trusted (G2-lite TrustedTip and G3 guests run in RISC Zero's executor; the vault's MockVerifier accepts their mock seals)
+------------------------------------------------------------------------------------------
+  re-running the round trip's closing checks over every release (X's included): vault counters = bridge counters,
+  vault balance = deposits - releases + fees per token, LEZ supply = claimed - burned, no exit secret in any release
+$ R=<work>/run-20261114-222856/roundtrip RESUME=1 STOP_AFTER= SEQ=http://127.0.0.1:6440 ETH_RPC=http://127.0.0.1:6450 lez-bridge/scripts/e2e-roundtrip.sh
+mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+run <work>/run-20261114-222856/roundtrip, anvil account 0x90F79bf6EB2c4f870365E785982E1f101E93b906, CLI 1fa9e317a3bf8d0c…, host <work>/build/target-outbound/release/outbound_host
+F=6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV P=DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+vault 0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623 usdc 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad cfg 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def; g2State = genesis 0x31edc214baa5e469ccee450953492701ee18b4cda0e1ad76a2f1b786b834ea41; updateImageId = TrustedTip guest
+7 deposit leaves; vault root 0xf3c729549d8689c59df66c6cd3cd74ca41923af979c7e277752e72d32bc2131e
+cfg_id 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def
+vault 0xce3478a9e0167a6bc5716dc39dbbbfac38f27623
+chain 31337
+lez_chain_id 0xf19632787e87b453ba591241bd3da31d1778f6fe6f5fde3b33ce4782ea4c1887
+zone_id 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+admin DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+freezer DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+attestor DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+mint_frozen false
+burn_frozen false
+root_source stand-in
+sponsor_amount 0
+float 0
+token 0x261d8c5e9742e6f7f1076fa1f560894524e19cad def 6u12weoxi8uek3Ta2ac5YeBiTLWTWkZFTvQ4jWZo5AdQ denoms [100000000, 1000000000] claims [2, 1] burns [2, 1] claimed_value 1200000000 burned_value 1200000000 registered true mint_frozen false burn_frozen false
+token 0x0000000000000000000000000000000000000000 def 2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN denoms [10000000000000000, 100000000000000000] claims [3, 1] burns [5, 0] claimed_value 130000000000000000 burned_value 50000000000000000 registered true mint_frozen false burn_frozen false
+batch 1 ends at LEZ block 92 (the reverted odd burn)
+cfg_id 0xa29d73ccb14424199c3378ff06a10e19faf8da4fbced4c9057099e0857854def
+vault 0xce3478a9e0167a6bc5716dc39dbbbfac38f27623
+chain 31337
+lez_chain_id 0xf19632787e87b453ba591241bd3da31d1778f6fe6f5fde3b33ce4782ea4c1887
+zone_id 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+admin DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+freezer DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+attestor DEfLqThDMFt94WtfwPgQ64j3a9mhT8SdNJSttUySye6Y
+mint_frozen false
+burn_frozen false
+root_source stand-in
+sponsor_amount 0
+float 0
+token 0x261d8c5e9742e6f7f1076fa1f560894524e19cad def 6u12weoxi8uek3Ta2ac5YeBiTLWTWkZFTvQ4jWZo5AdQ denoms [100000000, 1000000000] claims [2, 1] burns [2, 1] claimed_value 1200000000 burned_value 1200000000 registered true mint_frozen false burn_frozen false
+token 0x0000000000000000000000000000000000000000 def 2LVrJpnZBtNEeaB4TSMqUQ8v88cc3xdcirrx2U33vrcN denoms [10000000000000000, 100000000000000000] claims [3, 1] burns [5, 0] claimed_value 130000000000000000 burned_value 50000000000000000 registered true mint_frozen false burn_frozen false
+
+## 23:24:10 check: vault counters after update 2 = the live bridge config (no LEZ operations since LAST2)
+  0x261d8c5e9742e6f7f1076fa1f560894524e19cad d0: vault deposits 2 claims 2 burns 2 releases 2 | bridge claims 2 burns 2
+  0x261d8c5e9742e6f7f1076fa1f560894524e19cad d1: vault deposits 1 claims 1 burns 1 releases 1 | bridge claims 1 burns 1
+  0x261d8c5e9742e6f7f1076fa1f560894524e19cad: vault claimedValue 1200000000 burnedValue 1200000000 | bridge 1200000000 1200000000
+  0x0000000000000000000000000000000000000000 d0: vault deposits 3 claims 3 burns 5 releases 5 | bridge claims 3 burns 5
+  0x0000000000000000000000000000000000000000 d1: vault deposits 1 claims 1 burns 0 releases 0 | bridge claims 1 burns 0
+  0x0000000000000000000000000000000000000000: vault claimedValue 130000000000000000 burnedValue 50000000000000000 | bridge 130000000000000000 50000000000000000
+OK: vault counters = live bridge counters  [mock-verified: proofs executed, not proved; LEZ finality trusted for the test]
+
+## 23:24:11 solvency
+USDC: vault balance 18000000 = deposits 1200000000 - releases 1200000000 + accrued fees 18000000 = 18000000: OK
+ETH: vault balance 81550000000000000 = deposits 130000000000000000 - releases 50000000000000000 + accrued fees 1550000000000000 = 81550000000000000: OK
+LEZ 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad: supply 0 = claimed 1200000000 - burned 1200000000: OK
+LEZ 0x0000000000000000000000000000000000000000: supply 80000000000000000 = claimed 130000000000000000 - burned 50000000000000000: OK
+
+## 23:24:11 privacy: no exit commitment E or exit leaf in any release transaction's calldata or logs
+8 release transactions, 16 values (exit commitments and exit leaves) searched: 0 found
+
+anonymity sets (observer's candidates under the root; unreleased among them):
+exit 0 (0x261D8c5e9742e6f7f1076Fa1F560894524e19cad d0): candidates under the newest root 1, of which unreleased 1
+exit 1 (0x261D8c5e9742e6f7f1076Fa1F560894524e19cad d1): candidates under the newest root 1, of which unreleased 1
+exit 2 (0x0000000000000000000000000000000000000000 d0): candidates under the newest root 4, of which unreleased 4
+exit 3 (0x0000000000000000000000000000000000000000 d0): candidates under the newest root 4, of which unreleased 3
+exit 4 (0x0000000000000000000000000000000000000000 d0): candidates under the newest root 5, of which unreleased 3
+exit 5 (0x261D8c5e9742e6f7f1076Fa1F560894524e19cad d0): candidates under the newest root 2, of which unreleased 1
+exit 6 (0x0000000000000000000000000000000000000000 d0): candidates under the newest root 5, of which unreleased 2
+
+## 23:24:11 done. mock-verified: proofs executed, not proved; LEZ finality trusted for the test
+  X on LEZ: native 49551152 (top-up 50000000 minus its burn fee), wrapped ETH 0 (claimed 10000000000000000, burned 10000000000000000)
+  X on Ethereum: recipient 0xd039cc59a7923eed58407524ec2b47dc1462a4db holds 9950000000000000 wei
+  relay payer: paid 1231648 for X's claim; X paid nothing for it
+PASS: step 17. Final balances reconciled on both sides
+
+------------------------------------------------------------------------------------------
+SUMMARY (2026-11-14 23:24:12, wall clock 55 min)
+------------------------------------------------------------------------------------------
+PASS      0s  1. Prerequisites
+               label: -
+PASS      2s  2. Fetch the LEZ 0.4 testnet kit (public branch testnet-0.4, pinned commit 96a0a502)
+               label: -
+PASS   1243s  3. Build the kit's sequencer and wallet (LEZ v0.4.0-rc3 + kit patches; cached after the first run)
+               label: rapidsnark built from source WITHOUT assembly on this machine (--rapidsnark-from-source: this CPU lacks ADX/BMI2, which the prebuilt library needs); same results, slower field arithmetic
+PASS   1527s  4. Build the bridge: lez-bridge CLI, outbound host (executor only), vault
+               label: -
+PASS      7s  5. Bring up a throwaway LEZ rc3 chain with the kit
+               label: throwaway LEZ 0.4 (v0.4.0-rc3) chain you run yourself: one standalone sequencer, no Logos Blockchain anchoring, LEZ's published test genesis keys; not a Logos network, not the LEZ 0.4 bridge test network
+PASS      1s  6. Start a local Ethereum node (anvil)
+               label: local Ethereum node (anvil), not Sepolia
+PASS    158s  7. LEZ: fund the demo account P from the genesis account, deploy the token and bridge programs
+               label: P is the demo operator: bridge admin, freezer and root attestor
+PASS      2s  8. Ethereum: G2 genesis state, then deploy the vault
+               label: vault with the TEST MockVerifier: mock-verified (it accepts a seal that is imageId | sha256(journal)); no real verifier, no Sepolia. The round-trip deploy has no deposit desk, so none is deployed
+PASS     62s  9. LEZ: wrapped USDC and ETH (minted only by the bridge), bridge init bound to the vault, token registry
+               label: -
+PASS      1s  10. Ethereum: deposits (six for P, one for a never-used LEZ account X)
+               label: -
+PASS    103s  11. LEZ: attest the deposit root, then P's six public claims and a refused repeat
+               label: operator-attested: the demo operator posts the vault root (here from a local anvil vault). Not the trustless path: the RFP-021 light client was proved on local chains only (rc3 and rc1; about 2 h per update), and does not run in this demo
+PASS     28s  12. LEZ: relayed PUBLIC claim into X, which was never used and holds no LEZ
+               label: the claimer signs, the bridge's relay co-signs as fee payer; the relay is a demo-network convenience, not part of the trust-minimised design
+PASS      1s  13. LEZ: X's balances after the relayed claim
+               label: -
+PASS    103s  14. LEZ: burns (X burns its 0.01 wrapped ETH toward a fresh Ethereum address; P's first batch)
+               label: public burns on the throwaway chain; the never-used account pays its own burn fee from a top-up by the demo operator (the relay co-signs claims only)
+PASS     27s  15. Outbound: G2-lite updates over the LEZ blocks, submitted to the vault
+               label: Simulated: proofs executed, not proved, and LEZ finality trusted (G2-lite TrustedTip and G3 guests run in RISC Zero's executor; the vault's MockVerifier accepts their mock seals)
+PASS     48s  16. Ethereum: releases (P's seven exits, then X's)
+               label: Simulated: proofs executed, not proved, and LEZ finality trusted (G2-lite TrustedTip and G3 guests run in RISC Zero's executor; the vault's MockVerifier accepts their mock seals)
+PASS      3s  17. Final balances reconciled on both sides
+               label: Simulated: proofs executed, not proved, and LEZ finality trusted (G2-lite TrustedTip and G3 guests run in RISC Zero's executor; the vault's MockVerifier accepts their mock seals)
+ALL STEPS PASSED
+Not shown by this demo: private claims (private claims take about 10 minutes of proving each (done separately, see public-demo/prove/), so this demo makes public claims only).
+Not shown by this demo: the trustless deposit root (RFP-021 light client) and any real proof; Sepolia; the deposit desk (the round-trip vault has none).
+Transcript: <work>/judge-demo-20261114-222856.log
+
+cleanup: stopping the relay, anvil and the chain, deleting <work>/run-20261114-222856

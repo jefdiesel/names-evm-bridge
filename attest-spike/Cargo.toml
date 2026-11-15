@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = ["host", "methods"]
+exclude = ["common", "methods/guest-consensus", "methods/guest-inclusion", "methods/guest-inclusion-sw"]
+
+[profile.release]
+debug = 1
+lto = true

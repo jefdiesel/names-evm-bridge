@@ -1,0 +1,12 @@
+deposit leaf 1 of 8
+root 0x974637da889e23dab941f44e180c63b715eb258793f4836dc1e9626f5592323f
+claim nullifier 0x48dd1e4af3b5f776fd845b48534eff8ef6223785c59a49d74aca75dcd2138279
+recipient B8UnZGJdFP3dtvUFeXsp8NTySWBY2qU8FwDK4oari3wT (one-time address of 2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC; the opening stays on this machine)
+sponsor 100000000 from the bridge float (float 100000000000)
+isDepositRoot[root] slot 0xbaa61165dd5345265ebf5e63223e2d8e5cea47db6afcb8398f7df0265be212a8 value 0x0000000000000000000000000000000000000000000000000000000000000001
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+privacy-preserving: proving on this computer
+proved and submitted in 676.0s
+tx 7c8d98afd8a82b33d79fb1773c718b3ba175d5c60f870095dbfae878b555035e
+applied in block 463
+guard: exit=0 wall=701s peak_footprint=9391MB peak_rss=6433MB

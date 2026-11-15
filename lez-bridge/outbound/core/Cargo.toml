@@ -1,0 +1,25 @@
+[package]
+name = "outbound_core"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# G2-lite statement: LEZ block linkage, transaction parsing, burn and claim extraction, the
+# claim-nullifier accumulator, the G2 state and the vault's `UpdateJournal`. Shared by the zkVM
+# guests (methods/outbound_guest*) and the native host (outbound/host).
+[dependencies]
+claim_acc = { path = "../claim-acc" }
+bridge_core = { path = "../../bridge" }
+bridge_token_core = { path = "../../token" }
+lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+# Caret, not "=": the guests pin =3.0.5 in their own locks; the provers (outbound/release hosts) resolve
+# 3.1.0 (RISC Zero advisory GHSA-g6qg-9j8p-7j87: receipts for the 3.1.0 verifier need risc0-zkvm 3.1.0).
+risc0-zkvm = { version = "3.0.5", default-features = false, features = ["std"] }
+borsh = { version = "1.5.7", features = ["derive"] }
+
+[features]
+default = []
+# TEST ONLY. Compiles in `finality::TrustedTip`, which accepts a block hash as final because
+# the host says so. A guest built without this feature has no way to name it; the release guest
+# (methods/outbound_guest) never enables it, so its image id differs from the test guest's.
+trusted-tip = []

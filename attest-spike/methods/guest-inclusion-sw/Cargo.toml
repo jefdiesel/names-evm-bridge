@@ -1,0 +1,23 @@
+[package]
+name = "inclusion-guest-sw"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+# Same source as guest-inclusion, WITHOUT the tiny-keccak accelerator patch:
+# software keccak-f in rv32im, to show what the inclusion step costs if the
+# keccak coprocessor is not available on the LEZ proving path.
+[workspace]
+
+[dependencies]
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std", "unstable"] }
+attest-common = { path = "../../common" }
+alloy-trie = { version = "0.9", default-features = false, features = ["ethereum"] }
+# keccak256 backend: tiny-keccak (alloy-primitives 1.x defaults to sha3).
+alloy-primitives = { version = "1", default-features = false, features = ["tiny-keccak"] }
+alloy-rlp = { version = "0.3", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

@@ -1,0 +1,710 @@
+[
+ {
+  "name": "createDemoUSDC",
+  "sepoliaGas": 4098169,
+  "localGas": 618975,
+  "status": 1,
+  "estimate": 618975,
+  "contract": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+  "diff": {
+   "newSlots": 2,
+   "changedSlots": 0,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e": [
+     2,
+     0,
+     0
+    ]
+   },
+   "newAccounts": [
+    "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e"
+   ]
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "createBridgeVault",
+  "sepoliaGas": 36133590,
+  "localGas": 5140054,
+  "status": 1,
+  "estimate": 5140054,
+  "contract": "0xa34adbe8413838668b0521230a4d96c6b7e91484",
+  "diff": {
+   "newSlots": 7,
+   "changedSlots": 0,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     7,
+     0,
+     0
+    ]
+   },
+   "newAccounts": [
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484"
+   ]
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "registerToken_dUSDC",
+  "sepoliaGas": 1037498,
+  "localGas": 251818,
+  "status": 1,
+  "estimate": 251818,
+  "contract": null,
+  "diff": {
+   "newSlots": 9,
+   "changedSlots": 0,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     9,
+     0,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "registerToken_ETH",
+  "sepoliaGas": 827892,
+  "localGas": 211452,
+  "status": 1,
+  "estimate": 211452,
+  "contract": null,
+  "diff": {
+   "newSlots": 7,
+   "changedSlots": 1,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     7,
+     1,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "setRelayFeeMenu_dUSDC",
+  "sepoliaGas": 1705208,
+  "localGas": 391508,
+  "status": 1,
+  "estimate": 391508,
+  "contract": null,
+  "diff": {
+   "newSlots": 15,
+   "changedSlots": 0,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     15,
+     0,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "setRelayFeeMenu_ETH",
+  "sepoliaGas": 1705136,
+  "localGas": 391436,
+  "status": 1,
+  "estimate": 391436,
+  "contract": null,
+  "diff": {
+   "newSlots": 15,
+   "changedSlots": 0,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     15,
+     0,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "setCaps_dUSDC",
+  "sepoliaGas": 477589,
+  "localGas": 124509,
+  "status": 1,
+  "estimate": 124509,
+  "contract": null,
+  "diff": {
+   "newSlots": 4,
+   "changedSlots": 1,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     4,
+     1,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "setCaps_ETH",
+  "sepoliaGas": 477397,
+  "localGas": 124317,
+  "status": 1,
+  "estimate": 124317,
+  "contract": null,
+  "diff": {
+   "newSlots": 4,
+   "changedSlots": 1,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     4,
+     1,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "setGlobalCaps",
+  "sepoliaGas": 474850,
+  "localGas": 121770,
+  "status": 1,
+  "estimate": 121770,
+  "contract": null,
+  "diff": {
+   "newSlots": 4,
+   "changedSlots": 1,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     4,
+     1,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "setCapWeight_dUSDC",
+  "sepoliaGas": 132616,
+  "localGas": 50696,
+  "status": 1,
+  "estimate": 50696,
+  "contract": null,
+  "diff": {
+   "newSlots": 1,
+   "changedSlots": 0,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     1,
+     0,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "setCapWeight_ETH",
+  "sepoliaGas": 132340,
+  "localGas": 50420,
+  "status": 1,
+  "estimate": 50420,
+  "contract": null,
+  "diff": {
+   "newSlots": 1,
+   "changedSlots": 0,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     1,
+     0,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "mint",
+  "sepoliaGas": 238132,
+  "localGas": 68092,
+  "status": 1,
+  "estimate": 68092,
+  "contract": null,
+  "diff": {
+   "newSlots": 2,
+   "changedSlots": 0,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e": [
+     2,
+     0,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "approve",
+  "sepoliaGas": 127839,
+  "localGas": 45919,
+  "status": 1,
+  "estimate": 45919,
+  "contract": null,
+  "diff": {
+   "newSlots": 1,
+   "changedSlots": 0,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e": [
+     1,
+     0,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "deposit1_dUSDC",
+  "sepoliaGas": 800033,
+  "localGas": 241613,
+  "status": 1,
+  "estimate": 246545,
+  "contract": null,
+  "diff": {
+   "newSlots": 6,
+   "changedSlots": 5,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     5,
+     3,
+     0
+    ],
+    "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e": [
+     1,
+     2,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "deposit2_dUSDC",
+  "sepoliaGas": 509076,
+  "localGas": 193116,
+  "status": 1,
+  "estimate": 198048,
+  "contract": null,
+  "diff": {
+   "newSlots": 3,
+   "changedSlots": 8,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     3,
+     5,
+     0
+    ],
+    "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e": [
+     0,
+     3,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "deposit3_dUSDC",
+  "sepoliaGas": 508450,
+  "localGas": 192490,
+  "status": 1,
+  "estimate": 197422,
+  "contract": null,
+  "diff": {
+   "newSlots": 3,
+   "changedSlots": 8,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     3,
+     5,
+     0
+    ],
+    "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e": [
+     0,
+     3,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "deposit4_dUSDC",
+  "sepoliaGas": 511879,
+  "localGas": 195919,
+  "status": 1,
+  "estimate": 200851,
+  "contract": null,
+  "diff": {
+   "newSlots": 3,
+   "changedSlots": 8,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     3,
+     5,
+     0
+    ],
+    "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e": [
+     0,
+     3,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ },
+ {
+  "name": "deposit5_ETH",
+  "sepoliaGas": 469970,
+  "localGas": 170010,
+  "status": 1,
+  "estimate": 174990,
+  "contract": null,
+  "diff": {
+   "newSlots": 3,
+   "changedSlots": 5,
+   "clearedSlots": 0,
+   "perAddr": {
+    "0xa34adbe8413838668b0521230a4d96c6b7e91484": [
+     3,
+     5,
+     0
+    ]
+   },
+   "newAccounts": []
+  },
+  "receiptKeys": [
+   "blockHash",
+   "blockNumber",
+   "blockTimestamp",
+   "contractAddress",
+   "cumulativeGasUsed",
+   "effectiveGasPrice",
+   "from",
+   "gasUsed",
+   "logs",
+   "logsBloom",
+   "status",
+   "to",
+   "transactionHash",
+   "transactionIndex",
+   "type"
+  ]
+ }
+]

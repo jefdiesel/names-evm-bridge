@@ -1,0 +1,58 @@
+# RFP-022 LEZ side: the wrapped-token program and the bridge program, on LEZ v0.4.0-rc3 (bafd07be).
+# RFP-021: the Ethereum state attestation program (attest/), which the bridge can consume.
+[workspace]
+resolver = "3"
+members = [
+    "token",
+    "bridge",
+    "methods",
+    "methods/token_guest",
+    "methods/bridge_guest",
+    "cli",
+    "client",
+    "attest/core",
+    "attest/program",
+    "attest/probe",
+    "attest/methods",
+]
+# The attestation guests and the cycle-count host are separate workspaces with their own
+# [patch] sections (RISC Zero BLS/SHA forks), so nothing here is rebuilt against those patches.
+exclude = ["methods/attest_guest", "methods/attest_probe_guest", "attest/cycles", "methods/release_guest", "release", "attest/lcbench", "methods/lc_bench_zk", "methods/lc_bench_blst", "methods/lc_bench_fast", "attest/vendor/helios-consensus-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+bridge_token_core = { path = "token" }
+bridge_core = { path = "bridge" }
+eth_attest_core = { path = "attest/core" }
+eth_attest = { path = "attest/program" }
+lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+# Exactly LEZ v0.4.0-rc3's risc0 (its Cargo.lock at bafd07be): the CLI makes the privacy receipts
+# the LEZ sequencer verifies, and a receipt from another recursion circuit (4.1.0: other control
+# ids) is refused. The circuit crates are pinned in cli/Cargo.toml; VERSIONS.toml role lez_host.
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+borsh = "1.5.7"
+
+# Same keccak patch LEZ applies, so the guests match what the zone builds.
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
+
+# Helios's BLS12-381 verification is slow unoptimised; the attest tests run real Sepolia and
+# mainnet updates natively, so optimise the curve and hashing crates even in the test profile.
+[profile.dev.package.bls12_381]
+opt-level = 3
+[profile.dev.package.sha2]
+opt-level = 3
+[profile.dev.package.ethereum_hashing]
+opt-level = 3
+[profile.dev.package.tree_hash]
+opt-level = 3
+[profile.dev.package.ethereum_ssz]
+opt-level = 3
+[profile.dev.package.ssz_types]
+opt-level = 3
+[profile.dev.package.helios-consensus-core]
+opt-level = 3

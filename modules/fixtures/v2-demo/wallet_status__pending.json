@@ -1,0 +1,25 @@
+{
+  "_provenance": "Shapes from the module's Names Wallet mode (names_mode.rs / wallet.rs, as its unit tests check them); not recorded from a live Names Wallet (none installed).",
+  "error": null,
+  "success": true,
+  "value": {
+    "accounts": [
+      {
+        "account": "2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC",
+        "kind": "private",
+        "written": "Private/2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC"
+      }
+    ],
+    "connected": true,
+    "mode": "names",
+    "needs": "token_source",
+    "token_source": {
+      "accepted": false,
+      "request": {
+        "kind": "token_source",
+        "request": "6c0e5d1f2a3b4c5d6e7f8091a2b3c4d5",
+        "state": "pending"
+      }
+    }
+  }
+}

@@ -1,0 +1,381 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "as_of": 1794576606106,
+    "attestation": {
+      "anchor": "0x5e81a69dd5b2dfd18a00c0021f7954b7971421221897b3ec752a4002561ddd7d",
+      "anchor_age_s": 39306,
+      "anchor_age_text": "11 h",
+      "anchor_block": 12123027,
+      "anchor_recorded": true,
+      "anchor_time": 1794537300,
+      "behind_finalized_blocks": 3169,
+      "chain_id": 11155111,
+      "finalized_slot": 11566976,
+      "instance": "0x09dd33204d65597cdb66e90f793a4fe3478cbe226a047a77e228b4dcf05ab4de",
+      "min_participants": 342,
+      "network": "sepolia",
+      "program": "4VhxvwLN5n3u3rZbsz2VNFVavLwc1niNvgxq8JJ15veK",
+      "updater": "No update daemon runs; each finality update is proved by hand (about 2 h on a 16 GB Apple M4 desktop).",
+      "updates": 0
+    },
+    "ethereum": {
+      "admin": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+      "deposits_frozen": false,
+      "exits_possible": false,
+      "fee_recipient": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+      "freezer": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+      "global_cap": {
+        "deposit_cap": "100000000000",
+        "deposit_used": "1330000000",
+        "release_cap": "100000000000",
+        "release_used": "0",
+        "window_s": 86400
+      },
+      "min_release_delay_s": 86400,
+      "pending_admin": "0x0000000000000000000000000000000000000000",
+      "releases_frozen": false
+    },
+    "lez": {
+      "admin": "6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV",
+      "burn_frozen": false,
+      "claims_float_covers": 4,
+      "float": "80000000",
+      "freezer": "6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV",
+      "mint_frozen": false,
+      "root_source": {
+        "instance": "0x09dd33204d65597cdb66e90f793a4fe3478cbe226a047a77e228b4dcf05ab4de",
+        "kind": "rfp-021",
+        "program": "4VhxvwLN5n3u3rZbsz2VNFVavLwc1niNvgxq8JJ15veK",
+        "slot": 83
+      },
+      "sponsor_amount": "20000000",
+      "this_wallet_is_admin": true,
+      "this_wallet_is_freezer": true
+    },
+    "operations": [
+      {
+        "available": true,
+        "op": "freeze",
+        "reason": "runs through the lez-bridge CLI as a dry run in this build",
+        "side": "lez",
+        "title": "Freeze minting or burning (all tokens or one)"
+      },
+      {
+        "available": true,
+        "op": "unfreeze",
+        "reason": "runs through the lez-bridge CLI as a dry run in this build",
+        "side": "lez",
+        "title": "Unfreeze minting or burning"
+      },
+      {
+        "available": true,
+        "op": "set_sponsor",
+        "reason": "runs through the lez-bridge CLI as a dry run in this build",
+        "side": "lez",
+        "title": "Set the sponsor amount per claim"
+      },
+      {
+        "available": true,
+        "op": "fund_float",
+        "reason": "runs through the lez-bridge CLI as a dry run in this build",
+        "side": "lez",
+        "title": "Top up the float (anyone, from a public account)"
+      },
+      {
+        "available": true,
+        "op": "register_token",
+        "reason": "runs through the lez-bridge CLI as a dry run in this build",
+        "side": "lez",
+        "title": "Register a token on LEZ"
+      },
+      {
+        "available": false,
+        "op": "eth_register_token",
+        "reason": "not available in this build: Ethereum admin transactions go through the Logos Ethereum module, which is not wired yet",
+        "side": "ethereum",
+        "title": "Register or delist a token in the vault"
+      },
+      {
+        "available": false,
+        "op": "eth_set_fees",
+        "reason": "not available in this build: Ethereum admin transactions go through the Logos Ethereum module, which is not wired yet",
+        "side": "ethereum",
+        "title": "Deposit and withdraw fees"
+      },
+      {
+        "available": false,
+        "op": "eth_set_caps",
+        "reason": "not available in this build: Ethereum admin transactions go through the Logos Ethereum module, which is not wired yet",
+        "side": "ethereum",
+        "title": "Caps and cap window"
+      },
+      {
+        "available": false,
+        "op": "eth_set_cap_weight",
+        "reason": "not available in this build: Ethereum admin transactions go through the Logos Ethereum module, which is not wired yet",
+        "side": "ethereum",
+        "title": "Global cap weights"
+      },
+      {
+        "available": false,
+        "op": "eth_set_relay_menu",
+        "reason": "not available in this build: Ethereum admin transactions go through the Logos Ethereum module, which is not wired yet",
+        "side": "ethereum",
+        "title": "Relay-fee menu"
+      },
+      {
+        "available": false,
+        "op": "eth_set_delay",
+        "reason": "not available in this build: Ethereum admin transactions go through the Logos Ethereum module, which is not wired yet",
+        "side": "ethereum",
+        "title": "Release delay"
+      },
+      {
+        "available": false,
+        "op": "eth_freeze",
+        "reason": "not available in this build: Ethereum admin transactions go through the Logos Ethereum module, which is not wired yet",
+        "side": "ethereum",
+        "title": "Freeze deposits or releases on Ethereum"
+      },
+      {
+        "available": false,
+        "op": "eth_roles",
+        "reason": "not available in this build: Ethereum admin transactions go through the Logos Ethereum module, which is not wired yet",
+        "side": "ethereum",
+        "title": "Admin, freezer and fee recipient"
+      }
+    ],
+    "tokens": [
+      {
+        "accrued_fees": "0",
+        "cap_weight": "1000000000000000000",
+        "cap_weight_text": "1 dUSDC counts as $1 toward the global caps",
+        "caps": {
+          "deposit": {
+            "cap": "50000000000",
+            "cap_text": "50,000",
+            "pct": 2.6,
+            "used": "1300000000",
+            "used_text": "1,300"
+          },
+          "release": {
+            "cap": "50000000000",
+            "cap_text": "50,000",
+            "pct": 0.0,
+            "used": "0",
+            "used_text": "0"
+          },
+          "window_s": 86400
+        },
+        "decimals": 6,
+        "definition": "FBqNAwJs9T4eNDw9pQXxXrLZNcnR1sTnnBEYzhudLQZJ",
+        "denoms": [
+          {
+            "deposit_fee": "0",
+            "deposit_fee_text": "none",
+            "deposits": 3,
+            "index": 0,
+            "lez_burns": 0,
+            "lez_claims": 2,
+            "relay_fee_menu": [
+              {
+                "pct": "0.50%",
+                "text": "0.5",
+                "value": "500000"
+              },
+              {
+                "pct": "1%",
+                "text": "1",
+                "value": "1000000"
+              }
+            ],
+            "text": "100",
+            "value": "100000000",
+            "withdraw_fee": "0",
+            "withdraw_fee_text": "none"
+          },
+          {
+            "deposit_fee": "0",
+            "deposit_fee_text": "none",
+            "deposits": 1,
+            "index": 1,
+            "lez_burns": 0,
+            "lez_claims": 0,
+            "relay_fee_menu": [
+              {
+                "pct": "0.50%",
+                "text": "5",
+                "value": "5000000"
+              },
+              {
+                "pct": "1%",
+                "text": "10",
+                "value": "10000000"
+              }
+            ],
+            "text": "1,000",
+            "value": "1000000000",
+            "withdraw_fee": "0",
+            "withdraw_fee_text": "none"
+          },
+          {
+            "deposit_fee": "0",
+            "deposit_fee_text": "none",
+            "deposits": 0,
+            "index": 2,
+            "lez_burns": 0,
+            "lez_claims": 0,
+            "relay_fee_menu": [
+              {
+                "pct": "0.50%",
+                "text": "50",
+                "value": "50000000"
+              },
+              {
+                "pct": "1%",
+                "text": "100",
+                "value": "100000000"
+              }
+            ],
+            "text": "10,000",
+            "value": "10000000000",
+            "withdraw_fee": "0",
+            "withdraw_fee_text": "none"
+          }
+        ],
+        "eth_token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+        "freeze": {
+          "eth_deposits": false,
+          "eth_releases": false,
+          "lez_burn": false,
+          "lez_mint": false
+        },
+        "lez_burned_value": "0",
+        "lez_claimed_text": "200",
+        "lez_claimed_value": "200000000",
+        "lez_registered": true,
+        "registered": true,
+        "release_delay_s": 86400,
+        "symbol": "dUSDC"
+      },
+      {
+        "accrued_fees": "0",
+        "cap_weight": "3000000000",
+        "cap_weight_text": "1 ETH counts as $3,000 toward the global caps",
+        "caps": {
+          "deposit": {
+            "cap": "5000000000000000000",
+            "cap_text": "5",
+            "pct": 0.2,
+            "used": "10000000000000000",
+            "used_text": "0.01"
+          },
+          "release": {
+            "cap": "5000000000000000000",
+            "cap_text": "5",
+            "pct": 0.0,
+            "used": "0",
+            "used_text": "0"
+          },
+          "window_s": 86400
+        },
+        "decimals": 18,
+        "definition": "CswQqK9jzUHf5sraiM8G9HfgMT2bcJ8GhVpbAA9trwQ6",
+        "denoms": [
+          {
+            "deposit_fee": "0",
+            "deposit_fee_text": "none",
+            "deposits": 1,
+            "index": 0,
+            "lez_burns": 0,
+            "lez_claims": 0,
+            "relay_fee_menu": [
+              {
+                "pct": "0.50%",
+                "text": "0.00005",
+                "value": "50000000000000"
+              },
+              {
+                "pct": "1%",
+                "text": "0.0001",
+                "value": "100000000000000"
+              }
+            ],
+            "text": "0.01",
+            "value": "10000000000000000",
+            "withdraw_fee": "0",
+            "withdraw_fee_text": "none"
+          },
+          {
+            "deposit_fee": "0",
+            "deposit_fee_text": "none",
+            "deposits": 0,
+            "index": 1,
+            "lez_burns": 0,
+            "lez_claims": 0,
+            "relay_fee_menu": [
+              {
+                "pct": "0.50%",
+                "text": "0.0005",
+                "value": "500000000000000"
+              },
+              {
+                "pct": "1%",
+                "text": "0.001",
+                "value": "1000000000000000"
+              }
+            ],
+            "text": "0.1",
+            "value": "100000000000000000",
+            "withdraw_fee": "0",
+            "withdraw_fee_text": "none"
+          },
+          {
+            "deposit_fee": "0",
+            "deposit_fee_text": "none",
+            "deposits": 0,
+            "index": 2,
+            "lez_burns": 0,
+            "lez_claims": 0,
+            "relay_fee_menu": [
+              {
+                "pct": "0.50%",
+                "text": "0.005",
+                "value": "5000000000000000"
+              },
+              {
+                "pct": "1%",
+                "text": "0.01",
+                "value": "10000000000000000"
+              }
+            ],
+            "text": "1",
+            "value": "1000000000000000000",
+            "withdraw_fee": "0",
+            "withdraw_fee_text": "none"
+          }
+        ],
+        "eth_token": "0x0000000000000000000000000000000000000000",
+        "freeze": {
+          "eth_deposits": false,
+          "eth_releases": false,
+          "lez_burn": false,
+          "lez_mint": false
+        },
+        "lez_burned_value": "0",
+        "lez_claimed_text": "0",
+        "lez_claimed_value": "0",
+        "lez_registered": true,
+        "registered": true,
+        "release_delay_s": 86400,
+        "symbol": "ETH"
+      }
+    ],
+    "updater": {
+      "available": false,
+      "reason": "The attestation update daemon is not built; a finality update took 7,074.7 s to prove on a 16 GB Apple M4 desktop."
+    }
+  }
+}

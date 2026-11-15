@@ -1,0 +1,27 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "exits": [
+      {
+        "denom_text": "100",
+        "eth_to": "0x37a46E7334Dd061E0C7E2298247EE9278d0d321F",
+        "exit_commitment": "0x6266d24f2203520fbab20f347080067dd45e84adb35a911f399139b38a05432a",
+        "id": "rdm-1794576624570-0",
+        "plan": "rdm-1794576624570",
+        "receive_text": "99.5",
+        "relay_fee_text": "0.5",
+        "release": {
+          "available": false,
+          "reason": "This test vault was set up with a wrong starting value, so it can't pay ETH back out. Deposits can be claimed on the bridge test network; withdrawals come with the next vault.",
+          "vault_note": "This test vault was set up with a wrong starting value, so it can't pay ETH back out. Deposits can be claimed on the bridge test network; withdrawals come with the next vault.",
+          "detail": "Why: the vault on Sepolia was deployed with its outbound starting state at zero, and no update the bridge produces starts from zero. The bridge's way back (burn, update, release) is built and runs in the local demo; it needs a new vault.",
+          "what_happens_next": "A burn on this vault can't be paid out on Ethereum: withdrawals come with the next vault."
+        },
+        "stage": "simulated",
+        "symbol": "dUSDC"
+      }
+    ]
+  },
+  "_about": "Hand-made for the mini-app renders: the v2-demo recording with the v3 vault's release fields as the module gives them (release kind never, deployments.json release_note/release_detail). Not a recording."
+}

@@ -1,0 +1,189 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "anchor": "0x5e81a69dd5b2dfd18a00c0021f7954b7971421221897b3ec752a4002561ddd7d",
+    "claim_early": true,
+    "deposit": {
+      "account": "2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC",
+      "account_kind": "private",
+      "anonymity_set": 3,
+      "block": 12122993,
+      "claim_after": 1794623292,
+      "claim_job": null,
+      "claimed": true,
+      "commitment": "0xa50e0f44940eca30735460fa9b657d6ab948fc422b29b1293be0f7e5d6b7ad2e",
+      "created": 1794576612909,
+      "decimals": 6,
+      "denom": "100000000",
+      "denom_index": 0,
+      "denom_text": "100",
+      "deposit_time": 1794536892,
+      "deposits_after": 2,
+      "eth_token": "0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e",
+      "id": "dep-a50e0f44940e",
+      "leaf_index": 0,
+      "source": "imported",
+      "stage": "claimed",
+      "stage_text": "Claimed",
+      "symbol": "dUSDC",
+      "timeline": [
+        {
+          "at": 1794536892,
+          "detail": "block 12122993",
+          "done": true,
+          "label": "Included on Ethereum",
+          "step": "sent"
+        },
+        {
+          "detail": "past the finalized checkpoint",
+          "done": true,
+          "label": "Final on Ethereum",
+          "step": "finalized"
+        },
+        {
+          "detail": "the attestation instance has a finalized anchor past this deposit",
+          "done": true,
+          "label": "Anchor recorded on LEZ",
+          "step": "anchored"
+        },
+        {
+          "at": 1794623292,
+          "detail": "3 deposits of this amount under the anchor; 2 arrived after yours",
+          "done": false,
+          "label": "Suggested claim time",
+          "step": "suggested"
+        },
+        {
+          "done": true,
+          "label": "Claimed on LEZ",
+          "step": "claimed"
+        }
+      ],
+      "tx": "0x5ca7529743269c4ce77fe9d1f2777d6f47a96030fed4113091853be8a925598e"
+    },
+    "dry_run": {
+      "error": {
+        "code": "already_claimed",
+        "local_only": true,
+        "message": "deposit already claimed: its nullifier is spent; nothing sent"
+      },
+      "float": "80000000",
+      "recipient": "AePC3xbb5yVhcpHfUkwCqCqNtoCsgVQnBCfbz8G4vGkN",
+      "recipient_kind": "one_time",
+      "root": "0xbe1e080d85207b6b7832392daf38ce65347cabe7902bed16e3251ee03a21d3e8",
+      "sponsor": "20000000"
+    },
+    "error": {
+      "code": "already_claimed",
+      "local_only": true,
+      "message": "deposit already claimed: its nullifier is spent; nothing sent"
+    },
+    "leaf_index": 0,
+    "ok": false,
+    "privacy": {
+      "always_public": [
+        {
+          "item": "Token and amount",
+          "where": "both chains",
+          "why": "Amounts are fixed denominations, so they say little when other people move the same amount. The fewer such moves, the less they hide."
+        },
+        {
+          "item": "Timing",
+          "where": "both chains",
+          "why": "When you deposit, claim, burn and release is visible. Spreading the steps out is the protection."
+        },
+        {
+          "item": "A one-time LEZ address that receives the mint",
+          "where": "LEZ",
+          "why": "Used once, for this claim only; it is not your account and does not lead to it."
+        },
+        {
+          "item": "The attestation anchor, the bridge and its deployment id",
+          "where": "LEZ",
+          "why": "Shared by every claim under the same anchor, so it narrows the candidates to deposits made before that anchor. Claim against the newest anchor."
+        },
+        {
+          "item": "A claim nullifier",
+          "where": "LEZ",
+          "why": "Stops a second claim of the same deposit. It cannot be linked to the deposit without your secret."
+        },
+        {
+          "item": "The fixed sponsor payment and the fee",
+          "where": "LEZ",
+          "why": "The same for every sponsored claim."
+        },
+        {
+          "item": "Your network address",
+          "where": "the RPC and sequencer you use",
+          "why": "Outside the bridge's protection. Use endpoints you trust, or your own."
+        }
+      ],
+      "confirmed": false,
+      "flow": "claim",
+      "headline": "Less private. The choices below make you easier to match by timing or pattern.",
+      "level": "reduced",
+      "notes": [
+        "Only 3 deposits of this amount so far: an observer has very few candidates to choose from. Waiting for more deposits makes your claim harder to match."
+      ],
+      "on_chain_error_text": "If a claim is refused on chain, the only message anyone sees is \"claim refused\": it never says which deposit. The detailed reason shown here is worked out on this computer and is not sent.",
+      "overrides": [
+        {
+          "chosen": false,
+          "key": "reveal_recipient",
+          "leaks": "The mint names your private account instead of a one-time address. Anyone can then see that this account received a bridge mint of this token and amount at this time, and connect it to your later activity. The bridge does not sponsor the fee in this mode, so your account pays it.",
+          "needs_confirmation": true,
+          "title": "Mint to my private account by name",
+          "who": "anyone reading the LEZ chain"
+        },
+        {
+          "chosen": false,
+          "key": "public_account",
+          "leaks": "A claim into a public account publishes the deposit's secret, which ties your Ethereum deposit (and the address that paid for it) to this LEZ account for good. A burn from a public account shows which account burned. Neither can be undone.",
+          "needs_confirmation": true,
+          "title": "Use a public account",
+          "who": "anyone reading either chain"
+        },
+        {
+          "chosen": true,
+          "key": "claim_early",
+          "leaks": "A claim soon after a deposit, while few other deposits of the same amount have arrived, can be matched to it by timing alone: an observer pairs the two events that sit close together.",
+          "needs_confirmation": true,
+          "title": "Claim before the suggested time",
+          "who": "anyone comparing the two chains' timestamps"
+        }
+      ],
+      "requires_confirmation": true,
+      "stays_private": [
+        "Your LEZ account",
+        "Which deposit you are claiming",
+        "The deposit's secret",
+        "Who paid the claim's fee (the bridge float pays it)"
+      ],
+      "weakened_by": [
+        {
+          "key": "claim_early",
+          "leaks": "A claim soon after a deposit, while few other deposits of the same amount have arrived, can be matched to it by timing alone: an observer pairs the two events that sit close together.",
+          "title": "Claim before the suggested time",
+          "who": "anyone comparing the two chains' timestamps"
+        }
+      ]
+    },
+    "proving": {
+      "enabled": false,
+      "estimate_s": 671,
+      "estimate_text": "about 11 minutes",
+      "hardware_note": "A private claim is proved on this computer. It needs about 9.5 GB of memory for 11 minutes: 16 GB of RAM is the minimum, with other apps closed. Keep Basecamp open until it finishes.",
+      "measured_on": "Apple M4 (16 GB), 4 threads, CPU prover: 670.9 s, 9,403 MB peak (LEZ block 4998)",
+      "min_ram_gb": 16,
+      "peak_mb": 9403,
+      "threads": 4
+    },
+    "recipient": "AePC3xbb5yVhcpHfUkwCqCqNtoCsgVQnBCfbz8G4vGkN",
+    "recipient_kind": "one_time",
+    "root": "0xbe1e080d85207b6b7832392daf38ce65347cabe7902bed16e3251ee03a21d3e8",
+    "sends_enabled": false,
+    "sponsor": "20000000",
+    "sponsored": true
+  }
+}

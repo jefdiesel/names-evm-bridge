@@ -1,0 +1,15 @@
+{
+  "name": "logos-bridge-deposit-web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Static page for depositing into the RFP-022 bridge vault from an ordinary Ethereum wallet. No dependencies.",
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "scripts": {
+    "test": "node --test test/request.test.mjs test/abi.test.mjs test/units.test.mjs test/flow.test.mjs test/create.test.mjs test/create-flow.test.mjs test/desk-flow.test.mjs test/wallets.test.mjs test/rpc.test.mjs test/deployments.test.mjs test/entry.test.mjs test/frame.test.mjs test/lns.test.mjs test/argon2id.test.mjs test/lns-page.test.mjs test/code-path.test.mjs test/compare-words.test.mjs",
+    "test:live": "LIVE=1 node --test test/live.sepolia.test.mjs",
+    "vectors": "node tools/gen-vectors.mjs",
+    "fixtures": "sh tools/gen-fixtures.sh",
+    "manifest": "node tools/manifest.mjs"
+  }
+}

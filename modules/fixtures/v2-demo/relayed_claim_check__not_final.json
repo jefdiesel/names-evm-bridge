@@ -1,0 +1,14 @@
+{
+ "_provenance": "Hand-made in relayed.rs's shapes (tests_relayed.rs checks them against the module's real replies); no chain or wallet ran for this file.",
+ "success": true,
+ "value": {
+  "ok": false,
+  "network": "LEZ 0.4 · bridge test network",
+  "wording": "The wallet signs the claim; the bridge's relay sends it and pays the fee.",
+  "error": {
+   "code": "not_final",
+   "message": "This deposit is not final on Sepolia yet (block 12131204, final up to 12131150). That takes about 15 minutes after the deposit; try again in about 11 minute(s)."
+  }
+ },
+ "error": null
+}

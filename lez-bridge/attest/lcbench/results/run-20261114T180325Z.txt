@@ -1,0 +1,30 @@
+## whole update (vendored Helios hook): Sepolia finality update, same period (509/512): session user=81735154 total=87293952 segments=84
+| step | user cycles |
+|---|---:|
+| setup: read + decode the bench input | 75 |
+| setup: decode the ReceiveInput | 41594 |
+| borsh-decode the Message (as handle() does) | 49674 |
+| whole: Helios signature path (today), committee by flat hash | 36807251 |
+| whole: zkcrypto, key witnesses, no extra G2 check, committee by flat hash | 24638317 |
+| whole: blst, key witnesses, committee by flat hash (no on-chain change) | 9293216 |
+| whole: blst, key witnesses by SSZ branch, committee root stored (no committee witness) | 8944790 |
+  verdict: whole: Helios signature path (today), committee by flat hash: verified, same finalized header: ok
+  verdict: whole: zkcrypto, key witnesses, no extra G2 check, committee by flat hash: verified, same finalized header: ok
+  verdict: whole: blst, key witnesses, committee by flat hash (no on-chain change): verified, same finalized header: ok
+  verdict: whole: blst, key witnesses by SSZ branch, committee root stored (no committee witness): verified, same finalized header: ok
+  verdict: negative: a flipped signature byte is rejected (blst, branches): ok
+## whole update (vendored Helios hook): mainnet finality update, same period (507/512): session user=85472483 total=91258880 segments=88
+| step | user cycles |
+|---|---:|
+| setup: read + decode the bench input | 75 |
+| setup: decode the ReceiveInput | 42592 |
+| borsh-decode the Message (as handle() does) | 51010 |
+| whole: Helios signature path (today), committee by flat hash | 39102824 |
+| whole: zkcrypto, key witnesses, no extra G2 check, committee by flat hash | 24895593 |
+| whole: blst, key witnesses, committee by flat hash (no on-chain change) | 9541030 |
+| whole: blst, key witnesses by SSZ branch, committee root stored (no committee witness) | 9225259 |
+  verdict: whole: Helios signature path (today), committee by flat hash: verified, same finalized header: ok
+  verdict: whole: zkcrypto, key witnesses, no extra G2 check, committee by flat hash: verified, same finalized header: ok
+  verdict: whole: blst, key witnesses, committee by flat hash (no on-chain change): verified, same finalized header: ok
+  verdict: whole: blst, key witnesses by SSZ branch, committee root stored (no committee witness): verified, same finalized header: ok
+  verdict: negative: a flipped signature byte is rejected (blst, branches): ok

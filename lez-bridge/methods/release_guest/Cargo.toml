@@ -1,0 +1,19 @@
+[package]
+name = "release_guest"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# G3, the release proof the vault's `release` verifies (statement: release/core). Its own
+# workspace like attest_guest, so nothing here touches the bridge workspace. Built only by
+# release/host (executor-only tests and the cross-language fixture).
+[workspace]
+
+[dependencies]
+release_core = { path = "../../release/core" }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

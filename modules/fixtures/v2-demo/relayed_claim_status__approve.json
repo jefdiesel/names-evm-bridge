@@ -1,0 +1,49 @@
+{
+ "_provenance": "Hand-made in relayed.rs's shapes (tests_relayed.rs checks them against the module's real replies); no chain or wallet ran for this file.",
+ "success": true,
+ "value": {
+  "check": "rc-5c1e0f2d9a4b7c31",
+  "host": "bridge_app",
+  "needs": null,
+  "id": "rc-job-1794640000000-3a9f1c",
+  "kind": "relayed_claim",
+  "account": "Public/7kHXTZHzMCz3PgiQVA9PE5DZLa18xpYvijdPCPK4J6ak",
+  "network": "LEZ 0.4 · bridge test network",
+  "amount_text": "0.01 ETH",
+  "symbol": "ETH",
+  "proposals": 1,
+  "resigns": 0,
+  "started": 1794640000000,
+  "finished": null,
+  "request": "req-7c1d",
+  "tx": null,
+  "block": null,
+  "error": null,
+  "result": null,
+  "elapsed_s": 12,
+  "can_cancel": true,
+  "wording": "The wallet signs the claim; the bridge's relay sends it and pays the fee.",
+  "state": "running",
+  "phase": "approve",
+  "phases": [
+   {
+    "phase": "approve",
+    "reached": true
+   },
+   {
+    "phase": "relay",
+    "reached": false
+   },
+   {
+    "phase": "confirm",
+    "reached": false
+   },
+   {
+    "phase": "done",
+    "reached": false
+   }
+  ],
+  "note": "Waiting for you in the Names app: it shows the call your wallet built. Approve it there."
+ },
+ "error": null
+}

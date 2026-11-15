@@ -1,0 +1,9 @@
+deposit leaf 3 of 8
+root 0x974637da889e23dab941f44e180c63b715eb258793f4836dc1e9626f5592323f
+claim nullifier 0x520f781cf86f22f8ab3cb193f920f962363ba778c852c097df4a59d65d9d68ed
+recipient 6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f (public claimer)
+isDepositRoot[root] slot 0xbaa61165dd5345265ebf5e63223e2d8e5cea47db6afcb8398f7df0265be212a8 value 0x0000000000000000000000000000000000000000000000000000000000000001
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+submitted in 248.8ms
+tx dbf862e98e34b103458bed117f4fab8e8076a2b92ca30d856c4be0615b3539a4
+applied in block 951

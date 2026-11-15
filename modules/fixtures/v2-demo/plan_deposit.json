@@ -1,0 +1,132 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "amount": "1250000000",
+    "bridged": "1200000000",
+    "bridged_text": "1,200",
+    "claim_advice": "Claim each piece no sooner than 24 h after its deposit, and later still while few deposits of the same amount exist.",
+    "decimals": 6,
+    "deposit_fees": "0",
+    "deposit_fees_text": "0",
+    "lez_fee": "The claim's LEZ fee is paid from the bridge's float (sponsored), so nothing has to fund your private account first.",
+    "pieces": [
+      {
+        "anonymity_set": 1,
+        "claim_after_s": 86400,
+        "denom": "1000000000",
+        "denom_index": 1,
+        "denom_text": "1,000",
+        "deposit_fee": "0",
+        "send_after_s": 0,
+        "send_after_text": "now"
+      },
+      {
+        "anonymity_set": 3,
+        "claim_after_s": 109161,
+        "denom": "100000000",
+        "denom_index": 0,
+        "denom_text": "100",
+        "deposit_fee": "0",
+        "send_after_s": 22761,
+        "send_after_text": "in about 6 h"
+      },
+      {
+        "anonymity_set": 3,
+        "claim_after_s": 141324,
+        "denom": "100000000",
+        "denom_index": 0,
+        "denom_text": "100",
+        "deposit_fee": "0",
+        "send_after_s": 54924,
+        "send_after_text": "in about 15 h"
+      }
+    ],
+    "privacy": {
+      "always_public": [
+        {
+          "item": "Token and amount",
+          "where": "both chains",
+          "why": "Amounts are fixed denominations, so they say little when other people move the same amount. The fewer such moves, the less they hide."
+        },
+        {
+          "item": "Timing",
+          "where": "both chains",
+          "why": "When you deposit, claim, burn and release is visible. Spreading the steps out is the protection."
+        },
+        {
+          "item": "Your Ethereum address and the deposit",
+          "where": "Ethereum",
+          "why": "A deposit is an ordinary token transfer from your address. The commitment it carries reveals nothing about your LEZ account."
+        },
+        {
+          "item": "Your network address",
+          "where": "the RPC and sequencer you use",
+          "why": "Outside the bridge's protection. Use endpoints you trust, or your own."
+        }
+      ],
+      "confirmed": false,
+      "flow": "deposit",
+      "headline": "Private. Only the amount, the token and the timing are public.",
+      "level": "private",
+      "notes": [],
+      "on_chain_error_text": "If a claim is refused on chain, the only message anyone sees is \"claim refused\": it never says which deposit. The detailed reason shown here is worked out on this computer and is not sent.",
+      "overrides": [
+        {
+          "chosen": false,
+          "key": "public_account",
+          "leaks": "A claim into a public account publishes the deposit's secret, which ties your Ethereum deposit (and the address that paid for it) to this LEZ account for good. A burn from a public account shows which account burned. Neither can be undone.",
+          "needs_confirmation": true,
+          "title": "Use a public account",
+          "who": "anyone reading either chain"
+        },
+        {
+          "chosen": false,
+          "key": "all_at_once",
+          "leaks": "Several deposits sent together, then claimed together, form a pattern (count, amounts, timing) that stands out from other people's deposits even though each piece is a standard amount.",
+          "needs_confirmation": true,
+          "title": "Deposit every piece at the same time",
+          "who": "anyone reading the vault's deposits"
+        },
+        {
+          "chosen": false,
+          "key": "odd_amount",
+          "leaks": "The bridge only moves standard amounts. Anything left over stays where it is; sending it some other way would fingerprint you.",
+          "needs_confirmation": true,
+          "title": "Keep an amount that is not a standard denomination",
+          "who": "anyone reading amounts"
+        }
+      ],
+      "requires_confirmation": false,
+      "stays_private": [
+        "Which LEZ account the deposit is for",
+        "The deposit's secret (it never leaves this computer)"
+      ],
+      "weakened_by": []
+    },
+    "remainder": "50000000",
+    "remainder_text": "50",
+    "spread_s": 54924,
+    "spread_text": "3 deposits over about 15 h",
+    "summary": [
+      {
+        "count": 1,
+        "denom_index": 1,
+        "denom_text": "1,000"
+      },
+      {
+        "count": 2,
+        "denom_index": 0,
+        "denom_text": "100"
+      }
+    ],
+    "symbol": "dUSDC",
+    "total_to_send": "1200000000",
+    "total_to_send_text": "1,200",
+    "warnings": [
+      "Only 1 deposit of 1,000 dUSDC so far. A claim of this amount is easy to match while few others exist: wait for more before claiming.",
+      "Only 3 deposits of 100 dUSDC so far. A claim of this amount is easy to match while few others exist: wait for more before claiming.",
+      "50 dUSDC does not fit a denomination and stays with you. Sending an odd amount some other way would make you easy to recognise."
+    ]
+  }
+}

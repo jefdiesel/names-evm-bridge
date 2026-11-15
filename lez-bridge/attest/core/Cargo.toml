@@ -1,0 +1,24 @@
+[package]
+name = "eth_attest_core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# The light half of the RFP-021 attestation program: account layout, messages, statements and the
+# inclusion library a consumer runs inside its own execution. No BLS, no Helios: a consumer
+# (e.g. the bridge) links only this.
+[dependencies]
+borsh.workspace = true
+lee_core.workspace = true
+risc0-zkvm.workspace = true
+alloy-trie = { version = "0.9.9", default-features = false, features = ["ethereum"] }
+alloy-primitives = { version = "1.7.3", default-features = false, features = ["rlp"] }
+alloy-rlp = { version = "0.3.17", default-features = false }
+
+[features]
+# Client-side builders for synthetic tries, headers and receipts (tests, cycle counts). Never
+# enabled by a program guest.
+testkit = []
+
+[dev-dependencies]
+alloy-trie = { version = "0.9.9", features = ["ethereum", "std"] }

@@ -1,0 +1,85 @@
+{
+ "_provenance": "Hand-made in relayed.rs's shapes (tests_relayed.rs checks them against the module's real replies); no chain or wallet ran for this file.",
+ "success": true,
+ "value": {
+  "ok": true,
+  "id": "rc-5c1e0f2d9a7b4e13",
+  "error": null,
+  "network": "LEZ 0.4 · bridge test network",
+  "wording": "The wallet signs the claim; the bridge's relay sends it and pays the fee.",
+  "privacy": "A public claim publishes the claim secret and links the Sepolia deposit to this account.",
+  "deposit": {
+   "amount_text": "0.01 ETH",
+   "symbol": "ETH",
+   "amount": "10000000000000000",
+   "decimals": 18,
+   "account": "Public/7kHXTZHzMCz3PgiQVA9PE5DZLa18xpYvijdPCPK4J6ak",
+   "leaf_index": 7,
+   "leaves": 9,
+   "deposit_tx": "0x7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a",
+   "block": 12131204,
+   "finalized_block": 12131290
+  },
+  "root": "0xd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5",
+  "root_after_leaf": 8,
+  "relay": {
+   "payer": "Public/1HHhGGKfxtpAL5Uno5QqowGy748EUkYS6QGLFgQMgNT",
+   "max_gas": 250000,
+   "max_fee": "2500000",
+   "reserve_at_head": "2003040"
+  },
+  "call": {
+   "program": "JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7",
+   "token_program": "3gF78HRJNCfabkWFiszahVVacq181aU8SSGua8Cj9ZE4",
+   "accounts": 5,
+   "message_len": 1175,
+   "message_sha256": "abababababababababababababababababababababababababababababababab",
+   "gas_limit": 250000,
+   "max_fee": "2500000",
+   "payer": "Public/1HHhGGKfxtpAL5Uno5QqowGy748EUkYS6QGLFgQMgNT"
+  },
+  "checks": [
+   {
+    "key": "file",
+    "ok": true,
+    "text": "Claim file checked: its commitment follows from its claim key, account, token and amount."
+   },
+   {
+    "key": "bridge",
+    "ok": true,
+    "text": "Bridge read on LEZ 0.4 · bridge test network: ETH claims are open."
+   },
+   {
+    "key": "deposit",
+    "ok": true,
+    "text": "Deposit found on Sepolia: leaf 7 of 9, final."
+   },
+   {
+    "key": "root",
+    "ok": true,
+    "text": "Vault root recorded on LEZ 0.4 · bridge test network (the root after leaf 8)."
+   },
+   {
+    "key": "unclaimed",
+    "ok": true,
+    "text": "Not claimed yet."
+   },
+   {
+    "key": "relay",
+    "ok": true,
+    "text": "The bridge's relay pays the fee (at most 2,500,000)."
+   }
+  ],
+  "wallet": {
+   "available": true,
+   "connected": true,
+   "given": true,
+   "network": "lez-0.4",
+   "channel": "2da7f7df00000000000000000000000000000000000000000000000000000000",
+   "needs": null
+  },
+  "dry_run": true,
+  "approval": "Your Names app shows the call your wallet built and asks you to approve it. Your wallet signs it and sends nothing; the bridge's relay sends it and pays the fee."
+ },
+ "error": null
+}

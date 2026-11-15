@@ -1,0 +1,166 @@
+# The evaluator's demo, end to end on one Ubuntu runner: scripts/judge-demo.sh brings up a
+# throwaway LEZ v0.4.0-rc3 chain from the public testnet kit and a local anvil, deploys the vault,
+# the bridge and the token programs, and runs deposit -> operator-attested root -> relayed public
+# claim -> burn -> outbound update -> release (proofs executed, not proved; LEZ finality trusted;
+# mock-verified). The transcript is uploaded as an artifact.
+#
+# Cost: the ubuntu-24.04 runner this repository got had 7 GB of memory (the "Runner size" step
+# prints its CPUs). Cold, the builds took about 5 h 15 min (a run on 2026-11-14: kit
+# 2 h 03 min, bridge CLI 1 h 50 min, outbound host 1 h 22 min at 4 jobs; three Rust workspaces, each
+# compiling LEZ and RISC Zero and their guests), the demo itself about 10 min. So it runs on
+# demand only (workflow_dispatch). A dispatch restores what earlier ones saved: the kit's binaries
+# (keyed on the kit commit), rzup, the cargo registry, and the bridge's two target directories
+# (keyed on their lockfiles); cargo then rebuilds only this repository's own crates and guests,
+# whose checked-out files are always newer. Caches saved by a run on main are visible to every
+# branch; caches saved on another branch only to that branch, so dispatch on main.
+name: judge-demo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: judge-demo-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: never
+  # must match KIT_COMMIT in scripts/judge-demo.sh (the kit binaries are cached under it)
+  KIT_COMMIT: 96a0a50232203ceae0cb8e69ef564d2d4a5d34a1
+
+jobs:
+  demo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      # CARGO_BUILD_JOBS = the runner's CPU count (more jobs than CPUs only add memory pressure)
+      - name: Runner size
+        run: |
+          echo "CPUs $(nproc), memory $(awk '/MemTotal/ {print int($2 / 1048576)}' /proc/meminfo) GB"
+          echo "CARGO_BUILD_JOBS=$(nproc)" >> "$GITHUB_ENV"
+          echo "CARGO_DIR=$HOME/.cargo" >> "$GITHUB_ENV"   # cargo's home on the runner (for the cache paths)
+
+      - name: Free disk (the three builds need about 30 GB)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h / | tail -1
+
+      - name: System packages (as the testnet kit's README lists them)
+        run: sudo apt-get update -q && sudo apt-get install -y -q build-essential clang libclang-dev libssl-dev pkg-config libpcsclite-dev
+
+      - name: Foundry (pinned)
+        uses: foundry-rs/foundry-toolchain@82dee4ba654bd2146511f85f0d013af94670c4de # v1.4.0
+        with:
+          version: v1.5.1
+
+      # rzup from crates.io (checksummed by cargo's registry index) instead of an install script;
+      # then the RISC Zero Rust toolchain and cargo-risczero at fixed versions. The compiled rzup
+      # binary is cached (compiling it took 5 of the 6 minutes of this step).
+      - name: Restore rzup
+        id: rzup
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.CARGO_DIR }}/bin/rzup
+          key: judge-demo-rzup-0.5.0-${{ runner.os }}-${{ runner.arch }}
+
+      - name: RISC Zero toolchain (rzup 0.5.0, rust 1.97.0, cargo-risczero 3.0.5)
+        env:
+          # rzup reads release lists from the GitHub API; unauthenticated, shared runner IPs hit the rate limit.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          [ -x "$CARGO_DIR/bin/rzup" ] || cargo install rzup --version 0.5.0 --locked
+          rzup install rust 1.97.0
+          rzup install cargo-risczero 3.0.5
+          rzup show
+
+      - name: Save rzup
+        if: steps.rzup.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.CARGO_DIR }}/bin/rzup
+          key: judge-demo-rzup-0.5.0-${{ runner.os }}-${{ runner.arch }}
+
+      # The kit's binaries, built by the script from the pinned kit commit on an earlier run.
+      - name: Restore the kit's built binaries
+        id: kitbin
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: run/judge-demo/build/kit-bin
+          key: judge-demo-kit-bin-${{ env.KIT_COMMIT }}-${{ runner.os }}-${{ runner.arch }}
+
+      # The crates the three builds download (sources only; keyed on the lockfiles and the kit commit).
+      - name: Restore the cargo registry
+        id: registry
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ${{ env.CARGO_DIR }}/registry/index
+            ${{ env.CARGO_DIR }}/registry/cache
+            ${{ env.CARGO_DIR }}/git/db
+          key: judge-demo-cargo-home-${{ runner.os }}-${{ env.KIT_COMMIT }}-${{ hashFiles('lez-bridge/Cargo.lock', 'lez-bridge/outbound/Cargo.lock') }}
+          restore-keys: judge-demo-cargo-home-${{ runner.os }}-
+
+      # The bridge's two target directories. Dependencies (LEZ, RISC Zero, their guests' std) are
+      # reused; this repository's crates are rebuilt every time, because a fresh checkout makes
+      # their files newer than the cached build (so a cache can never hide a source change).
+      - name: Restore the bridge's target directories
+        id: targets
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            run/judge-demo/build/target-bridge
+            run/judge-demo/build/target-outbound
+          key: judge-demo-targets-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lez-bridge/Cargo.lock', 'lez-bridge/outbound/Cargo.lock', 'lez-bridge/rust-toolchain.toml') }}
+          restore-keys: judge-demo-targets-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: scripts/judge-demo.sh
+        run: scripts/judge-demo.sh
+
+      - name: Save the kit's built binaries
+        if: always() && steps.kitbin.outputs.cache-hit != 'true' && hashFiles('run/judge-demo/build/kit-bin/bin/wallet') != ''
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: run/judge-demo/build/kit-bin
+          key: judge-demo-kit-bin-${{ env.KIT_COMMIT }}-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Save the cargo registry
+        if: always() && steps.registry.outputs.cache-hit != 'true' && hashFiles('run/judge-demo/build/target-bridge/release/lez-bridge') != ''
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ${{ env.CARGO_DIR }}/registry/index
+            ${{ env.CARGO_DIR }}/registry/cache
+            ${{ env.CARGO_DIR }}/git/db
+          key: judge-demo-cargo-home-${{ runner.os }}-${{ env.KIT_COMMIT }}-${{ hashFiles('lez-bridge/Cargo.lock', 'lez-bridge/outbound/Cargo.lock') }}
+
+      # Saved even when a later step of the demo failed: the builds are the expensive part.
+      - name: Save the bridge's target directories
+        if: always() && steps.targets.outputs.cache-hit != 'true' && hashFiles('run/judge-demo/build/target-bridge/release/lez-bridge') != '' && hashFiles('run/judge-demo/build/target-outbound/release/outbound_host') != ''
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            run/judge-demo/build/target-bridge
+            run/judge-demo/build/target-outbound
+          key: judge-demo-targets-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lez-bridge/Cargo.lock', 'lez-bridge/outbound/Cargo.lock', 'lez-bridge/rust-toolchain.toml') }}
+
+      - name: Build logs (on failure)
+        if: failure()
+        run: |
+          for f in run/judge-demo/build/*.log run/judge-demo/build/kit-bin/logs/*.log; do
+            [ -f "$f" ] && { echo "== $f"; tail -40 "$f"; }
+          done || true
+
+      - name: Upload the transcript
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: judge-demo-transcript
+          path: run/judge-demo/judge-demo-*.public.log
+          if-no-files-found: warn

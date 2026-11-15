@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="What a bridge deposit on the Sepolia testnet makes public, and what stays private.">
+  <meta property="og:title" content="What a deposit reveals · Names Wallet bridge (Sepolia testnet)">
+  <title>What a deposit reveals · Names Wallet bridge (Sepolia testnet)</title>
+<!-- site:assets -->
+<link rel="icon" href="/favicon.ico?v=85b55946" sizes="any">
+<link rel="icon" href="/favicon.svg?v=2143afb7" type="image/svg+xml">
+<link rel="preload" href="/assets/fonts/Inter-Bold.woff2?v=fa888127" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/tokens.css?v=586856d3">
+<link rel="stylesheet" href="/assets/chrome.css?v=a2a40c35">
+<!-- /site:assets -->
+  <link rel="stylesheet" href="../../app.css?v=bef66ad2e4ca">
+</head>
+<body>
+<!-- site:header -->
+<a class="site-skip" href="#main">Skip to content</a>
+<header class="site-top">
+  <div class="site-top-in">
+    <a class="site-brand" href="/"><img src="/assets/mark.svg?v=2143afb7" alt="" width="28" height="28">Names Wallet</a>
+    <span class="site-net"><b>Testnet</b><span class="site-net-more">: coins have no value</span></span>
+    <nav class="site-nav" aria-label="Main">
+      <ul>
+        <li><a href="/basecamp/">Basecamp</a></li>
+        <li><a href="/android/">Android</a></li>
+        <li><a href="/bridge/" aria-current="page">EVM Bridge</a></li>
+        <li><a href="/registry/">Registry</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<!-- /site:header -->
+  <main id="main" tabindex="-1">
+    <div class="wrap doc">
+      <p class="crumbs"><a href="../../">Back to the bridge</a></p>
+      <h1>What a deposit reveals</h1>
+      <p class="lede">Ethereum records some facts for good. Who receives the deposit on Logos is not one of them.</p>
+      <h2>Public on Sepolia</h2>
+      <ul>
+        <li>The address you deposit from.</li>
+        <li>The amount and the time.</li>
+        <li>A commitment: 32 bytes that look random.</li>
+        <li>When the bridge fee is on: the fee. It is the same for everyone who deposits the same amount.</li>
+      </ul>
+      <h2>Not public</h2>
+      <ul>
+        <li>Your LEZ account. It is sealed inside the commitment.</li>
+        <li>The secret that lets you claim.</li>
+        <li>Which claim on Logos is yours, while others deposit the same amount.</li>
+      </ul>
+      <h2>Keep it that way</h2>
+      <ul>
+        <li>Deposit from an address not tied to your name.</li>
+        <li>Use the common amounts.</li>
+        <li>Claim later, not right away.</li>
+      </ul>
+      <h2>Who else sees something</h2>
+      <ul>
+        <li>PublicNode, which the page reads Sepolia through: your IP address, your address, and the commitment, before you deposit (the page checks the commitment is unused and simulates the deposit). With a deposit link, these reads start as soon as the link is opened, before you connect. In Settings you can read through your wallet’s connection instead.</li>
+        <li>Your wallet’s connection to the chain (for MetaMask, usually Infura): the same, whenever reads go through it, and the transaction you send.</li>
+        <li>This site’s host: your IP address and which files you load.</li>
+      </ul>
+      <h2>On your device</h2>
+      <p>A deposit made here gets its secret in this tab. It is kept in memory and in the claim file you save, and nowhere else: not in the address bar, not in browser storage, not sent anywhere. The page remembers only which wallet you used last and your read setting. After you send, the address bar holds the deposit’s public facts, so a reload can find it.</p>
+      <p>Sepolia is a test network: the coins have no value.</p>
+    </div>
+  </main>
+<!-- site:footer -->
+<footer class="site-foot">
+  <div class="site-foot-in">
+    <div class="site-foot-brand">
+      <a class="site-brand" href="/"><img src="/assets/mark.svg?v=2143afb7" alt="" width="36" height="36">Names Wallet</a>
+      <p>A wallet, LNS names and private messages on Logos.</p>
+      <p>Testnet software: the coins have no value.</p>
+      <ul><li><a href="/accessibility/">Accessibility</a></li></ul>
+    </div>
+    <nav class="site-foot-cols" aria-label="Footer">
+      <div>
+        <h2>Wallet</h2>
+        <ul>
+          <li><a href="/basecamp/">Basecamp</a></li>
+          <li><a href="/basecamp/details/">Basecamp details</a></li>
+          <li><a href="/android/">Android</a></li>
+          <li><a href="/android/details/">Android details</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>EVM Bridge</h2>
+        <ul>
+          <li><a href="/bridge/">Bridge demo</a></li>
+          <li><a href="/bridge/about/privacy/">What a deposit reveals</a></li>
+          <li><a href="/bridge/about/security/">Security of the page</a></li>
+          <li><a href="/bridge/about/verify/">Verify the page</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Registry</h2>
+        <ul>
+          <li><a href="/registry/">Program Registry</a></li>
+          <li><a href="/registry/submit/">Register a program or app</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Source</h2>
+        <ul>
+          <li><a href="https://github.com/jefdiesel/logos-names">Basecamp source</a></li>
+          <li><a href="https://github.com/jefdiesel/logos-node-android/tree/android-app">Android source</a></li>
+          <li><a href="https://github.com/jefdiesel/lez-program-registry">Registry source</a></li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+</footer>
+<!-- /site:footer -->
+</body>
+</html>

@@ -1,0 +1,39 @@
+# v4 canonical build: outbound host + G2-lite guests + G3 release guest
+commit: adc0bcacc2ca7827c6836f061cf11727c81b3533 (branch outbound-prove-31), clean git archive of lez-bridge/, tracked Cargo.lock files (--locked)
+built: 2026-11-15 11:30:15 EST on the build host, rustc 1.98.1 (48a229cea 2026-09-01) (lez-bridge/rust-toolchain.toml), cargo-risczero 3.0.5
+command: cargo build --release --locked -j 4 -p outbound_host in lez-bridge/outbound (risc0-build 3.0.7 native guests, no Docker; not reproducible across machines or directories)
+host: risc0-zkvm 3.1.0, risc0-circuit-recursion 4.1.0, risc0-circuit-rv32im 4.1.0, risc0-groth16 3.0.6, risc0-zkp 3.0.6, risc0-binfmt 3.0.6, risc0-build 3.0.7
+guests: outbound_guest(_trusted_tip) risc0-zkvm 3.1.0 (their Cargo.lock); release_guest risc0-zkvm 3.0.5 (unchanged source and lock)
+
+sha256:
+7bb6fdecbb3ed99861baad58e64be0bc8b99957dedd843526c8ec783a0d16d45  outbound_host
+cf06043dd43f99c185b9995050854ae9f30479c071937a0de00c656a81604fe7  elf/outbound_guest_trusted_tip.bin
+e906bc53dcbd319a04bf4e563dfbb8a1015313558c43155f889df85c1807a7f5  elf/outbound_guest.bin
+2353c51e8366f2379a0acf703257a15a6eff449575e17b12e55e6700ea102d8a  elf/release_guest.bin
+
+outbound_host ids (embedded guests = elf/):
+UPDATE_IMAGE_ID_TRUSTED_TIP=0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017
+UPDATE_IMAGE_ID_RELEASE=0x527f2d9d7a5fc6c2ed0943d7e12e82b3f32b46594183a8f506a8d33c8bc859a3
+RELEASE_IMAGE_ID=0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4
+PRIVACY_CIRCUIT_ID=0x631f0c96572a86ce63d1b9c4e98c8383cabb016b3c852017101452b992cf0c38
+GROTH16_SELECTOR=0xe71e6620
+
+image ids recomputed from elf/ (circuit-id):
+0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017 outbound_guest_trusted_tip.bin
+0x527f2d9d7a5fc6c2ed0943d7e12e82b3f32b46594183a8f506a8d33c8bc859a3 outbound_guest.bin
+0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4 release_guest.bin
+previous canonical release guest (v3, wt-secfix/canon): 0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4 (sha256 b8177673a2daec88fa5a528ecaeef6588e1f73cc2ed868b66a24c335026ff8fc)
+
+executor runs (never proved), 2026-11-15 11:30:16:
+PREV_STATE=0x53f225e19880effe80e3ab5c46a073977919111e5da96ade280ccac93b5d8980
+NEW_STATE=0x37d1af10c6a123f2feeadd9eeafb297d65340bc56b15bfdf98b5eabbb1b95003
+blocks 4486..9629 (4437024 bytes), roots 10, claims [("0000000000000000000000000000000000000000", 0, 5), ("0000000000000000000000000000000000000000", 1, 3)], exits 1, nullifiers 8, private receipts 0
+executor: 105870834 user cycles, 133169152 total, 127 segments, 0 assumptions; journal equals the native one
+journal equal to the v3-image run of 2026-11-15: yes
+executor: 105870834 user cycles, 141557760 total, 270 segments (po2 19), 0 assumptions; journal equals the native one
+private fixtures in the executor (LEZ rc1 blocks, same wire format as rc3; their risc0 3.0.x receipts are not checked by this guest), from the canonical tests:
+block 4998 (254089 bytes, private): 941222 user cycles, 2 segments, 0 assumptions
+block 782 (253807 bytes, private): 945987 user cycles, 2 segments, 0 assumptions
+block 884 (255787 bytes, private): 807597 user cycles, 2 segments, 0 assumptions
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 20 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.27s

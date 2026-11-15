@@ -1,0 +1,185 @@
+# The Groth16 wrap of a proved outbound update, on a GitHub-hosted x86-64 runner (no machine of
+# ours needed), then the read-only on-chain check against RISC Zero's RiscZeroGroth16Verifier 3.1.0
+# on Sepolia. On demand only (workflow_dispatch): the owner starts it.
+#
+#   gh workflow run wrap-outbound.yml --ref main -f receipt=first-4524-4533
+#
+# Input: a directory under public-demo/prove/receipts/ holding receipt.bin (a succinct receipt from
+# outbound_host --prove), journal.hex and image-id. Steps: build lez-bridge/outbound/wrap (its own
+# workspace: risc0-zkvm 3.1.0, no guests) and run its tests; add swap; pull RISC Zero's prover image
+# (risc0-groth16 3.0.6: risczero/risc0-groth16-prover:v2026-10-20.1, gnark, linux/amd64, 2.3 GB
+# compressed); public-demo/prove/wrap-outbound.sh (compress to Groth16, verify natively, seal =
+# selector 0xe71e6620 + 256 bytes, time and memory logs); then `cast call verify(seal, imageId,
+# sha256(journal))` on 0x8c915b5071206C6E328BC18529586c513408aB3b, which returns nothing when the
+# proof is accepted and reverts otherwise, plus a negative control with a changed digest.
+#
+# Memory: RISC Zero publishes no RAM or time figure for this prover. A private repository's
+# standard runner has 2 CPUs, 8 GB and 14 GB of SSD (GitHub's runner reference); larger runners
+# need an organization on the Team or Enterprise plan, which this personal repository is not. So the
+# job adds swap on the runner's /mnt disk (input swap_gb) so the prover is slowed, not killed, if it
+# needs more than 8 GB; mem.log and time.log show what it used.
+name: wrap-outbound
+
+on:
+  workflow_dispatch:
+    inputs:
+      receipt:
+        description: directory under public-demo/prove/receipts/
+        required: true
+        default: first-4524-4533
+      swap_gb:
+        description: swap to add on /mnt, GB (0 = none)
+        required: true
+        default: "24"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wrap-outbound-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: never
+  VERIFIER: "0x8c915b5071206C6E328BC18529586c513408aB3b"
+  SEPOLIA_RPC: https://sepolia.gateway.tenderly.co
+  IMAGE: risczero/risc0-groth16-prover:v2026-10-20.1
+
+jobs:
+  wrap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Runner size and input
+        env:
+          RECEIPT: ${{ inputs.receipt }}
+        run: |
+          case "$RECEIPT" in ''|*/*|.*) echo "receipt must be a plain directory name"; exit 2 ;; esac
+          D=public-demo/prove/receipts/$RECEIPT
+          test -f "$D/receipt.bin" && test -f "$D/journal.hex" && test -f "$D/image-id"
+          echo "IN=$PWD/$D" >> "$GITHUB_ENV"
+          echo "IMAGE_ID=$(tr -d ' \n' < "$D/image-id")" >> "$GITHUB_ENV"
+          echo "OUT=$RUNNER_TEMP/wrap-out" >> "$GITHUB_ENV"
+          echo "CPUs $(nproc), memory $(awk '/MemTotal/ {print int($2 / 1048576)}' /proc/meminfo) GB; $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2-)"
+          echo "CPU flags: $(grep -o -w -E 'adx|bmi2|avx2|avx512f' /proc/cpuinfo | sort -u | tr '\n' ' ')"
+          df -h / /mnt | sed 1d
+          ls -la "$D"; sha256sum "$D"/*
+
+      - name: Free disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h / | tail -1
+
+      - name: Swap on /mnt
+        env:
+          SWAP_GB: ${{ inputs.swap_gb }}
+        run: |
+          case "$SWAP_GB" in ''|*[!0-9]*) echo "swap_gb must be a number"; exit 2 ;; esac
+          if [ "$SWAP_GB" -gt 0 ]; then
+            free_gb=$(df -P -BG /mnt | awk 'NR==2 {gsub("G","",$4); print $4}')
+            [ "$SWAP_GB" -le $((free_gb - 4)) ] || SWAP_GB=$((free_gb - 4))
+            sudo fallocate -l "${SWAP_GB}G" /mnt/wrap.swap && sudo chmod 600 /mnt/wrap.swap
+            sudo mkswap /mnt/wrap.swap >/dev/null && sudo swapon /mnt/wrap.swap
+          fi
+          swapon --show; free -g
+
+      - name: System packages
+        run: sudo apt-get update -q && sudo apt-get install -y -q build-essential clang pkg-config libssl-dev time
+
+      - name: Foundry (pinned)
+        uses: foundry-rs/foundry-toolchain@82dee4ba654bd2146511f85f0d013af94670c4de # v1.4.0
+        with:
+          version: v1.5.1
+
+      - name: Restore the cargo cache
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            lez-bridge/outbound/wrap/target
+          key: wrap-outbound-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lez-bridge/outbound/wrap/Cargo.lock', 'lez-bridge/rust-toolchain.toml') }}
+
+      - name: Rust toolchain from lez-bridge/rust-toolchain.toml
+        working-directory: lez-bridge
+        run: rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
+
+      - name: Build and test outbound_wrap (rust 1.98.1 from lez-bridge/rust-toolchain.toml)
+        working-directory: lez-bridge/outbound/wrap
+        run: |
+          cargo --version
+          cargo build --release --locked -j "$(nproc)"
+          cargo test --release --locked -j "$(nproc)"
+
+      - name: Save the cargo cache
+        if: always()
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            lez-bridge/outbound/wrap/target
+          key: wrap-outbound-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lez-bridge/outbound/wrap/Cargo.lock', 'lez-bridge/rust-toolchain.toml') }}
+        continue-on-error: true
+
+      - name: Pull the prover image
+        run: |
+          /usr/bin/time -f "pull %e s" docker pull "$IMAGE"
+          docker image inspect -f '{{.Id}} {{.Size}} bytes' "$IMAGE"
+          df -h / | tail -1
+
+      - name: Wrap (Groth16), verify natively
+        run: |
+          OUTBOUND_WRAP=$PWD/lez-bridge/outbound/wrap/target/release/outbound_wrap MIN_MEM_GB=4 MIN_DISK_GB=6 WRAP_LOCK=$RUNNER_TEMP/wrap.lock \
+            public-demo/prove/wrap-outbound.sh --receipt "$IN/receipt.bin" --image-id "$IMAGE_ID" --out "$OUT"
+          [ "$(tr -d ' \n' < "$OUT/journal.hex")" = "$(tr -d ' \n' < "$IN/journal.hex")" ] || { echo "the wrapped journal is not the committed journal.hex"; exit 1; }
+          echo "journal equals the committed journal.hex"
+
+      - name: On-chain check (read only) on Sepolia's RiscZeroGroth16Verifier 3.1.0
+        run: |
+          SEAL=$(cat "$OUT/seal.hex")
+          DIGEST=0x$(python3 -c 'import sys,hashlib; print(hashlib.sha256(bytes.fromhex(open(sys.argv[1]).read().strip().removeprefix("0x"))).hexdigest())' "$OUT/journal.hex")
+          echo "selector $(cast call "$VERIFIER" 'SELECTOR()(bytes4)' --rpc-url "$SEPOLIA_RPC")"
+          echo "verify(seal, $IMAGE_ID, $DIGEST) on $VERIFIER:"
+          if cast call "$VERIFIER" "verify(bytes,bytes32,bytes32)" "$SEAL" "$IMAGE_ID" "$DIGEST" --rpc-url "$SEPOLIA_RPC" > "$OUT/onchain.txt" 2>&1; then
+            RESULT=ACCEPTED
+          else
+            RESULT=REFUSED
+          fi
+          cat "$OUT/onchain.txt"
+          # negative control: the same seal with another journal digest must revert
+          if cast call "$VERIFIER" "verify(bytes,bytes32,bytes32)" "$SEAL" "$IMAGE_ID" 0x$(echo other | sha256sum | cut -d' ' -f1) --rpc-url "$SEPOLIA_RPC" >/dev/null 2>&1; then
+            CONTROL="NOT refused (the check proves nothing)"
+          else
+            CONTROL="refused, as it must be"
+          fi
+          {
+            echo "ON-CHAIN: $RESULT by RiscZeroGroth16Verifier 3.1.0 $VERIFIER on Sepolia (read-only eth_call via $SEPOLIA_RPC)"
+            echo "negative control (changed journal digest): $CONTROL"
+            echo "image $IMAGE_ID, journal digest $DIGEST, seal $(wc -c < "$OUT/seal.bin") bytes"
+          } | tee -a "$OUT/summary.txt" "$GITHUB_STEP_SUMMARY"
+          cat "$OUT/summary.txt"
+          [ "$RESULT" = ACCEPTED ] && [ "$CONTROL" = "refused, as it must be" ]
+
+      - name: Upload the seal and logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wrap-outbound-${{ inputs.receipt }}
+          path: |
+            ${{ env.OUT }}/seal.bin
+            ${{ env.OUT }}/seal.hex
+            ${{ env.OUT }}/verify-call.txt
+            ${{ env.OUT }}/journal.hex
+            ${{ env.OUT }}/wrap.json
+            ${{ env.OUT }}/groth16.bin
+            ${{ env.OUT }}/summary.txt
+            ${{ env.OUT }}/out-wrap.log
+            ${{ env.OUT }}/time.log
+            ${{ env.OUT }}/mem.log
+            ${{ env.OUT }}/onchain.txt
+          if-no-files-found: warn

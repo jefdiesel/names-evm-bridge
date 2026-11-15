@@ -1,0 +1,46 @@
+{
+  "error": null,
+  "success": true,
+  "value": {
+    "accounts": [
+      {
+        "account": "2if1EJVcZwFT3oXxF4uewB2mk2XDXpmCWwTtBwUQ6HUC",
+        "kind": "private",
+        "tokens": [
+          {
+            "balance": "100000000",
+            "balance_text": "100",
+            "symbol": "dUSDC"
+          }
+        ]
+      },
+      {
+        "account": "6NAoZKXE14LJGeeASmpzpwvsuDLUDB2r6v2a2dXa4f4f",
+        "kind": "public",
+        "tokens": [
+          {
+            "balance": "100000000",
+            "balance_text": "100",
+            "symbol": "dUSDC"
+          }
+        ]
+      }
+    ],
+    "as_of": 1794576612744,
+    "refreshing": false,
+    "stale": false,
+    "synced_to": 5382,
+    "totals": [
+      {
+        "balance": "200000000",
+        "balance_text": "200",
+        "symbol": "dUSDC"
+      },
+      {
+        "balance": "0",
+        "balance_text": "0",
+        "symbol": "ETH"
+      }
+    ]
+  }
+}

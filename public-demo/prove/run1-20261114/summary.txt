@@ -1,0 +1,15 @@
+=== RUN 1 SUMMARY (send this) ===
+private claim, LEZ v0.4.0-rc3, demo chain; v2 leaf 0, 100 dUSDC, from private V via one-time AePC3xbb5yVhcpHfUkwCqCqNtoCsgVQnBCfbz8G4vGkN
+tx 2d9a469da3e95b41b6ba33edf68154164fef5c3553507dc7679365c0cbcf72d3
+block 3069
+prove+submit wall 582 s; whole script 1969 s
+guard: exit=0 wall=582s peak_footprint=9537MB peak_rss=6464MB
+float 100000000000 -> 99975000000
+claim block: V              absent
+claim block: commitment     absent
+claim block: secret_k       absent
+positive control: the one-time address is in the claim block (the search works)
+searched 3070 of 3070 blocks 1..3070: 0 hit(s), 0 read failure(s)
+files in <local path> (wallet aside) that contain a team secret: 0 (must be 0)
+logs: <local path> <local path> <local path>
+===

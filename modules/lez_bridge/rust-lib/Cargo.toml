@@ -1,0 +1,32 @@
+[package]
+name = "lez_bridge"
+version = "0.1.0"
+edition = "2021"
+
+# Standalone crate: the empty table keeps cargo from adopting a workspace in a parent
+# directory, which the module build cannot see.
+[workspace]
+
+[lib]
+crate-type = ["staticlib"]
+
+# Cargo.lock is committed: the builder feeds it to buildRustPackage. To regenerate it after
+# changing dependencies, stage the SDK the path dep below points at, then resolve against it:
+#   nix build github:logos-co/logos-module-builder/<rev>#rust-sdk-src -o logos-rust-sdk-src
+#   (cd rust-lib && cargo generate-lockfile)
+
+[dependencies]
+# Ethereum JSON-RPC reads (the plain `EthSource`); the same version the Names module uses.
+ureq = { version = "2", default-features = false, features = ["tls", "json"] }
+serde_json = "1"
+# Deposit leaves and the vault's tree (SHA-256), and function selectors / tags (keccak-256).
+sha2 = "0.10"
+tiny-keccak = { version = "2", features = ["keccak"] }
+# Fresh deposit secrets until the CLI derives them from the wallet seed (CLI-CONTRACT.md §5).
+getrandom = "0.2"
+# LEZ account ids are base58 of 32 bytes.
+bs58 = "0.5"
+# The deposit request's QR code, drawn by the mini-app (QML has no QR library).
+qrcodegen = "1.8"
+# Staged by the builder from the same logos-rust-sdk revision its code generator comes from.
+logos-rust-sdk = { path = "../logos-rust-sdk-src" }
