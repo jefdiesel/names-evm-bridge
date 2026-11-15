@@ -430,6 +430,122 @@ class Relayer(unittest.TestCase):
         os.unlink(b)
 
 
+
+class FakeBurnCli:
+    """`relay-cosign --kind burn`: the check and the submit of a public burn."""
+
+    def __init__(self, chain):
+        self.chain, self.calls, self.exit, self.submit_answer, self.check_answer, self.kinds = chain, [], "0x" + "e1" * 32, None, None, []
+
+    def __call__(self, tx, submit, kind="claim"):
+        self.calls.append(submit)
+        self.kinds.append(kind)
+        if not submit and self.check_answer:
+            return self.check_answer
+        base = {"ok": True, "kind": "burn", "exit_commitment": self.exit, "burner": "Claimer1", "eth_token": "0x" + "00" * 20,
+                "denom": "10000000000000000", "gas_limit": 120000, "max_fee": "1700000", "cycles": 90000, "payer_balance": "100000000",
+                "payer_nonce": str(self.chain.nonces.get(PAYER, 0)), "burner_nonce": str(self.chain.nonces.get("Claimer1", 0))}
+        if submit:
+            return self.submit_answer or dict(base, tx_hash=self.hash())
+        return base
+
+    def hash(self):
+        return "b" + self.exit[3:66]
+
+
+class BurnRelay(unittest.TestCase):
+    """POST /relay/burn ("Send back to Ethereum"): the same order of checks as a claim, its own caps."""
+
+    def setUp(self):
+        self.state = rl.load_state()
+        self.state.update(nullifiers={}, window={"relayed": [], "ips": {}}, ipkeys={}, inflight=None)
+        self.chain = FakeChain()
+        self.cli = FakeBurnCli(self.chain)
+        rl._last_reconcile[0] = 0.0
+        self.caps = (rl.BURN_DAILY_MAX, rl.IP_DAILY_BURNS)
+        rl.BURN_DAILY_MAX, rl.IP_DAILY_BURNS = 3, 2
+
+    def tearDown(self):
+        rl.BURN_DAILY_MAX, rl.IP_DAILY_BURNS = self.caps
+
+    def go(self, b=None, ip="1.2.3.4", now=DAY):
+        return rl.handle_burn(body() if b is None else b, ip, self.state, now=now, cli=self.cli, chain=self.chain)
+
+    def test_a_burn_is_checked_as_a_burn_relayed_once_and_settled_from_the_chain(self):
+        out = self.go()
+        self.assertEqual(out, {"ok": True, "tx_hash": self.cli.hash()})
+        self.assertEqual((self.cli.calls, self.cli.kinds), ([False, True], ["burn", "burn"]))
+        g = self.state["nullifiers"]["exit:" + self.cli.exit]
+        self.assertEqual((g["kind"], g["status"]), ("burn", "sent"))
+        self.assertIn("busy", self.go(now=DAY + 2)["reason"])                 # its payer nonce is in use
+        self.chain.land(self.cli.hash())
+        again = self.go(now=DAY + 10)
+        self.assertEqual(self.state["nullifiers"]["exit:" + self.cli.exit]["status"], "submitted")
+        self.assertIn("already relayed", again["reason"])                    # never twice: no nullifier says it applied
+        self.assertEqual(self.cli.calls, [False, True, False])
+
+    def test_burn_caps_are_their_own_and_claims_keep_theirs(self):
+        for i in range(2):
+            self.cli.exit = "0x%064x" % (i + 1)
+            self.assertTrue(self.go(now=DAY + i)["ok"])
+            self.chain.land(self.cli.hash())
+        self.cli.exit = "0x%064x" % 9
+        self.assertIn("from this address", self.go(now=DAY + 3)["reason"])
+        self.assertTrue(self.go(ip="5.6.7.8", now=DAY + 4)["ok"])
+        self.chain.land(self.cli.hash())
+        self.cli.exit = "0x%064x" % 10
+        self.assertIn("cap for burns", self.go(ip="9.9.9.9", now=DAY + 5)["reason"])
+        self.assertEqual(self.state["window"]["relayed"], [])                 # the claims' count is untouched
+
+    def test_a_refused_or_dropped_burn_gives_its_slot_back(self):
+        self.cli.submit_answer = {"ok": False, "reason": "stale nonce", "retry": True}
+        self.assertTrue(self.go()["retry"])
+        self.assertEqual((self.state["nullifiers"], self.state["window"]["burned"], self.state["inflight"]), ({}, [], None))
+        self.cli.submit_answer = None
+        self.assertTrue(self.go(now=DAY + 1)["ok"])
+        self.chain.nonces["Claimer1"] = 5                                     # the burner's nonce moved: never included
+        self.go(b=body(check_only=True), now=DAY + 30)
+        g = self.state["nullifiers"]["exit:" + self.cli.exit]
+        self.assertEqual(g["status"], "dropped")
+        self.assertEqual(self.state["window"]["burned"], [])                 # the global slot comes back
+        self.assertEqual(rl.count(self.state, rl.tags(self.state, "1.2.3.4", DAY + 30), "b", DAY + 30), 1)  # the sender's does not
+        self.assertTrue(self.go(now=DAY + 40)["ok"])                         # relayed again (IP_DAILY_BURNS 2)
+
+    def test_a_sender_cannot_loop_dropped_burns_past_its_own_daily_count(self):
+        for i in range(2):
+            self.cli.exit = "0x%064x" % (100 + i)                           # a fresh exit key each round
+            self.assertTrue(self.go(now=DAY + 100 * i)["ok"])
+            self.chain.nonces["Claimer1"] = self.chain.nonces.get("Claimer1", 0) + 1   # its own tx on that nonce: dropped
+            self.go(b=body(check_only=True), now=DAY + 100 * i + 30)
+            self.assertEqual(self.state["nullifiers"]["exit:" + self.cli.exit]["status"], "dropped")
+        self.cli.exit = "0x%064x" % 200
+        self.assertIn("too many relayed burns", self.go(now=DAY + 300)["reason"])
+        self.assertTrue(self.go(ip="5.6.7.8", now=DAY + 301)["ok"])        # others are not held up
+
+    def test_a_claim_in_flight_makes_a_burn_wait_and_the_reverse(self):
+        claims = FakeCli(self.chain)
+        self.assertTrue(rl.handle(body(), "9.9.9.9", self.state, now=DAY, cli=claims, desk=lambda: set(), chain=self.chain)["ok"])
+        self.assertIn("stale nonce", self.go(now=DAY + 1)["reason"])
+        self.chain.land(claims.hash())
+        self.assertTrue(self.go(now=DAY + 20)["ok"])
+        claims.nf = "0x" + "22" * 32
+        self.assertIn("stale nonce", rl.handle(body(), "9.9.9.9", self.state, now=DAY + 21, cli=claims, desk=lambda: set(), chain=self.chain)["reason"])
+
+    def test_a_check_refusal_and_a_non_burn_answer_are_refused(self):
+        self.cli.check_answer = {"ok": False, "reason": "the burn does not notify this bridge's config", "retry": False}
+        self.assertFalse(self.go()["ok"])
+        self.cli.check_answer = {"ok": True, "nullifier": "0x" + "11" * 32}
+        self.assertEqual(self.go(now=DAY + 1)["reason"], rl.GENERIC_ERROR)
+        self.assertEqual(self.state["nullifiers"], {})
+
+    def test_the_balance_floor_and_malformed_requests(self):
+        self.assertFalse(self.go(b="{")["ok"])
+        self.assertFalse(self.go(b=json.dumps({"tx": "zz"}))["ok"])
+        self.assertEqual(self.cli.calls, [])
+        real = FakeBurnCli.__call__
+        self.cli.check_answer = dict(real(self.cli, TX, False, "burn"), payer_balance="1000")
+        self.assertIn("out of funds", self.go()["reason"])
+
 class Queue(unittest.TestCase):
     """L2: one request runs, RELAY_QUEUE wait, the rest are turned away at once."""
 

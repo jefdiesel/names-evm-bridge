@@ -34,8 +34,10 @@ its commit 96a0a502, with this repository's default ports): two methods served b
 not by the sequencer, that reach the claim relay on loopback (public-demo/relayer/relayer.py):
   - `bridge_relayInfo` (no params) -> the relay's payer and caps;
   - `bridge_relayClaim` (params: [hex of a half-signed claim] or [hex, check_only]) -> the relay's
-    verdict ({"ok": true, "tx_hash": ...} or {"ok": false, "reason": ..., "retry": ...}).
-  Their own per-client bucket (IP_RELAY), body cap RELAY_MAX, at most RELAY_INFLIGHT at a time,
+    verdict ({"ok": true, "tx_hash": ...} or {"ok": false, "reason": ..., "retry": ...});
+  - `bridge_relayBurn` (the same params, a half-signed public burn: "Send back to Ethereum") -> the
+    relay's verdict from its POST /relay/burn.
+  Their own per-client bucket (IP_RELAY; `bridge_relayInfo`, a read, only the general one), body cap RELAY_MAX, at most RELAY_INFLIGHT at a time,
   never in a batch; the client address goes to the relay as CF-Connecting-IP for its daily caps,
   with the shared secret of --relay-auth-file (a mode-600 file, or LEZ_RPC_PROXY_RELAY_AUTH) in
   X-Relay-Auth, so the relay believes that header from this filter only and from no other
@@ -103,7 +105,7 @@ ALLOWED = {
 # Named here so the refusal is deliberate and testable: operator-only (no auth upstream).
 DENIED = {"getCrossZoneDeadLetters", "requeueCrossZoneDeadLetter"}
 # Served by the proxy itself from the claim relay (--relay), never sent to the sequencer.
-RELAY_METHODS = {"bridge_relayInfo", "bridge_relayClaim"}
+RELAY_METHODS = {"bridge_relayInfo", "bridge_relayClaim", "bridge_relayBurn"}
 
 DEFAULTS = dict(
     SEND_MAX=768 * 1024,  # a ~256 KB private transaction is ~342 KB as base64 JSON
@@ -216,7 +218,9 @@ class Limits:
                 return "client"
             elif method == "getBlockRange" and not entry["range"].take():
                 return "client"
-            elif method in RELAY_METHODS and not entry["relay"].take():
+            elif method in RELAY_METHODS and method != "bridge_relayInfo" and not entry["relay"].take():
+                # bridge_relayInfo (a cached read of the relay's payer and caps) costs only the
+                # client's general budget: wallets read it before every claim and burn
                 return "client"
         return None
 
@@ -511,8 +515,9 @@ class Handler(BaseHTTPRequestHandler):
             n = len(params) if isinstance(params, (list, dict)) else 0
             if not (isinstance(tx, str) and 2 <= len(tx) <= 2 * 8192 + 2 and all(c in "0123456789abcdefABCDEFx" for c in tx)
                     and isinstance(check, bool) and n <= 2):
-                return self.reply(400, rpc_error(-32602, "params: [hex of a half-signed claim] or [hex, check_only]", rid), method, started)
-            path, payload = "/relay", json.dumps({"tx": tx, "check_only": check}).encode()
+                return self.reply(400, rpc_error(-32602, "params: [hex of a half-signed claim or burn] or [hex, check_only]", rid), method, started)
+            path = "/relay/burn" if method == "bridge_relayBurn" else "/relay"
+            payload = json.dumps({"tx": tx, "check_only": check}).encode()
         if not self.server.limits.relay_inflight.acquire(blocking=False):
             return self.reply(503, rpc_error(-32005, "relay busy; retry later", rid), method, started, {"Retry-After": "10"})
         try:

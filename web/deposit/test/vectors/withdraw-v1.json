@@ -1,0 +1,244 @@
+{
+ "format": "logos bridge send-back codes, v1",
+ "spec": "modules/NAMES-SEND-BACK.md §3.1 (withdraw-to) and §3.2 (release); generator modules/tools/make-withdraw-vectors.py (not published)",
+ "withdrawTag": "logos-bridge/withdraw-to/v1",
+ "withdrawTo": {
+  "hrp": "logoswd",
+  "valid": [
+   {
+    "name": "v4 vault, recipient A, no relay fee",
+    "fields": {
+     "version": 1,
+     "chainId": "11155111",
+     "vault": "0xc2c6a059eab928966b24fa5549d441a3b17b54ed",
+     "recipient": "0x3c2f2c4baec708aee232379eb00e9ecfa1b351f8",
+     "feeChoice": 0
+    },
+    "payloadHex": "010000000000aa36a7c2c6a059eab928966b24fa5549d441a3b17b54ed3c2f2c4baec708aee232379eb00e9ecfa1b351f800",
+    "string": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmfu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7qqvy7kd4",
+    "digest": "0x7fa4e82745bba4da79b0fb628c99da06f871cb35949ead7eba0104aaa38b26c1",
+    "indexes": [
+     1172,
+     1187,
+     1570,
+     1905
+    ],
+    "words": [
+     "myth",
+     "nerve",
+     "session",
+     "until"
+    ],
+    "words_text": "myth · nerve · session · until"
+   },
+   {
+    "name": "v4 vault, recipient A, relay fee menu 1",
+    "fields": {
+     "version": 1,
+     "chainId": "11155111",
+     "vault": "0xc2c6a059eab928966b24fa5549d441a3b17b54ed",
+     "recipient": "0x3c2f2c4baec708aee232379eb00e9ecfa1b351f8",
+     "feeChoice": 1
+    },
+    "payloadHex": "010000000000aa36a7c2c6a059eab928966b24fa5549d441a3b17b54ed3c2f2c4baec708aee232379eb00e9ecfa1b351f801",
+    "string": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmfu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7qp3j2rs8",
+    "digest": "0xd14e70240024f8304d6f4aa44eee60b7268363a250dbce585d78cd9f22938d8d",
+    "indexes": [
+     1055,
+     578,
+     973,
+     1201
+    ],
+    "words": [
+     "loop",
+     "embark",
+     "keen",
+     "normal"
+    ],
+    "words_text": "loop · embark · keen · normal"
+   },
+   {
+    "name": "v4 vault, recipient B, menu 4",
+    "fields": {
+     "version": 1,
+     "chainId": "11155111",
+     "vault": "0xc2c6a059eab928966b24fa5549d441a3b17b54ed",
+     "recipient": "0xf7688cc67a7f0c9b36bc99390e401229b3a69e36",
+     "feeChoice": 4
+    },
+    "payloadHex": "010000000000aa36a7c2c6a059eab928966b24fa5549d441a3b17b54edf7688cc67a7f0c9b36bc99390e401229b3a69e3604",
+    "string": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fm0hdzxvv7nlpjdnd0ye8y8yqy3fkwnfudsyk9e3qu",
+    "digest": "0xd964b422cf0bd92c048ab7bc3bf3f2a3aa43cef66c1d9525fd446448497f3858",
+    "indexes": [
+     75,
+     1406,
+     2042,
+     1436
+    ],
+    "words": [
+     "annual",
+     "quit",
+     "young",
+     "receive"
+    ],
+    "words_text": "annual · quit · young · receive"
+   },
+   {
+    "name": "anvil chain 31337, all-ff recipient",
+    "fields": {
+     "version": 1,
+     "chainId": "31337",
+     "vault": "0x4b302669bf6ec007e35bdb7fc32464dbed537a17",
+     "recipient": "0xffffffffffffffffffffffffffffffffffffffff",
+     "feeChoice": 0
+    },
+    "payloadHex": "010000000000007a694b302669bf6ec007e35bdb7fc32464dbed537a17ffffffffffffffffffffffffffffffffffffffff00",
+    "string": "logoswd1qyqqqqqqqqq8562txqnxn0mwcqr7xk7m0lpjgexma4fh59llllllllllllllllllllllllllllllllcq96y7wp",
+    "digest": "0x405be3684aa089fdb627cfd6daf6681595b25588b1569a95f5011a20929ff968",
+    "indexes": [
+     583,
+     1523,
+     1208,
+     1849
+    ],
+    "words": [
+     "employ",
+     "salmon",
+     "novel",
+     "transfer"
+    ],
+    "words_text": "employ · salmon · novel · transfer"
+   }
+  ],
+  "invalid": [
+   {
+    "name": "checksum",
+    "string": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmfu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7qqvy7kdq",
+    "code": "checksum"
+   },
+   {
+    "name": "mixed case",
+    "string": "LOGOSWD1QYqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmfu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7qqvy7kd4",
+    "code": "case"
+   },
+   {
+    "name": "deposit code hrp",
+    "string": "logosdep1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmfu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7qqptg2k6",
+    "code": "hrp"
+   },
+   {
+    "name": "version 2",
+    "string": "logoswd1qgqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmfu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7qqfphz4h",
+    "code": "version"
+   },
+   {
+    "name": "short",
+    "string": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmfu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7qz3sahl",
+    "code": "length"
+   },
+   {
+    "name": "trailing byte",
+    "string": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmfu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7qqqq6979mf",
+    "code": "length"
+   },
+   {
+    "name": "zero chain",
+    "string": "logoswd1qyqqqqqqqqqqqqxzc6s9n64e9ztxkf8624yagsdrk9a4fmfu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7qq9r0j55",
+    "code": "chain"
+   },
+   {
+    "name": "zero vault",
+    "string": "logoswd1qyqqqqqqqz4rdfcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7qq34t5n8",
+    "code": "vault"
+   },
+   {
+    "name": "zero recipient",
+    "string": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmgqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3t07uk",
+    "code": "recipient"
+   },
+   {
+    "name": "recipient is the vault",
+    "string": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmwzc6s9n64e9ztxkf8624yagsdrk9a4fmgqegg5n6",
+    "code": "recipient"
+   },
+   {
+    "name": "fee choice 5",
+    "string": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmfu9ukyhtk8pzhwyv3hn6cqa8k05xe4r7q97cg9la",
+    "code": "fee-choice"
+   }
+  ]
+ },
+ "release": {
+  "hrp": "logosrel",
+  "valid": [
+   {
+    "name": "0.01 ETH to recipient A, sent by the recipient (no relay fee)",
+    "fields": {
+     "chainId": "11155111",
+     "vault": "0xc2c6a059eab928966b24fa5549d441a3b17b54ed",
+     "root": "0xbef64b1dcf82a2769b71c5cea2adc098ec946e70726bf80ec871da09c35ca8c9",
+     "nullifier": "0x00f08820cb5edd231ba2378da9f07559f982f84416840454bb5017a9e6ebbfdb",
+     "token": "0x0000000000000000000000000000000000000000",
+     "denomIndex": 0,
+     "recipient": "0x3c2f2c4baec708aee232379eb00e9ecfa1b351f8",
+     "relayer": "0x0000000000000000000000000000000000000000",
+     "relayFee": "0",
+     "seal": "0xe71e66202edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f722"
+    },
+    "payloadHex": "010000000000aa36a7c2c6a059eab928966b24fa5549d441a3b17b54edbef64b1dcf82a2769b71c5cea2adc098ec946e70726bf80ec871da09c35ca8c900f08820cb5edd231ba2378da9f07559f982f84416840454bb5017a9e6ebbfdb0000000000000000000000000000000000000000000000003c2f2c4baec708aee232379eb00e9ecfa1b351f800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e71e66202edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f722",
+    "string": "logosrel1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmd77e93mnuz5fmfkuw9e632msycaj2xuurjd0uqajr3mgyuxh9geyq0pzpqed0d6gcm5gmcm20sw4vlnqhcgstggpz5hdgp020xawlakqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrctevfwhvwz9wuger084sp60vlgdn28uqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq88renzqtk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wg3wmmc4s2r3gwakhpqsnepq30c2h8fwt09hn2m7p99ucgg8jy8hyghdau2c9pc58wmtssgfussghu9tn5h9hjme4dlqjj7vyyrezrmjytk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wgs582l5q",
+    "length": 734
+   },
+   {
+    "name": "1 dUSDC-style token, denomination 2, relay fee 0.5%",
+    "fields": {
+     "chainId": "11155111",
+     "vault": "0xc2c6a059eab928966b24fa5549d441a3b17b54ed",
+     "root": "0xbef64b1dcf82a2769b71c5cea2adc098ec946e70726bf80ec871da09c35ca8c9",
+     "nullifier": "0x00f08820cb5edd231ba2378da9f07559f982f84416840454bb5017a9e6ebbfdb",
+     "token": "0x1d40743114c72e678c6212562cab98a1590520ff",
+     "denomIndex": 2,
+     "recipient": "0x3c2f2c4baec708aee232379eb00e9ecfa1b351f8",
+     "relayer": "0x7ae1117aed159da154bc0a4567265333c5bf8475",
+     "relayFee": "50000000",
+     "seal": "0xe71e66202edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f722"
+    },
+    "payloadHex": "010000000000aa36a7c2c6a059eab928966b24fa5549d441a3b17b54edbef64b1dcf82a2769b71c5cea2adc098ec946e70726bf80ec871da09c35ca8c900f08820cb5edd231ba2378da9f07559f982f84416840454bb5017a9e6ebbfdb1d40743114c72e678c6212562cab98a1590520ff000000023c2f2c4baec708aee232379eb00e9ecfa1b351f87ae1117aed159da154bc0a4567265333c5bf84750000000000000000000000000000000000000000000000000000000002faf080e71e66202edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f7222edef158287143bb6b84109e4208bf0ab9d2e5bcb79ab7e094bcc2107910f722",
+    "string": "logosrel1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmd77e93mnuz5fmfkuw9e632msycaj2xuurjd0uqajr3mgyuxh9geyq0pzpqed0d6gcm5gmcm20sw4vlnqhcgstggpz5hdgp020xawlak82qwsc3f3ewv7xxyyjk9j4e3g2eq5s07qqqqqprctevfwhvwz9wuger084sp60vlgdn28u84cg30tk3t8dp2j7q53t8yefn83dls36sqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqta0pq88renzqtk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wg3wmmc4s2r3gwakhpqsnepq30c2h8fwt09hn2m7p99ucgg8jy8hyghdau2c9pc58wmtssgfussghu9tn5h9hjme4dlqjj7vyyrezrmjytk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wgslda66d",
+    "length": 734
+   }
+  ],
+  "invalid": [
+   {
+    "name": "withdraw hrp",
+    "string": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmd77e93mnuz5fmfkuw9e632msycaj2xuurjd0uqajr3mgyuxh9geyq0pzpqed0d6gcm5gmcm20sw4vlnqhcgstggpz5hdgp020xawlakqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrctevfwhvwz9wuger084sp60vlgdn28uqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq88renzqtk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wg3wmmc4s2r3gwakhpqsnepq30c2h8fwt09hn2m7p99ucgg8jy8hyghdau2c9pc58wmtssgfussghu9tn5h9hjme4dlqjj7vyyrezrmjytk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wgsrnk4wc",
+    "code": "hrp"
+   },
+   {
+    "name": "version 2",
+    "string": "logosrel1qgqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmd77e93mnuz5fmfkuw9e632msycaj2xuurjd0uqajr3mgyuxh9geyq0pzpqed0d6gcm5gmcm20sw4vlnqhcgstggpz5hdgp020xawlakqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrctevfwhvwz9wuger084sp60vlgdn28uqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq88renzqtk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wg3wmmc4s2r3gwakhpqsnepq30c2h8fwt09hn2m7p99ucgg8jy8hyghdau2c9pc58wmtssgfussghu9tn5h9hjme4dlqjj7vyyrezrmjytk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wgsdadwf3",
+    "code": "version"
+   },
+   {
+    "name": "short seal",
+    "string": "logosrel1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmd77e93mnuz5fmfkuw9e632msycaj2xuurjd0uqajr3mgyuxh9geyq0pzpqed0d6gcm5gmcm20sw4vlnqhcgstggpz5hdgp020xawlakqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrctevfwhvwz9wuger084sp60vlgdn28uqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq88renzqtk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wg3wmmc4s2r3gwakhpqsnepq30c2h8fwt09hn2m7p99ucgg8jy8hyghdau2c9pc58wmtssgfussghu9tn5h9hjme4dlqjj7vyyrezrmjytk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wfvzdva",
+    "code": "length"
+   },
+   {
+    "name": "3.0.0 selector",
+    "string": "logosrel1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmd77e93mnuz5fmfkuw9e632msycaj2xuurjd0uqajr3mgyuxh9geyq0pzpqed0d6gcm5gmcm20sw4vlnqhcgstggpz5hdgp020xawlakqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrctevfwhvwz9wuger084sp60vlgdn28uqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrnc3tm5tk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wg3wmmc4s2r3gwakhpqsnepq30c2h8fwt09hn2m7p99ucgg8jy8hyghdau2c9pc58wmtssgfussghu9tn5h9hjme4dlqjj7vyyrezrmjytk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wgsxpzrul",
+    "code": "seal"
+   },
+   {
+    "name": "zero recipient",
+    "string": "logosrel1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmd77e93mnuz5fmfkuw9e632msycaj2xuurjd0uqajr3mgyuxh9geyq0pzpqed0d6gcm5gmcm20sw4vlnqhcgstggpz5hdgp020xawlakqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq88renzqtk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wg3wmmc4s2r3gwakhpqsnepq30c2h8fwt09hn2m7p99ucgg8jy8hyghdau2c9pc58wmtssgfussghu9tn5h9hjme4dlqjj7vyyrezrmjytk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wgsn4ymmp",
+    "code": "recipient"
+   },
+   {
+    "name": "fee without relayer",
+    "string": "logosrel1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmd77e93mnuz5fmfkuw9e632msycaj2xuurjd0uqajr3mgyuxh9geyq0pzpqed0d6gcm5gmcm20sw4vlnqhcgstggpz5hdgp020xawlakqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrctevfwhvwz9wuger084sp60vlgdn28uqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqp08renzqtk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wg3wmmc4s2r3gwakhpqsnepq30c2h8fwt09hn2m7p99ucgg8jy8hyghdau2c9pc58wmtssgfussghu9tn5h9hjme4dlqjj7vyyrezrmjytk779vzsu2rhd4cgyy7ggyt7z4e6tjmedu6klsff0xzzpu3paez9m00zkpgw9pmk6uyzz0yyz9lp2ua9eduk7dt0cy5hnppq7gs7u3zahh3tq58zsamdwzpp8jzpzls4wwjuk7t0x4huz2tesss0yg0wgs4um2wf",
+    "code": "relayer"
+   }
+  ]
+ }
+}

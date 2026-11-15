@@ -3,6 +3,7 @@
 import { createMockChain, createMockWallet, ADDR } from './mock-chain.js';
 import { encodeRequest } from '../src/lib/request.js';
 import { DEPLOYMENTS, deskOf, DEV } from '../src/lib/deployments.js';
+import { encodeRelease } from '../src/lib/withdraw.js';
 
 const sc = new URLSearchParams(location.search).get('s') || 'start';
 const C = '0x' + 'a7c3e95b1d0f4826'.repeat(4);
@@ -31,7 +32,18 @@ const SAVE = [['click', 'Save claim file'], ['wait', 300], ['tick', '#saved-ack'
 // The deposit desk (bridge fee): an own public account, given by its address only (no key is
 // asked for: the relayer pays a public claim's fee by co-signing it).
 const OWN_PUBLIC = [...OWN, ['fill', '#acct', `Public/${OTHER}`], ['wait', 1200], ['tick', '#unclaimable-ack'], ['wait', 300], ['click', 'Continue'], ['wait', 1200]];
+// Send back to Ethereum: a release code for the mock vault's recorded exit root
+const ROOT = '0x' + '5a'.repeat(32);
+const RELEASE = encodeRelease({ chainId: 11155111n, vault: ADDR.vault, root: ROOT, nullifier: '0x' + '6b'.repeat(32), token: ADDR.eth, denomIndex: 0, recipient: ADDR.me, relayer: '0x' + '00'.repeat(20), relayFee: 0n, seal: '0xe71e6620' + '77'.repeat(256) });
 const SCENARIOS = {
+  withdraw: { hash: 'withdraw' },
+  'withdraw-connected': { hash: 'withdraw', steps: [['click', 'Connect wallet'], ['wait', 800]] },
+  'release-paste': { hash: 'release' },
+  'release-first': { hash: RELEASE, recordedAgo: 7200 },
+  'release-wait': { hash: RELEASE, recordedAgo: 900, steps: [['click', 'Connect wallet'], ['wait', 1200]] },
+  'release-ready': { hash: RELEASE, recordedAgo: 7200, steps: [['click', 'Connect wallet'], ['wait', 1200]] },
+  'release-done': { hash: RELEASE, recordedAgo: 7200, steps: [['click', 'Connect wallet'], ['wait', 1200], ['click', 'Release'], ['wait', 4500]] },
+  'release-refused': { hash: RELEASE, recordedAgo: 7200, verifyOk: false, steps: [['click', 'Connect wallet'], ['wait', 1200]] },
   start: {},
   nowallet: { noWallet: true, steps: [['click', 'Connect wallet']] },
   chooser: { wallets: 2, steps: [['click', 'Connect wallet']] },
@@ -102,6 +114,8 @@ const DESK = deskOf(DEPLOYMENTS[0]);
 const desk = DESK ? { address: DESK, feeBps: 30n } : null; // the live rate (0.3%) since 2026-11-14
 const chain = createMockChain({ usdcBalance: cfg.usdcBalance ?? 0n, ethBalance: cfg.ethBalance, finalizedLag: cfg.finalizedLag ?? 70, altVault: cfg.altVault, finalizedSupported: true, desk, receiptDelayPolls: cfg.receiptDelayPolls });
 if (cfg.frozen) chain.S.globalFrozen = true;
+if (cfg.recordedAgo !== undefined) chain.S.exitRoots.set(ROOT, chain.timeOf(chain.S.head) - BigInt(cfg.recordedAgo));
+if (cfg.verifyOk === false) chain.S.verifyOk = false;
 const icon = (fill) => 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${fill}"/><path d="M8 20l8-10 8 10z" fill="#fff"/></svg>`);
 if (!cfg.noWallet) {
   const n = cfg.wallets || 1;

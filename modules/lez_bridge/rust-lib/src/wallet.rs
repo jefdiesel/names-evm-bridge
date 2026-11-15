@@ -198,7 +198,7 @@ fn names_inner(method: &str, args: &Value, retry: bool, plain_ok: bool) -> Resul
 }
 
 /// Time, real outside tests; a counter the tests read in them.
-mod clock {
+pub(crate) mod clock {
     #[cfg(not(test))]
     pub fn now_ms() -> u64 {
         crate::util::now_ms()

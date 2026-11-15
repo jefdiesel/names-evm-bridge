@@ -42,11 +42,13 @@ mod qr;
 mod receive;
 mod relayed;
 mod request;
+mod sendback;
 mod store;
 mod text;
 mod util;
 mod vault;
 mod wallet;
+mod withdraw;
 
 use config::{Config, Deployment};
 use eth::{EthSource, JsonRpc, LogosEthModule};
@@ -62,10 +64,11 @@ use util::{format_amount, hex0x, now_ms, units};
 /// lists `grant_add_account` (wallet::add_account).
 /// `receive_deployment`: `receives`/`receive_status` read each deposit on the deployment it was made
 /// on and name it (`deployment: {id, label, current, network}`).
-pub const FEATURES: [&str; 15] = [
+/// `send_back`: the `send_back_*` calls (`modules/NAMES-SEND-BACK.md`).
+pub const FEATURES: [&str; 16] = [
     "relayed_claim", "relayed_claim_check_with", "relayed_claim_build", "relayed_claim_submit", "account_hint",
     "receive", "deposit_code", "public_receive", "receive_status", "receives", "relayed_claim_check_deposit", "account_add", "build_id",
-    "receive_request", "receive_deployment",
+    "receive_request", "receive_deployment", "send_back",
 ];
 
 pub const MODULE_VERSION: &str = "0.1.0";
@@ -298,6 +301,55 @@ pub trait LezBridgeModule: Send + 'static {
     /// Forgets checked claim `check_id` (its claim key leaves memory).
     fn relayed_claim_forget(&mut self, check_id: String) -> String;
 
+    // ── Send back to Ethereum (modules/NAMES-SEND-BACK.md) ─────────────
+    // Public accounts, a `release == "proof"` deployment (v4). No reply carries the exit secret.
+
+    /// The bridge page link the wallet copies (`#withdraw`), and whether this bridge can send back.
+    fn send_back_link(&mut self) -> String;
+
+    /// What a `logoswd1…` withdraw-to code says: `{ok, recipient, words, words_text, fee_choice,
+    /// warnings}` or `{ok: false, error: {code, message}}`. No wallet call.
+    fn send_back_check(&mut self, code: String) -> String;
+
+    /// Derives the exit secret through the wallet (`needs: "secret"` the first time), stores the
+    /// exit (no secret) and answers its view: `{id, stage, amount_text, receive_text, recipient,
+    /// words_text, exit_commitment, …}`.
+    fn send_back_plan(&mut self, token: String, denom_index: String, account: String, code: String) -> String;
+
+    /// The burn as the relayed call the Names Wallet signs (`propose_relayed_call`'s input). Pure
+    /// apart from the relay's caps; holds `E`, never the exit secret.
+    fn send_back_build(&mut self, id: String) -> String;
+
+    /// Proposes the burn to the Names Wallet (`needs: "names_update"` while the wallet can't sign one).
+    fn send_back_burn(&mut self, id: String, options_json: String) -> String;
+
+    /// A burn the Names app signed (hex), handed to the bridge's relay (`bridge_relayBurn`).
+    fn send_back_submit(&mut self, id: String, transaction: String) -> String;
+
+    /// Every send-back of this computer, newest first (no chain read).
+    fn send_backs(&mut self) -> String;
+
+    /// Moves send-back `id` on as the chains say: `{stage, text, wait, burn_block, leaf_index,
+    /// root, releasable_at, released_tx, reads}`. For a 60 s poll.
+    fn send_back_status(&mut self, id: String) -> String;
+
+    /// Today's stand-in for the prover helper: writes the release proof's inputs (the secret in a
+    /// mode-600 file) and answers their paths and the prover command. The reply holds paths only.
+    fn send_back_witness(&mut self, id: String) -> String;
+
+    /// Starts the release prover (set with `set_release_prover`) as a job; `needs: "prover"` without one.
+    fn send_back_prove(&mut self, id: String) -> String;
+
+    /// Attaches the Groth16 seal (hex) once Sepolia's verifier accepts it for this send-back (a read).
+    fn send_back_seal(&mut self, id: String, seal: String) -> String;
+
+    /// The `logosrel1…` release code and its link, once the seal is in.
+    fn send_back_release_code(&mut self, id: String) -> String;
+
+    /// The release prover's command, a JSON array of strings (the helper and any wrapper in
+    /// front of it); `[]` turns it off.
+    fn set_release_prover(&mut self, argv_json: String) -> String;
+
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
@@ -354,18 +406,6 @@ fn reply(outcome: Result<Value, String>) -> String {
         Err(error) => json!({ "success": false, "value": null, "error": error }),
     }
     .to_string()
-}
-
-/// A shared LEZ endpoint (tests) as a boxed one.
-struct SharedRpc(std::sync::Arc<dyn lez::LezRpc + Send + Sync>);
-
-impl lez::LezRpc for SharedRpc {
-    fn call(&self, method: &str, params: Value) -> Result<Value, lez::Problem> {
-        self.0.call(method, params)
-    }
-    fn describe(&self) -> String {
-        self.0.describe()
-    }
 }
 
 /// Seconds after which a cached registry read is read again.
@@ -567,8 +607,8 @@ impl Bridge {
         let native = !d.lez_rpc.is_empty() && (self.names_mode() || self.wallet_cli().is_err());
         let lez = if native {
             let rpc: Box<dyn lez::LezRpc> = match &self.relayed.rpc_override {
-                Some(r) => Box::new(SharedRpc(r.clone())),
-                None => Box::new(lez::Http::new(&d.lez_rpc)),
+                Some(r) => Box::new(lez::Patient::new(r.clone())),
+                None => Box::new(lez::Patient::new(std::sync::Arc::new(lez::Http::new(&d.lez_rpc)))),
             };
             util::lez_account(&d.bridge_program)
                 .and_then(|b| lez::show_json(rpc.as_ref(), &b))
@@ -2185,6 +2225,70 @@ impl LezBridgeModule for Bridge {
         reply(Ok(self.relayed_forget(check_id.trim())))
     }
 
+    fn send_back_link(&mut self) -> String {
+        reply(Ok(self.send_back_link_now()))
+    }
+
+    fn send_back_check(&mut self, code: String) -> String {
+        reply(Ok(self.send_back_check_now(&code)))
+    }
+
+    fn send_back_plan(&mut self, token: String, denom_index: String, account: String, code: String) -> String {
+        reply(self.send_back_plan_now(&token, &denom_index, &account, &code))
+    }
+
+    fn send_back_build(&mut self, id: String) -> String {
+        reply(self.send_back_build_now(id.trim()))
+    }
+
+    fn send_back_burn(&mut self, id: String, options_json: String) -> String {
+        reply(options(&options_json).and_then(|o| self.send_back_burn_now(id.trim(), &o)))
+    }
+
+    fn send_back_submit(&mut self, id: String, transaction: String) -> String {
+        reply(self.send_back_submit_now(id.trim(), &transaction))
+    }
+
+    fn send_backs(&mut self) -> String {
+        reply(Ok(self.send_backs_now()))
+    }
+
+    fn send_back_status(&mut self, id: String) -> String {
+        reply(self.send_back_status_now(id.trim()))
+    }
+
+    fn send_back_witness(&mut self, id: String) -> String {
+        reply(self.send_back_witness_now(id.trim()))
+    }
+
+    fn send_back_prove(&mut self, id: String) -> String {
+        reply(self.send_back_prove_now(id.trim()))
+    }
+
+    fn send_back_seal(&mut self, id: String, seal: String) -> String {
+        reply(self.send_back_seal_now(id.trim(), &seal))
+    }
+
+    fn send_back_release_code(&mut self, id: String) -> String {
+        reply(self.send_back_release_code_now(id.trim()))
+    }
+
+    fn set_release_prover(&mut self, argv_json: String) -> String {
+        reply((|| {
+            let v: Value = serde_json::from_str(argv_json.trim()).map_err(|_| "give the prover as a JSON array of strings")?;
+            let argv: Vec<String> = v.as_array().ok_or("give the prover as a JSON array of strings")?.iter().map(|x| x.as_str().map(str::to_owned).ok_or("every entry is a string")).collect::<Result<_, _>>()?;
+            if let Some(p) = argv.first() {
+                let p = PathBuf::from(p);
+                if !p.is_absolute() || !cli::is_executable(&p) {
+                    return Err(format!("there is no program at {}", p.display()));
+                }
+            }
+            self.cfg.release_prover = argv.clone();
+            self.save()?;
+            Ok(json!({ "release_prover": argv }))
+        })())
+    }
+
     fn set_wallet_mode(&mut self, mode: String) -> String {
         reply((|| {
             let m = mode.trim();
@@ -2209,6 +2313,8 @@ pub extern "Rust" fn logos_module_install() {
 mod tests;
 #[cfg(test)]
 mod tests_names;
+#[cfg(test)]
+mod tests_sendback;
 #[cfg(test)]
 mod tests_relayed;
 #[cfg(test)]

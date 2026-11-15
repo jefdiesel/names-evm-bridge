@@ -37,6 +37,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use anyhow::{Context as _, Result, anyhow, bail};
 use bridge_core::{self as bc, Config, Instruction, Message as BridgeMessage, RootSource, config_address};
+use bridge_token_core::Message as TokenMessage;
 use common::{HashType, transaction::LeeTransaction};
 use lee::{
     FeeDeclaration, PublicKey, PublicTransaction, Signature, Simulation,
@@ -169,13 +170,13 @@ pub async fn build(
     let report = match measured {
         Err(ExecutionFailureKind::DryRun(report)) => report,
         Ok(hash) => bail!("internal error: the measuring dry run sent {hash}"),
-        Err(e) => return Err(anyhow!(e).context("measuring the claim")),
+        Err(e) => return Err(anyhow!(e).context("measuring the transaction")),
     };
     let DryRunReport::Public { fee, cycles, wire_bytes: measured_bytes, revert_reason, reserve_at_head, .. } = *report else {
         bail!("internal error: a public claim measured as private");
     };
     if let Some(why) = revert_reason {
-        bail!("the claim would revert: {why}; nothing sent");
+        bail!("it would revert: {why}; nothing sent");
     }
     let nonces = wallet.get_accounts_nonces(&[claimer, payer]).await?;
     let nonces: BTreeMap<_, _> = [(claimer, nonces[0]), (payer, nonces[1])].into_iter().collect();
@@ -187,7 +188,7 @@ pub async fn build(
     // the reserve at head (the gas limit at today's base fees), so clamp to the cap above that.
     let reserve = scale(reserve_at_head);
     if reserve > fee_cap {
-        bail!("this claim's fee reserve {reserve} is above the relay's cap {fee_cap}; nothing sent");
+        bail!("its fee reserve {reserve} is above the relay's cap {fee_cap}; nothing sent");
     }
     let max_fee = scale(fee.max_fee).min(fee_cap);
     msg.execution.fee = Some(FeeDeclaration::new(payer, fee.gas_limit, fee.tip, max_fee));
@@ -195,6 +196,23 @@ pub async fn build(
     let hash = msg.hash();
     let witness = WitnessSet::from_raw_parts(vec![(Signature::new(key, &hash), PublicKey::new_from_private_key(key))]);
     Ok(HalfSigned { tx: PublicTransaction::new(msg, witness), gas: fee.gas_limit, max_fee, cycles })
+}
+
+/// The relayed version of a call, signed by its sender, NOT measured first: the relay's own caps
+/// as gas and max fee. Only for probes of the relay's refusals (`burn --relay --no-precheck`): a
+/// call that would revert is refused by the relay's simulation, never sent.
+pub async fn build_unmeasured(wallet: &mut WalletCore<SequencerClient>, accounts: Vec<AccountMention>, message: Vec<u8>, payer: AccountId, gas: u64, max_fee: u128) -> Result<HalfSigned> {
+    let sender = accounts.first().ok_or_else(|| anyhow!("no accounts"))?.actor().account_id;
+    if sender == payer {
+        bail!("the relay's payer is the sender itself");
+    }
+    let nonces = wallet.get_accounts_nonces(&[sender, payer]).await?;
+    let nonces: BTreeMap<_, _> = [(sender, nonces[0]), (payer, nonces[1])].into_iter().collect();
+    let msg = relayed_message(&accounts, message, nonces, FeeDeclaration::new(payer, gas, 0, max_fee))?;
+    let key = wallet.get_account_public_signing_key(sender).ok_or_else(|| anyhow!("{sender} is not a public account of this wallet"))?;
+    let hash = msg.hash();
+    let witness = WitnessSet::from_raw_parts(vec![(Signature::new(key, &hash), PublicKey::new_from_private_key(key))]);
+    Ok(HalfSigned { tx: PublicTransaction::new(msg, witness), gas, max_fee, cycles: 0 })
 }
 
 /// The relay's payer and caps (`GET <relay>/info`).
@@ -242,13 +260,18 @@ fn busy_wait(v: &Value) -> Option<std::time::Duration> {
 /// Sends the half-signed claim. `Ok(Ok(hash))`: submitted (`None`: checked only);
 /// `Ok(Err((reason, retry)))`: refused. On a "busy" answer it waits `retry_after` (at most
 /// [`MAX_BUSY_WAIT_S`]) before returning, so the caller's rebuild uses the payer's new nonce.
-pub async fn post(relay: &Relay, tx: &PublicTransaction, check_only: bool) -> Result<std::result::Result<Option<HashType>, (String, bool)>> {
+pub async fn post(relay: &Relay, tx: &PublicTransaction, check_only: bool, burn: bool) -> Result<std::result::Result<Option<HashType>, (String, bool)>> {
     let tx_hex = hex(&borsh::to_vec(tx)?);
     let v = match relay {
-        Relay::Rpc(u) => rpc(u, "bridge_relayClaim", json!([tx_hex, check_only])).await?,
+        Relay::Rpc(u) => rpc(u, if burn { "bridge_relayBurn" } else { "bridge_relayClaim" }, json!([tx_hex, check_only])).await?,
         Relay::Direct(u) => {
             let body = json!({ "tx": tx_hex, "check_only": check_only }).to_string();
-            let resp = http()?.post(u.clone()).header("content-type", "application/json").body(body).send().await.context("the relay")?;
+            let mut u = u.clone();
+            if burn {
+                let p = format!("{}/burn", u.path().trim_end_matches('/'));
+                u.set_path(&p);
+            }
+            let resp = http()?.post(u).header("content-type", "application/json").body(body).send().await.context("the relay")?;
             let status = resp.status();
             let text = resp.text().await?;
             serde_json::from_str(&text).with_context(|| format!("relay answered {status}, not JSON: {}", text.chars().take(200).collect::<String>()))?
@@ -314,8 +337,11 @@ fn refusal_json(r: &Refusal) -> Value {
     v
 }
 
-/// Strict decode of a half-signed claim; checks that need no chain state.
-pub fn decode(bytes: &[u8], bridge: AccountId, payer: AccountId, max_gas: u64, max_fee: u128) -> std::result::Result<(PublicTransaction, AccountId, Instruction), Refusal> {
+/// The checks every half-signed transaction the relay pays for must pass, whatever it calls: a
+/// strict decode, exactly one signature (the sender's, valid), the signers and nonces exactly the
+/// sender and the payer, no promotions or admission evidence, the payer's fee within the caps and
+/// no tip, no declared actor of the payer's account. Returns the transaction and the sender.
+fn half_signed(bytes: &[u8], payer: AccountId, max_gas: u64, max_fee: u128, who: &str) -> std::result::Result<(PublicTransaction, AccountId), Refusal> {
     if bytes.len() > MAX_TX_BYTES {
         return refuse(format!("transaction is {} bytes, more than {MAX_TX_BYTES}", bytes.len()));
     }
@@ -325,21 +351,21 @@ pub fn decode(bytes: &[u8], bridge: AccountId, payer: AccountId, max_gas: u64, m
     let m = tx.message();
     let w = tx.witness_set().signatures_and_public_keys();
     if w.len() != 1 {
-        return refuse(format!("expected exactly the claimer's signature, found {}", w.len()));
+        return refuse(format!("expected exactly the {who}'s signature, found {}", w.len()));
     }
     if !tx.witness_set().is_valid_for(m) {
-        return refuse("the claimer's signature does not verify");
+        return refuse(format!("the {who}'s signature does not verify"));
     }
-    let claimer = AccountId::from(&w[0].1);
-    if claimer == payer {
-        return refuse("the claimer is the relay's payer");
+    let sender = AccountId::from(&w[0].1);
+    if sender == payer {
+        return refuse(format!("the {who} is the relay's payer"));
     }
-    let both: BTreeSet<AccountId> = [claimer, payer].into_iter().collect();
+    let both: BTreeSet<AccountId> = [sender, payer].into_iter().collect();
     if !m.public_context.promotions.is_empty() {
         return refuse("promotions are not allowed");
     }
     if m.public_context.authorized_accounts != both || m.nonces.keys().copied().collect::<BTreeSet<_>>() != both {
-        return refuse("the signers must be exactly the claimer and the relay's payer");
+        return refuse(format!("the signers must be exactly the {who} and the relay's payer"));
     }
     if !m.admission_evidence.is_empty() {
         return refuse("admission evidence is not allowed");
@@ -357,11 +383,18 @@ pub fn decode(bytes: &[u8], bridge: AccountId, payer: AccountId, max_gas: u64, m
     if fee.max_fee > max_fee {
         return refuse(format!("max_fee {} is more than {max_fee}", fee.max_fee));
     }
-    if m.execution.root.to != Actor::new(claimer, bridge) {
-        return refuse("the transaction does not call the claimer's actor of this bridge");
-    }
     if m.public_context.actors.iter().any(|a| a.account_id == payer) {
         return refuse("the transaction declares an actor of the relay's payer");
+    }
+    Ok((tx, sender))
+}
+
+/// Strict decode of a half-signed claim; checks that need no chain state.
+pub fn decode(bytes: &[u8], bridge: AccountId, payer: AccountId, max_gas: u64, max_fee: u128) -> std::result::Result<(PublicTransaction, AccountId, Instruction), Refusal> {
+    let (tx, claimer) = half_signed(bytes, payer, max_gas, max_fee, "claimer")?;
+    let m = tx.message();
+    if m.execution.root.to != Actor::new(claimer, bridge) {
+        return refuse("the transaction does not call the claimer's actor of this bridge");
     }
     let Ok(BridgeMessage::Instruction(ins)) = borsh::from_slice::<BridgeMessage>(&m.execution.root.message) else {
         return refuse("the root message is not a bridge instruction (strict decode failed)");
@@ -372,6 +405,141 @@ pub fn decode(bytes: &[u8], bridge: AccountId, payer: AccountId, max_gas: u64, m
         _ => return refuse("the instruction is not a claim"),
     }
     Ok((tx, claimer, ins))
+}
+
+/// A relayed public burn as decoded: the burner, the definition, the amount, the exit commitment.
+pub struct Burn {
+    pub tx: PublicTransaction,
+    pub burner: AccountId,
+    pub definition: AccountId,
+    pub amount: u128,
+    pub exit: [u8; 32],
+}
+
+/// Strict decode of a half-signed public burn ("Send back to Ethereum"); checks that need no chain
+/// state. The root call is the burner's actor of the token program with exactly
+/// `BurnWithNotice { definition, amount, notify: Actor(config PDA of this bridge, this bridge), memo }`,
+/// and the declared actors are exactly the burner's token actor, the definition's and the config's.
+pub fn decode_burn(bytes: &[u8], bridge: AccountId, token_program: AccountId, payer: AccountId, max_gas: u64, max_fee: u128) -> std::result::Result<Burn, Refusal> {
+    let (tx, burner) = half_signed(bytes, payer, max_gas, max_fee, "burner")?;
+    let m = tx.message();
+    if m.execution.root.to != Actor::new(burner, token_program) {
+        return refuse("the transaction does not call the burner's actor of this bridge's token program");
+    }
+    let Ok(TokenMessage::BurnWithNotice { definition, amount, notify, memo }) = borsh::from_slice::<TokenMessage>(&m.execution.root.message) else {
+        return refuse("the root message is not a burn with notice (strict decode failed)");
+    };
+    if notify != Actor::new(config_address(&bridge), bridge) {
+        return refuse("the burn does not notify this bridge's config");
+    }
+    let expected: BTreeSet<Actor> = [Actor::new(burner, token_program), Actor::new(definition, token_program), Actor::new(config_address(&bridge), bridge)].into_iter().collect();
+    if m.public_context.actors != expected {
+        return refuse("the declared accounts are not exactly a public burn's");
+    }
+    Ok(Burn { tx, burner, definition, amount, exit: memo })
+}
+
+/// The burn's checks against the chain, then (with `submit`) the payer's signature and the submission.
+#[expect(clippy::too_many_arguments, reason = "the relayer's configuration")]
+pub async fn cosign_burn(
+    wallet: &WalletCore<SequencerClient>,
+    sequencer: &str,
+    bytes: &[u8],
+    bridge: AccountId,
+    token_program: AccountId,
+    payer: AccountId,
+    max_gas: u64,
+    max_fee: u128,
+    submit: bool,
+) -> std::result::Result<Value, Refusal> {
+    let b = decode_burn(bytes, bridge, token_program, payer, max_gas, max_fee)?;
+    let m = b.tx.message().clone();
+    let fee = m.execution.fee.expect("checked");
+    let config: Config = borsh::from_slice(&crate::public_state(wallet, config_address(&bridge), bridge).await.map_err(internal)?)
+        .map_err(|_| Refusal { reason: "the bridge has no config".into(), ..Refusal::default() })?;
+    if config.token_program != token_program {
+        return refuse("the relay's token program is not the bridge's");
+    }
+    if [config.admin, config.freezer, config.attestor].contains(&payer) || config.pending_admin == Some(payer) {
+        return refuse("relay misconfigured: its payer holds a bridge role; use a dedicated payer account");
+    }
+    let Some(token) = config.tokens.iter().find(|t| t.definition == b.definition) else { return refuse("this token is not registered on the bridge") };
+    if !token.denoms.contains(&b.amount) {
+        return refuse("a burn is exactly one denomination; nothing sent");
+    }
+    if config.burn_frozen {
+        return refuse("burns are frozen on this bridge; nothing sent");
+    }
+    if token.burn_frozen {
+        return refuse("burns of this token are frozen on this bridge; nothing sent");
+    }
+    let chain = wallet.get_accounts_nonces(&[b.burner, payer]).await.map_err(internal)?;
+    if m.nonces.get(&b.burner) != Some(&chain[0]) || m.nonces.get(&payer) != Some(&chain[1]) {
+        return Err(Refusal { reason: "stale nonce: rebuild the burn and send it again".into(), retry: true, ..Refusal::default() });
+    }
+    let mut states = HashMap::new();
+    let mut admitted: BTreeSet<AccountId> = [b.burner, payer].into_iter().collect();
+    for actor in &m.public_context.actors {
+        let view = wallet.get_account_view(*actor).await.map_err(internal)?;
+        if view.is_some() {
+            admitted.insert(actor.account_id);
+        }
+        states.insert(*actor, view.map_or_else(ActorState::empty, |a| a.data.actor_state(actor.program_account_id).clone()));
+    }
+    let programs = crate::catalog(wallet, &[token_program, bridge]).await.map_err(internal)?;
+    let simulation = Simulation { public_actor_states: states, admitted_accounts: Some(admitted) };
+    let (cycles, result) = lee::simulate_public_transaction(&b.tx, &simulation, &programs, fee.gas_limit);
+    if let Err(e) = result {
+        return refuse(format!("the burn does not apply in simulation: {:#}", anyhow::Error::from(e)));
+    }
+    let payer_balance = crate::public_state(wallet, payer, lee_core::native_token::NATIVE_TOKEN_PROGRAM_ID)
+        .await
+        .map_err(internal)
+        .and_then(|s| lee_core::native_token::decode_balance(&s).map_err(|e| internal(anyhow!("{e}"))))?;
+    if payer_balance < fee.max_fee {
+        return refuse(format!("the relay's payer holds {payer_balance}, less than this burn's max_fee {}", fee.max_fee));
+    }
+    let mut summary = json!({
+        "kind": "burn",
+        "burner": b.burner.to_string(),
+        "exit_commitment": format!("0x{}", hex(&b.exit)),
+        "eth_token": format!("0x{}", hex(&token.eth_token)),
+        "denom": b.amount.to_string(),
+        "gas_limit": fee.gas_limit,
+        "max_fee": fee.max_fee.to_string(),
+        "cycles": cycles,
+        "payer_balance": payer_balance.to_string(),
+        "burner_nonce": chain[0].0.to_string(),
+        "payer_nonce": chain[1].0.to_string(),
+        "bytes": bytes.len(),
+    });
+    if !submit {
+        return Ok(summary);
+    }
+    summary["tx_hash"] = json!(sign_and_send(wallet, sequencer, &b.tx, payer).await?);
+    Ok(summary)
+}
+
+/// The payer's signature added to a checked half-signed transaction, then the submission.
+async fn sign_and_send(wallet: &WalletCore<SequencerClient>, sequencer: &str, tx: &PublicTransaction, payer: AccountId) -> std::result::Result<String, Refusal> {
+    let Some(key) = wallet.get_account_public_signing_key(payer) else {
+        return Err(Refusal { reason: "relay misconfigured: the payer's key is not in its wallet".into(), ..Refusal::default() });
+    };
+    let m = tx.message().clone();
+    let hash = m.hash();
+    let mut sigs = tx.witness_set().signatures_and_public_keys().to_vec();
+    sigs.push((Signature::new(key, &hash), PublicKey::new_from_private_key(key)));
+    let full = PublicTransaction::new(m, WitnessSet::from_raw_parts(sigs));
+    if full.check_stateless().is_err() {
+        return Err(Refusal { reason: "relay error: the co-signed transaction fails the stateless check".into(), ..Refusal::default() });
+    }
+    let client = sequencer_service_rpc::SequencerClientBuilder::default().build(sequencer).map_err(|e| internal(anyhow!("{e}")))?;
+    let full = LeeTransaction::Public(full);
+    let local_hash = full.hash();
+    match sequencer_service_rpc::RpcClient::send_transaction(&client, full).await {
+        Ok(hash) => Ok(hash.to_string()),
+        Err(e) => Err(send_refusal(e, &local_hash)),
+    }
 }
 
 /// The full check, then (with `submit`) the payer's signature and the submission.
@@ -521,7 +689,7 @@ fn send_refusal(e: sequencer_service_rpc::ClientError, local_hash: &HashType) ->
         sequencer_service_rpc::ClientError::Call(err) => {
             let full = err.code() == sequencer_service_rpc::MEMPOOL_IS_FULL_ERROR_CODE;
             Refusal {
-                reason: if full { "the chain's mempool is full; try again shortly" } else { "the sequencer refused the co-signed claim; nothing was charged" }
+                reason: if full { "the chain's mempool is full; try again shortly" } else { "the sequencer refused the co-signed transaction; nothing was charged" }
                     .into(),
                 retry: full,
                 detail: Some(format!("code {}: {}", err.code(), err.message())),
@@ -549,11 +717,16 @@ pub async fn run_cosign(
     max_gas: u64,
     max_fee: u128,
     submit: bool,
+    burn: bool,
 ) -> Result<()> {
     let text = std::fs::read_to_string(tx_file).with_context(|| format!("reading {}", tx_file.display()))?;
     let out = match unhex(&text) {
         Err(_) => json!({ "ok": false, "reason": "the transaction is not hex", "retry": false }),
-        Ok(bytes) => match cosign(wallet, sequencer, &bytes, bridge, token_program, payer, max_gas, max_fee, submit).await {
+        Ok(bytes) => match if burn {
+            cosign_burn(wallet, sequencer, &bytes, bridge, token_program, payer, max_gas, max_fee, submit).await
+        } else {
+            cosign(wallet, sequencer, &bytes, bridge, token_program, payer, max_gas, max_fee, submit).await
+        } {
             Ok(mut v) => {
                 v["ok"] = json!(true);
                 v
@@ -795,4 +968,83 @@ mod tests {
         assert_eq!((v["uncertain"].as_bool(), v["retry"].as_bool()), (Some(true), Some(false)));
         assert_eq!(v["tx_hash"].as_str(), Some("ab".repeat(32).as_str()));
     }
+
+    const BURN_VECTOR: &str = include_str!("../../../modules/lez_bridge/rust-lib/testdata/public-burn-v1.json");
+
+    /// The burn the `lez_bridge` module hands the Names Wallet (`send_back_build`, the vector's
+    /// call JSON), built into a message the way the wallet builds a relayed call and signed by a
+    /// burner, is a burn the relay's decoder takes, with the vector's exit; changed shapes are not.
+    #[test]
+    fn the_wallet_s_build_of_the_module_s_burn_is_a_burn_the_relay_takes() {
+        use lee_core::program::PdaSeed;
+        let v: Value = serde_json::from_str(BURN_VECTOR).unwrap();
+        let (i, e) = (&v["inputs"], &v["expected"]);
+        let id = |x: &Value| -> AccountId { x.as_str().unwrap().trim_start_matches("Public/").parse().unwrap() };
+        let h32 = |x: &Value| -> [u8; 32] { unhex(x.as_str().unwrap()).unwrap().try_into().unwrap() };
+        let (bridge, tp, payer) = (id(&i["bridge_program"]), id(&i["token_program"]), id(&i["payer"]));
+        let call = &e["call"];
+        let message = unhex(call["message"].as_str().unwrap()).unwrap();
+        let definition = id(&i["definition"]);
+        let denom: u128 = i["denom"].as_str().unwrap().parse().unwrap();
+        let exit = h32(&e["exit_commitment"]);
+        assert_eq!(
+            borsh::to_vec(&TokenMessage::BurnWithNotice { definition, amount: denom, notify: Actor::new(config_address(&bridge), bridge), memo: exit }).unwrap(),
+            message,
+            "the module's message is the token program's BurnWithNotice"
+        );
+        assert_eq!(config_address(&bridge).to_string(), e["config_pda"].as_str().unwrap());
+        let (bk, burner) = keyed(6);
+        let build = |msg: Vec<u8>, entries: &[Value], root_program: AccountId| -> Message {
+            let root = Actor::new(burner, root_program);
+            let mut actors = vec![root];
+            for entry in entries {
+                let p = entry.get("program").map_or(root_program, id);
+                let account = match entry.get("seed") {
+                    Some(seed) => AccountId::for_public_pda(&id(&entry["of"]), &PdaSeed::new(h32(seed))),
+                    None => id(&entry["account"]),
+                };
+                let a = Actor::new(account, p);
+                if !actors.contains(&a) {
+                    actors.push(a);
+                }
+            }
+            let fee = &call["fee"];
+            let nonces = [(burner, Default::default()), (payer, Default::default())].into_iter().collect();
+            Message::new(root, msg, actors, nonces, Some(FeeDeclaration::new(payer, fee["gas_limit"].as_u64().unwrap(), 0, fee["max_fee"].as_str().unwrap().parse().unwrap())), Vec::new())
+        };
+        let entries = call["accounts"].as_array().unwrap().clone();
+        let ok = signed(build(message.clone(), &entries, id(&call["program"])), &[&bk]);
+        let b = decode_burn(&ok, bridge, tp, payer, 250_000, 2_500_000).unwrap_or_else(|r| panic!("{}", r.reason));
+        assert_eq!((b.burner, b.definition, b.amount, b.exit), (burner, definition, denom, exit));
+        let why = |bytes: &[u8]| decode_burn(bytes, bridge, tp, payer, 250_000, 2_500_000).err().map(|r| r.reason).unwrap_or_default();
+        // To another bridge's config.
+        let other = AccountId::new([5; 32]);
+        let m2 = borsh::to_vec(&TokenMessage::BurnWithNotice { definition, amount: denom, notify: Actor::new(config_address(&other), other), memo: exit }).unwrap();
+        assert!(why(&signed(build(m2, &entries, tp), &[&bk])).contains("notify"));
+        // A plain transfer, an extra actor, the bridge as root, a second signature, the payer's caps.
+        let m3 = borsh::to_vec(&TokenMessage::Transfer { definition, to: other, amount: denom }).unwrap();
+        assert!(why(&signed(build(m3, &entries, tp), &[&bk])).contains("burn with notice"));
+        let mut more = entries.clone();
+        more.push(json!({ "account": other.to_string(), "program": tp.to_string() }));
+        assert!(why(&signed(build(message.clone(), &more, tp), &[&bk])).contains("exactly a public burn"));
+        assert!(why(&signed(build(message.clone(), &entries, bridge), &[&bk])).contains("token program"));
+        let (pk, _) = keyed(7);
+        assert!(why(&signed(build(message.clone(), &entries, tp), &[&bk, &pk])).contains("exactly"));
+        assert!(decode_burn(&ok, bridge, tp, payer, 1000, 2_500_000).is_err());
+        assert!(decode_burn(&ok, bridge, tp, payer, 250_000, 10).is_err());
+        // A claim is not a burn, and a burn is not a claim.
+        assert!(decode(&ok, bridge, payer, 250_000, 2_500_000).is_err());
+        // Trailing bytes, a tip, an actor of the payer, a missing actor.
+        let mut long = ok.clone();
+        long.push(0);
+        assert!(why(&long).contains("strict decode"));
+        let mut tipped = build(message.clone(), &entries, tp);
+        tipped.execution.fee = Some(FeeDeclaration::new(payer, 120_000, 1, 2_500_000));
+        assert!(why(&signed(tipped, &[&bk])).contains("tip"));
+        let mut with_payer = entries.clone();
+        with_payer.push(json!({ "account": payer.to_string(), "program": "11111111111111111111111111111111" }));
+        assert!(why(&signed(build(message.clone(), &with_payer, tp), &[&bk])).contains("payer"));
+        assert!(why(&signed(build(message.clone(), &entries[..1], tp), &[&bk])).contains("exactly a public burn"));
+    }
+
 }

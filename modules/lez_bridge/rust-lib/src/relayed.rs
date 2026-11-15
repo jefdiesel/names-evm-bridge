@@ -403,7 +403,7 @@ fn leaf_of(e: &DepositEvent, cfg: &lez::BridgeConfig) -> Result<[u8; 32], Refusa
 }
 
 /// The head fee state: `(base_fee_exec, base_fee_stor)`.
-fn fee_state(rpc: &dyn LezRpc) -> Result<(u128, u128), Problem> {
+pub(crate) fn fee_state(rpc: &dyn LezRpc) -> Result<(u128, u128), Problem> {
     let v = rpc.call("getFeeState", json!([]))?;
     let n = |k: &str| v[k].as_u64().map(u128::from).or_else(|| v[k].as_str().and_then(|s| s.parse().ok()));
     match (n("base_fee_exec"), n("base_fee_stor")) {
@@ -421,12 +421,12 @@ impl Bridge {
     /// [`Self::lez_rpc`] of deployment `d` (a deposit or claim read on the deployment it is for).
     pub(crate) fn lez_rpc_for(&self, d: &Deployment) -> Result<Arc<dyn LezRpc + Send + Sync>, Refusal> {
         if let Some(r) = &self.relayed.rpc_override {
-            return Ok(r.clone());
+            return Ok(Arc::new(lez::Patient::new(r.clone())));
         }
         if d.lez_rpc.is_empty() || d.relay != "rpc" {
             return refuse("no_relay", format!("{} has no claim relay: a public claim from the Names Wallet needs one. Choose the bridge test network deployment in Settings.", d.label));
         }
-        Ok(Arc::new(lez::Http::new(&d.lez_rpc)))
+        Ok(Arc::new(lez::Patient::new(Arc::new(lez::Http::new(&d.lez_rpc)))))
     }
 
     /// The Names Wallet's view of this claim's account: `{available, connected, given, network,
@@ -716,7 +716,7 @@ impl Bridge {
     }
 
     /// The gates before proposing. `Some(needs)` when the person has something to do first.
-    fn relayed_gates(&self, account: &str, bridge: &str, token_program: &str, options: &Value) -> Result<Option<Value>, String> {
+    pub(crate) fn relayed_gates(&self, account: &str, bridge: &str, token_program: &str, options: &Value) -> Result<Option<Value>, String> {
         let v = self.relay_wallet_view(account);
         if v["available"] != true {
             return Err(v["problem"].as_str().unwrap_or(wallet::UNREACHABLE_TEXT).to_owned());

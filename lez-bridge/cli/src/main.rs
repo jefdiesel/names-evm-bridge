@@ -359,6 +359,9 @@ enum Command {
         max_fee: Balance,
         #[arg(long)]
         submit: bool,
+        /// `burn`: a relayed public burn to this bridge (`BurnWithNotice`), not a claim.
+        #[arg(long, default_value = "claim", value_parser = ["claim", "burn"])]
+        kind: String,
     },
     /// Initialise the bridge with roots from an RFP-021 attestation instance
     /// (`InitializeAttested`): signed by the bridge's header account, as `init`.
@@ -495,6 +498,12 @@ enum Command {
         chain: recover::ChainArgs,
         #[command(flatten)]
         emit: EmitCall,
+        /// A relayed public burn ("Send back to Ethereum"): `--from` (a public account of this
+        /// wallet, no native LEZ needed) signs and the bridge's relay co-signs as fee payer
+        /// (`bridge_relayBurn`). No value (or `auto`): the relay behind `--sequencer`; or a loopback
+        /// `http://…/relay`. With `--dry-run` the relay only checks it (check_only).
+        #[arg(long, value_name = "URL", num_args = 0..=1, default_missing_value = "auto", conflicts_with = "emit_call")]
+        relay: Option<String>,
     },
     /// The next deposit commitment of `--from` (derived from its key) and a deposit request for
     /// the Ethereum side (format v1 of web/deposit). Scans the vault first; prints no secret.
@@ -1088,16 +1097,16 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
             }
             let accounts = plan.mentions(wallet, bridge, token_program, pda(bridge, bc::root_seed(&plan.root)));
             if let Some(relay) = relay {
-                return relayed_claim(wallet, &relay, accounts, borsh::to_vec(&message)?).await;
+                return relayed_send(wallet, &relay, accounts, borsh::to_vec(&message)?, "claim").await.map(drop);
             }
             send(wallet, &[bridge, token_program], accounts, &borsh::to_vec(&message)?, plan.fee_payer()).await
         }
-        Command::RelayCosign { tx_file, bridge, token_program, payer, max_gas, max_fee, submit } => {
+        Command::RelayCosign { tx_file, bridge, token_program, payer, max_gas, max_fee, submit, kind } => {
             if NO_PRECHECK.load(std::sync::atomic::Ordering::Relaxed) || DRY_RUN.load(std::sync::atomic::Ordering::Relaxed) {
                 bail!("relay-cosign takes neither --no-precheck nor --dry-run (leave out --submit to only check)");
             }
             let sequencer = SEQUENCER.get().cloned().unwrap_or_default();
-            relay::run_cosign(wallet, &sequencer, &tx_file, bridge, token_program, payer, max_gas, max_fee, submit).await
+            relay::run_cosign(wallet, &sequencer, &tx_file, bridge, token_program, payer, max_gas, max_fee, submit, kind == "burn").await
         }
         Command::ClaimAttested {
             bridge,
@@ -1168,7 +1177,11 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
             );
             send(wallet, &[bridge, token_program, attest_program], accounts, &borsh::to_vec(&message)?, plan.fee_payer()).await
         }
-        Command::Burn { bridge, token_program, from, definition, amount, exit, eth_dest, max_relay_fee, key_index, chain, emit } => {
+        Command::Burn { bridge, token_program, from, definition, amount, exit, eth_dest, max_relay_fee, key_index, chain, emit, relay } => {
+            let relay = relay.map(|r| relay::allowed_relay(&r, &SEQUENCER.get().cloned().unwrap_or_default())).transpose()?;
+            if relay.is_some() && !matches!(identity(wallet, from), AccountIdentity::Public(_)) {
+                bail!("--relay takes a public account of this wallet as --from");
+            }
             let (memo, derived) = match exit {
                 Some(e) if emit.emit_call.is_some() => {
                     let e = hex32(&e)?;
@@ -1202,6 +1215,14 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
                 AccountIdentity::PublicNoSign(definition).select_program_actor_state(token_program),
                 pda(bridge, config_seed()),
             ];
+            if let Some(relay) = relay {
+                println!("exit commitment 0x{}", to_hex(&memo));
+                let landed = relayed_send(wallet, &relay, accounts, borsh::to_vec(&message)?, "burn").await?;
+                if let (Some((key, j)), Some(_)) = (derived, landed) {
+                    recover::record_exit(&recover::bridge_config(wallet, bridge).await?.cfg_id, &key, j)?;
+                }
+                return Ok(());
+            }
             let applied = send_tx(wallet, &[token_program, bridge], accounts, &borsh::to_vec(&message)?, None).await?;
             if let (Some((key, j)), Some(_)) = (derived, applied) {
                 recover::record_exit(&recover::bridge_config(wallet, bridge).await?.cfg_id, &key, j)?;
@@ -1899,33 +1920,42 @@ async fn send_tx(
 /// Tries of a relayed claim: each busy answer waits up to 30 s (the relay holds one claim in flight).
 const RELAY_TRIES: u32 = 6;
 
-async fn relayed_claim(wallet: &mut WalletCore<SequencerClient>, relay: &relay::Relay, accounts: Vec<AccountMention>, message: Vec<u8>) -> Result<()> {
+/// `what`: "claim" or "burn" (`bridge_relayBurn`). The block it landed in, or `None` for a dry run.
+/// `--no-precheck` (tests and the relay's refusal probes only): built on the relay's caps without
+/// measuring, so a call that would revert reaches the relay, whose own simulation refuses it.
+async fn relayed_send(wallet: &mut WalletCore<SequencerClient>, relay: &relay::Relay, accounts: Vec<AccountMention>, message: Vec<u8>, what: &str) -> Result<Option<u64>> {
     let dry_run = DRY_RUN.load(std::sync::atomic::Ordering::Relaxed);
+    let unmeasured = NO_PRECHECK.load(std::sync::atomic::Ordering::Relaxed);
+    let burn = what == "burn";
     let (payer, max_gas, max_fee) = relay::info(relay).await?;
     println!("relay {relay}: fee payer {payer}, caps gas {max_gas}, max_fee {max_fee}");
     let started = std::time::Instant::now();
     for attempt in 1..=RELAY_TRIES {
-        let half = relay::build(wallet, accounts.clone(), message.clone(), payer, max_fee, dry_run).await?;
-        println!("relayed claim: declared gas {}, max_fee {} (measured {} cycles), signed by the claimer", half.gas, half.max_fee, half.cycles);
+        let half = if unmeasured {
+            relay::build_unmeasured(wallet, accounts.clone(), message.clone(), payer, max_gas, max_fee).await?
+        } else {
+            relay::build(wallet, accounts.clone(), message.clone(), payer, max_fee, dry_run).await?
+        };
+        println!("relayed {what}: declared gas {}, max_fee {} (measured {} cycles), signed by the sender", half.gas, half.max_fee, half.cycles);
         if half.gas > max_gas || half.max_fee > max_fee {
-            bail!("this claim needs gas {} / max_fee {}, above the relay's caps {max_gas} / {max_fee}; nothing sent", half.gas, half.max_fee);
+            bail!("this {what} needs gas {} / max_fee {}, above the relay's caps {max_gas} / {max_fee}; nothing sent", half.gas, half.max_fee);
         }
         out::phase("relay", serde_json::json!({ "relay": relay.to_string(), "attempt": attempt }));
-        match relay::post(relay, &half.tx, dry_run).await? {
+        match relay::post(relay, &half.tx, dry_run, burn).await? {
             Ok(None) => {
-                println!("dry run: the relay checked the claim and would co-sign it; nothing signed by the relay or sent");
+                println!("dry run: the relay checked the {what} and would co-sign it; nothing signed by the relay or sent");
                 out::set_result(serde_json::json!({ "dry_run": true, "relay": true }));
-                return Ok(());
+                return Ok(None);
             }
             Ok(Some(hash)) => {
                 println!("relayed and submitted in {:.1?}", started.elapsed());
                 out::event("submitted", serde_json::json!({ "tx": hash.to_string(), "relay": true }));
                 let landed = finish_tx(wallet, hash).await?;
                 out::set_result(serde_json::json!({ "block": landed.1, "elapsed_s": started.elapsed().as_secs_f64(), "dry_run": false, "relay": true }));
-                return Ok(());
+                return Ok(Some(landed.1));
             }
             Err((reason, true)) if attempt < RELAY_TRIES => println!("relay: {reason} (try {attempt} of {RELAY_TRIES})"),
-            Err((reason, _)) => bail!("the relay refused the claim: {reason}; nothing sent"),
+            Err((reason, _)) => bail!("the relay refused the {what}: {reason}; nothing sent"),
         }
     }
     unreachable!("the last attempt returns")

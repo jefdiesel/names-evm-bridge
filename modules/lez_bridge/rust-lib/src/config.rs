@@ -232,6 +232,8 @@ pub struct Config {
     pub tmp_dir: Option<String>,
     /// `names` (default) or `cli` (see [`WALLET_MODES`]).
     pub wallet: String,
+    /// The release prover's argv (the helper, and any wrapper in front of it); empty: none set.
+    pub release_prover: Vec<String>,
 }
 
 impl Default for Config {
@@ -248,6 +250,7 @@ impl Default for Config {
             prover_wrapper: Vec::new(),
             tmp_dir: None,
             wallet: "names".into(),
+            release_prover: Vec::new(),
         }
     }
 }
@@ -274,6 +277,7 @@ impl Config {
             "proving": { "enabled": self.proving_enabled, "wrapper": self.prover_wrapper },
             "tmp_dir": self.tmp_dir,
             "wallet": self.wallet,
+            "release_prover": self.release_prover,
         })
     }
 
@@ -310,6 +314,7 @@ impl Config {
         c.proving_enabled = v["proving"]["enabled"].as_bool().unwrap_or(false);
         c.prover_wrapper = v["proving"]["wrapper"].as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_owned)).collect()).unwrap_or_default();
         c.tmp_dir = v["tmp_dir"].as_str().map(str::to_owned);
+        c.release_prover = v["release_prover"].as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_owned)).collect()).unwrap_or_default();
         if let Some(w) = v["wallet"].as_str().filter(|w| WALLET_MODES.contains(w)) {
             c.wallet = w.to_owned();
         }

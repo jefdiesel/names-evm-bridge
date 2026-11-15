@@ -56,6 +56,13 @@ export function createMockChain(opts = {}) {
     pendingPolls: new Map(),
     blocks: new Map(),
     nonce: 0,
+    // Send back to Ethereum: exit roots the vault recorded (root -> time), the release delay,
+    // spent release nullifiers, and whether the verifier accepts the seals it is given.
+    exitRoots: new Map(Object.entries(opts.exitRoots || {})),
+    releaseDelay: BigInt(opts.releaseDelay ?? 3600),
+    releaseSpent: new Set(),
+    verifyOk: opts.verifyOk ?? true,
+    released: [],
   };
   // seed: the five Sepolia v2 deposits (4 dUSDC, 1 ETH)
   for (const [tok, i] of [[ADDR.usdc, 0], [ADDR.usdc, 0], [ADDR.usdc, 1], [ADDR.usdc, 0], [ADDR.eth, 0]]) {
@@ -177,6 +184,17 @@ export function createMockChain(opts = {}) {
       if (is('commitmentUsed(bytes32)')) return '0x' + W(S.used.has('0x' + arg(0)) ? 1 : 0);
       if (is('counters(address,uint256)')) return '0x' + W(S.counters.get(`${addr(0)}:${Number(BigInt('0x' + arg(1)))}`) || 0n) + W(0) + W(0) + W(0);
       if (is('depositCount()')) return '0x' + W(S.leaves);
+      if (is('releaseNullifierSpent(bytes32)')) return '0x' + W(S.releaseSpent.has('0x' + arg(0)) ? 1 : 0);
+      if (is('exitRootTime(bytes32)')) return '0x' + W(S.exitRoots.get('0x' + arg(0)) || 0n);
+      if (is('releasableAt(address,bytes32)')) {
+        const t = S.exitRoots.get('0x' + arg(1));
+        return '0x' + W(t ? BigInt(t) + S.releaseDelay : 0n);
+      }
+      if (is('relayFeeMenu(address,uint32)')) return '0x' + W(32) + W(1) + W(50_000_000_000_000n);
+      if (is('release(bytes,bytes32,bytes32,address,uint32,address,address,uint256)')) {
+        checkRelease(d);
+        return '0x';
+      }
       if (is('cfgId()')) return S.cfgId || DEPLOYMENTS[0].cfgId;
       if (is('depositETH(uint32,bytes32)')) {
         checkDeposit(from, ADDR.eth, Number(BigInt('0x' + arg(0))), '0x' + arg(1), BigInt(tx.value || 0));
@@ -213,6 +231,25 @@ export function createMockChain(opts = {}) {
     return '0x';
   }
 
+  /** BridgeVault.release's checks, in its order (the seal: its selector, then the mock verdict). */
+  function checkRelease(d) {
+    const w = (i) => d.slice(10 + 64 * i, 10 + 64 * (i + 1));
+    const root = '0x' + w(1);
+    const t = S.exitRoots.get(root);
+    if (!t) throw err('UnknownExitRoot()');
+    if (timeOf(S.head) < BigInt(t) + S.releaseDelay) throw err('ReleaseTooEarly()');
+    if (S.releaseSpent.has('0x' + w(2))) throw err('NullifierSpent()');
+    const seal = d.slice(10 + 64 * 9, 10 + 64 * 9 + 8);
+    if (seal !== 'e71e6620' || !S.verifyOk) throw err('VerificationFailed()');
+  }
+  function applyRelease(tx) {
+    checkRelease(tx.data.toLowerCase());
+    const w = (i) => tx.data.slice(10 + 64 * i, 10 + 64 * (i + 1));
+    S.releaseSpent.add('0x' + w(2));
+    S.released.push({ nullifier: '0x' + w(2), recipient: '0x' + w(5).slice(24) });
+  }
+  const timeOf = (n) => 1794540000n + (BigInt(n) - 12120000n) * 12n;
+
   function mine(tx, logs) {
     S.head += 1n;
     const hash = '0x' + W(0x7e000000n + BigInt(++S.nonce) * 7919n);
@@ -224,7 +261,7 @@ export function createMockChain(opts = {}) {
     return hash;
   }
 
-  return { S, isVault, isDesk, applyDeskDeposit, chainId, timeOf: (n) => 1794540000n + (BigInt(n) - 12120000n) * 12n, ethCall, checkDeposit, applyDeposit, mine, blockHash, advance: (n = 1n) => (S.head += BigInt(n)) };
+  return { S, isVault, isDesk, applyDeskDeposit, applyRelease, chainId, timeOf, ethCall, checkDeposit, applyDeposit, mine, blockHash, advance: (n = 1n) => (S.head += BigInt(n)) };
 }
 
 /**
@@ -366,6 +403,10 @@ export function createMockWallet(chain, { walletChainId = 1n, behaviour = {}, on
           }
           const d = tx.data;
           let log;
+          if (d.startsWith(selector('release(bytes,bytes32,bytes32,address,uint32,address,address,uint256)'))) {
+            chain.applyRelease(tx);
+            return chain.mine(tx, []);
+          }
           if (chain.isDesk(tx.to)) {
             const w = (i) => d.slice(10 + 64 * i, 10 + 64 * (i + 1));
             const logs = d.startsWith(selector('depositETHWithFee(uint32,bytes32,bytes32)'))

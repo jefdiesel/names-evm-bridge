@@ -21,6 +21,9 @@ import { WALLET_TEST_BUILD, TESTING_PAGE } from './lib/links.js';
 import { compareWords } from './lib/compare-words.js';
 import { normalizeName, resolve as lnsResolve, confirmSame, confirmationLine } from './lib/lns.js';
 import { deriveName } from './lib/lnsderive.js';
+import { decodeRelease, codeFromInput, codeKind } from './lib/withdraw.js';
+import { withdrawFor, releaseChecks, sendRelease, releaseWhy, RELEASE_GAS_ABOUT } from './lib/send-back.js';
+import { rpc as rpcOf, isUserRejection } from './lib/providers.js';
 
 const flow = createFlow();
 // Two columns from this width (app.css uses the same breakpoint): the side panel beside the card.
@@ -1253,6 +1256,17 @@ function openRequest(text) {
 }
 
 function fromHash() {
+  const back = sendBackOf(location.hash);
+  if (back) {
+    if (back.kind === 'release' && back.text) return void readRelease(back.text);
+    sb = back;
+    return;
+  }
+  if (sb) {
+    sb = null;
+    sbKey = null;
+    $('card').replaceChildren();
+  }
   const f = readFragment(location.hash);
   if (f.kind === 'none') return;
   // the no-script fallbacks of two in-page links
@@ -1352,6 +1366,194 @@ async function openScanner() {
   }
 }
 
+// ------------------------------------------------------------------ send back to Ethereum
+// Two modes the Names Wallet links to (the bridge's design note NAMES-SEND-BACK.md):
+//   #withdraw (or a #logoswd1… code): connect the Ethereum wallet that should receive; the page
+//     shows its withdraw-to code and four words, which the person pastes into the Names Wallet;
+//   #release / #logosrel1…: the release code the wallet gives once the exit is proved; the page
+//     checks it and sends the vault's `release` with the connected wallet.
+// Both codes hold public facts only. Nothing is stored.
+
+let sb = null; // null | { kind: 'withdraw' } | { kind: 'release', text, rel, error, check, sending, sent }
+
+/** What the fragment asks of the send-back modes, or null. */
+function sendBackOf(fragment) {
+  let f = String(fragment || '').replace(/^#/, '');
+  try {
+    f = decodeURIComponent(f);
+  } catch {
+    /* not a send-back link */
+  }
+  if (f === 'withdraw' || codeKind(f) === 'withdraw') return { kind: 'withdraw' };
+  if (f === 'release') return { kind: 'release', text: '' };
+  if (codeKind(f) === 'release') return { kind: 'release', text: f };
+  return null;
+}
+
+const SB_WITHDRAW_STEPS = ['Connect the Ethereum wallet that should receive.', 'Copy the withdraw-to code.', 'Paste it in your Names Wallet: Send back to Ethereum.'];
+const SB_RELEASE_STEPS = ['Paste the release code from your Names Wallet.', 'Connect any Ethereum wallet: it pays the gas.', 'Release.'];
+
+function sbSteps(list, current) {
+  return h('ol', { class: 'flow-steps sb-steps' }, list.map((t, i) => h('li', { class: i < current ? 'done' : i === current ? 'current' : 'todo', 'aria-current': i === current ? 'step' : null },
+    h('span', { class: 'step-mark', 'aria-hidden': 'true' }, i < current ? '✓' : String(i + 1)), h('span', {}, h('span', { class: 'sr-only' }, `Step ${i + 1}: `), t))));
+}
+
+function sbWallet() {
+  const w = wallets.find((x) => x.id === S().wallet?.id);
+  return w ? rpcOf(w.provider) : null;
+}
+
+const wdCodes = new Map(); // account -> Promise<{code, words_text}>, memory only
+const fmtTime = (secs) => new Date(Number(secs) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+function withdrawView(s, host) {
+  const connected = !!s.account;
+  host.append(walletRow(s) || h('span'), h('div', { class: 'card-head' }, h('h1', { id: 'card-h', tabindex: '-1' }, 'Send back to Ethereum')), sbSteps(SB_WITHDRAW_STEPS, connected ? 1 : 0));
+  if (!connected) {
+    host.append(h('div', { class: 'action' }, ...primary('Connect wallet', () => connectWallet())));
+    return;
+  }
+  const a = addr(s.account);
+  const codeBox = h('p', { class: 'mono sb-code', id: 'wd-code' }, '…');
+  const words = h('p', { class: 'compare-words', id: 'wd-words' }, '…');
+  const copy = h('div', { class: 'action' });
+  host.append(
+    h('section', { class: 'sb-out', 'aria-labelledby': 'wd-h' },
+      h('h2', { id: 'wd-h' }, 'Your withdraw-to code'),
+      codeBox,
+      copy,
+      h('div', { class: 'compare', role: 'group', 'aria-labelledby': 'wd-words wd-line' }, words, h('p', { class: 'compare-line', id: 'wd-line' }, 'Your Names Wallet shows the same four words. If they differ, stop.')),
+      h('p', { class: 'sb-to' }, 'To ', h('span', { class: 'mono' }, a)),
+      more('Details',
+        h('p', {}, `The code holds only public facts: Sepolia, the bridge vault ${shortHex(addr(DEP.vault))} and this address. No secret.`),
+        h('p', {}, `You send the last step from this page yourself. Your wallet then needs a little Sepolia ETH for gas (about ${RELEASE_GAS_ABOUT.toLocaleString('en')} gas).`),
+        h('p', {}, 'After you approve the burn in your Names Wallet, Ethereum records it with the bridge operator’s next update (by hand today); then the vault waits one hour before it pays out.'),
+        h('p', {}, 'Another wallet, another address: disconnect and connect it, and this page makes its code.')),
+    ),
+  );
+  if (!wdCodes.has(s.account)) wdCodes.set(s.account, withdrawFor(s.account));
+  wdCodes.get(s.account).then((w) => {
+    codeBox.textContent = w.code;
+    words.textContent = w.words_text;
+    copy.replaceChildren(copyButtonPrimary(w.code));
+  }, (e) => (codeBox.textContent = `This address can’t take a release: ${e.message}`));
+}
+
+function copyButtonPrimary(text) {
+  const b = h('button', { type: 'button', class: 'btn btn-primary btn-wide' }, 'Copy the code');
+  b.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      b.textContent = 'Copied';
+      say('Copied. Paste it in your Names Wallet.');
+    } catch {
+      b.textContent = 'Select the code and copy it';
+    }
+    setTimeout(() => (b.textContent = 'Copy the code'), 1800);
+  });
+  return b;
+}
+
+let sbTimer = null;
+async function sbCheck() {
+  clearTimeout(sbTimer);
+  const r = sbWallet();
+  if (!sb || sb.kind !== 'release' || !sb.rel || !r) return;
+  sb.checking = true;
+  render(S());
+  try {
+    sb.check = await releaseChecks(r, sb.rel, { from: S().account });
+  } catch (e) {
+    sb.check = { ok: false, checks: [], problem: `Sepolia can’t be read through your wallet now (${e.message || e}). Try again.` };
+  }
+  sb.checking = false;
+  if (sb.check.wait) sbTimer = setTimeout(sbCheck, 30000);
+  render(S());
+}
+
+function readRelease(text) {
+  sb = { kind: 'release', text };
+  try {
+    sb.rel = decodeRelease(codeFromInput(text));
+    history.replaceState(null, '', `${location.pathname}${location.search}#${codeFromInput(text)}`);
+  } catch (e) {
+    sb.error = e.message;
+  }
+  render(S());
+  if (sb.rel) sbCheck();
+}
+
+function releaseView(s, host) {
+  const connected = !!s.account;
+  const onSepolia = s.walletChainId === SEPOLIA;
+  const rel = sb.rel;
+  const c = sb.check;
+  const step = !rel ? 0 : !connected || !onSepolia ? 1 : 2;
+  let title = 'Release on Ethereum';
+  if (sb.sent?.ok) title = 'Released';
+  else if (c?.done) title = 'Released already';
+  else if (c?.wait) title = `Releasable at ${fmtTime(c.wait.until)}`;
+  host.append(walletRow(s) || h('span'), h('div', { class: 'card-head' }, h('h1', { id: 'card-h', tabindex: '-1' }, title)), sbSteps(SB_RELEASE_STEPS, sb.sent?.ok || c?.done ? 3 : step));
+  const act = h('div', { class: 'action' });
+  host.append(act);
+  if (!rel) {
+    const box = h('textarea', { id: 'rel-code', class: 'mono', rows: 4, 'aria-label': 'Release code', placeholder: 'logosrel1…', spellcheck: 'false', autocomplete: 'off' });
+    act.append(box, ...primary('Read the code', () => readRelease(box.value)));
+    if (sb.error) act.append(statusLine('bad', sb.error));
+    return;
+  }
+  const dep = c?.dep;
+  const amount = c?.amount != null && dep ? `${formatUnits(c.amount, dep.tokens[rel.token]?.decimals ?? 18)} ${dep.tokens[rel.token]?.unit || 'ETH'}` : null;
+  host.insertBefore(h('p', { class: 'sb-to' }, amount ? `${amount} to ` : 'To ', h('span', { class: 'mono' }, addr(rel.recipient))), act);
+  if (c?.words_text) host.insertBefore(h('div', { class: 'compare' }, h('p', { class: 'compare-words' }, c.words_text), h('p', { class: 'compare-line' }, 'The same four words as your withdraw-to code.')), act);
+  if (sb.sent?.ok) {
+    act.append(statusLine('ok', `Received ${amount || ''} at ${shortHex(addr(rel.recipient))}.`), h('p', {}, ext(explorer('tx', sb.sent.hash), 'See it on Sepolia')));
+    return;
+  }
+  if (!connected) return void act.append(...primary('Connect wallet', () => connectWallet()));
+  if (!onSepolia) return void act.append(...primary('Switch to Sepolia', () => flow.switchNetwork()));
+  if (sb.checking && !c) return void act.append(h('p', { class: 'status' }, 'Checking the release on Sepolia…'));
+  if (!c) return;
+  if (c.done) return void act.append(statusLine('ok', 'This send-back was released already. Nothing to do.'));
+  if (c.problem) return void act.append(statusLine('bad', c.problem), h('button', { type: 'button', class: 'btn btn-quiet', onclick: sbCheck }, 'Check again'));
+  if (c.wait) {
+    act.append(h('p', {}, `The vault waits one hour after Ethereum records a send-back: ${aboutDuration(c.wait.seconds)} to go. This page checks again every 30 s.`));
+    return;
+  }
+  act.append(more('Checks', ...c.checks.map((x) => statusLine('ok', x.text))));
+  act.append(...primary(sb.sending ? 'Waiting for your wallet…' : 'Release', async () => {
+    sb.sending = true;
+    render(S());
+    try {
+      sb.sent = await sendRelease(sbWallet(), rel, dep, S().account);
+      if (sb.sent.ok === false) sb.check = { ...c, ok: false, problem: 'Included, then refused by the vault. Nothing was paid.' };
+      say(sb.sent.ok ? 'Released.' : 'The release did not go through.');
+    } catch (e) {
+      sb.check = { ...c, ok: false, problem: isUserRejection(e) ? 'You declined in your wallet. Nothing was sent.' : `${releaseWhy(e)} Nothing was sent.` };
+    }
+    sb.sending = false;
+    render(S());
+  }, { disabled: sb.sending }));
+}
+
+let sbKey = null;
+function renderSendBack(s) {
+  const host = $('card');
+  const key = keyOf([sb, s.account, s.walletChainId, s.wallet?.id]);
+  if (key === sbKey) return;
+  sbKey = key;
+  rendered.clear();
+  host.replaceChildren();
+  const side = $('side');
+  if (side) {
+    side.replaceChildren();
+    side.hidden = true;
+  }
+  if (sb.kind === 'withdraw') withdrawView(s, host);
+  else releaseView(s, host);
+  document.title = sb.kind === 'withdraw' ? 'Send back to Ethereum · Names Wallet (Sepolia testnet)' : `${sb.check?.wait ? `Releasable at ${fmtTime(sb.check.wait.until)}` : 'Release'} · Names Wallet (Sepolia testnet)`;
+}
+
 // ------------------------------------------------------------------ render
 
 let lastStep = null;
@@ -1371,6 +1573,10 @@ function docTitle(s) {
 
 let draftAsked = null;
 function render(s) {
+  if (sb) {
+    if (sb.kind === 'release' && sb.rel && !sb.check && !sb.checking && s.account && s.walletChainId === SEPOLIA) setTimeout(sbCheck, 0);
+    return renderSendBack(s);
+  }
   if (s.request && !s.createdHere && ui.mode === 'make') ui.mode = 'request';
   // a connected wallet on Sepolia with nothing chosen yet: make the default draft (the demo account where offered)
   if (ui.mode === 'make' && s.account && s.walletChainId === SEPOLIA && !s.request && !s.draft && draftAsked !== s.account) {
@@ -1415,6 +1621,7 @@ window.addEventListener('hashchange', () => {
   // connected wallet does at once (the empty draft): the code was dropped and the page stayed on
   // the make-a-deposit path, asking for an account. Now a code always takes over.
   const f = readFragment(location.hash);
+  if (sb?.kind === 'release' && sb.text && location.hash.slice(1) === codeFromInput(sb.text)) return; // the page's own replaceState
   if (f.kind === 'code' && S().request && encodeRequest(S().request) === f.text) return; // already showing it
   fromHash();
   render(S());

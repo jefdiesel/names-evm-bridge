@@ -19,6 +19,7 @@ Full detail:
 - `CLI-CONTRACT.md` (every call; §8 is the relayed claim);
 - `NAMES-EMBED.md` (claiming from another app: Part A today, Part B one confirmation);
 - `NAMES-RECEIVE.md` (a deposit whose secret the wallet makes);
+- `NAMES-SEND-BACK.md` ("Send back to Ethereum": a public account's burn, the release proof, the release code; §7 is what Names must add);
 - `../DESIGN.md` §1.1 (concurrency, what replies carry, busy, the freeze fix).
 
 The public copy of this repository does not carry `NAMES-EMBED.md`, `NAMES-RECEIVE.md` or
@@ -129,6 +130,8 @@ encodes it twice**: parse up to twice (`lez_bridge_ui/qml/logic.mjs` `unwrap`). 
 | `relayed_claim_check_with(claim, "{\"wallet_hint\":false}")` | The six checks of a claim file (path or text): `{ok, id, deposit, relay, checks[], privacy, …}` or `{ok: false, error: {code, message}}`. Nothing proposed. |
 | `relayed_claim_status(job)` | `{state, phase: approve\|relay\|confirm\|done, note, tx, block, result, error, needs}`. Poll every 2.5 s, one call at a time. It moves the job on (it may hand a signed claim to the relay); it proposes nothing new. |
 | `relayed_claims()` | Every claim job, newest first |
+| `send_back_link()`, `send_back_check(code)`, `send_backs()`, `send_back_status(id)`, `send_back_release_code(id)` | Send back to Ethereum (`NAMES-SEND-BACK.md` §5): the page link, a withdraw-to code's address and words, the list, the stages read from LEZ and Sepolia (60 s poll), the `logosrel1…` code. No secret in any reply. |
+| `send_back_build(id)` | The burn as the relayed call the Names Wallet signs (golden vector `lez_bridge/rust-lib/testdata/public-burn-v1.json`) |
 | `deposits()`, `holdings()`, `accounts()`, `jobs()`, `job(id)`, `exits()`, `admin_status()`, `privacy_report(choices)` | The mini-app's other views (`CLI-CONTRACT.md`). `holdings` and `accounts` ask the wallet for its accounts. |
 
 ### Needs a person (makes a wallet request, or starts something)
@@ -140,6 +143,9 @@ encodes it twice**: parse up to twice (`lez_bridge_ui/qml/logic.mjs` `unwrap`). 
 | `relayed_claim_check(claim)` / `relayed_claim_check_deposit(id, options)` | The checks. `_check_deposit` re-derives the claim key through the wallet (`needs: "secret"` until granted). |
 | `relayed_claim(check_id, options)` | Gates (connect, add an account, declare the programs once), then proposes the claim. The person approves in the Names app. |
 | `relayed_claim_build(check_id)` / `relayed_claim_submit(check_id, tx)` | For a host that signs itself (`NAMES-EMBED.md` Part B). The build's `call.message` holds the claim key. |
+| `send_back_plan(token, denom_index, "Public/<id>", code)` | Derives the exit secret through the wallet (`needs: "secret"` the first time) and stores the exit (its index, never the secret); refused on a vault that can't release |
+| `send_back_burn(id, options)` / `send_back_submit(id, tx)` | Proposes the burn to Names (`needs: "names_update"` until Names has §7) / hands a signed burn to the relay (`bridge_relayBurn`) |
+| `send_back_witness(id)`, `send_back_prove(id)`, `send_back_seal(id, seal)`, `set_release_prover(argv)` | The release proof's inputs (secret in a 0600 file, paths only in the reply); the helper prover as a job; the Groth16 seal (checked with a read-only `verify` on Sepolia); the helper's argv |
 | `relayed_claim_cancel(job)`, `relayed_claim_forget(check_id)` | Cancels a claim waiting for approval; drops a checked claim from memory |
 | `wallet_connect()`, `wallet_request(id)` | Asks for access; follows a request (poll every 2.5 s until `approved`/`done`, then repeat the call that asked) |
 | `claim(id, options)`, `redeem(plan_id, options)`, `release(exit_id, relayer)` | Private claim, burn, release (dry runs in this build unless proving is set up) |

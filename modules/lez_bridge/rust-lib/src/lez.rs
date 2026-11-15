@@ -108,6 +108,80 @@ impl LezRpc for Http {
     }
 }
 
+/// What a read says when the endpoint kept answering "slow down" past the call's budget.
+pub const BUSY_TEXT: &str = "The bridge's endpoint is busy; trying again shortly.";
+
+/// The deployment's endpoint, patient with its rate limits: a read answered HTTP 429 ("slow down",
+/// the RPC filter's per-client buckets or the edge's rule) is asked again after the endpoint's
+/// `Retry-After` (1 to 10 s), until `budget_ms` is spent; then it answers `rate_limited` with
+/// [`BUSY_TEXT`]. A 429 is never "taken", so asking again is safe. The relay's two sends
+/// (`bridge_relayClaim`, `bridge_relayBurn`) are passed through: their callers retry on their own
+/// schedule (the claim job, the send-back's next poll).
+pub struct Patient {
+    pub inner: std::sync::Arc<dyn LezRpc + Send + Sync>,
+    pub budget_ms: u64,
+}
+
+/// The time a call may spend waiting out 429s.
+pub const PATIENCE_MS: u64 = 20_000;
+
+impl Patient {
+    pub fn new(inner: std::sync::Arc<dyn LezRpc + Send + Sync>) -> Patient {
+        Patient { inner, budget_ms: PATIENCE_MS }
+    }
+}
+
+impl LezRpc for Patient {
+    fn describe(&self) -> String {
+        self.inner.describe()
+    }
+
+    fn call(&self, method: &str, params: Value) -> Result<Value, Problem> {
+        let started = crate::wallet::clock::now_ms();
+        loop {
+            match self.inner.call(method, params.clone()) {
+                Err(p) if p.code == "rate_limited" && !matches!(method, "bridge_relayClaim" | "bridge_relayBurn") => {
+                    let wait = p.retry_after.unwrap_or(2).clamp(1, 10) * 1000;
+                    if crate::wallet::clock::now_ms().saturating_sub(started) + wait > self.budget_ms {
+                        return Err(Problem { code: "rate_limited", message: BUSY_TEXT.to_owned(), retry_after: p.retry_after });
+                    }
+                    crate::wallet::clock::sleep_ms(wait);
+                }
+                other => return other,
+            }
+        }
+    }
+}
+
+/// The blocks `from..=to` (`getBlockRange`, at most `MAX_RANGE` a call), searched for `needle`:
+/// the first block holding it, and the last block read. On a failed read: the block read last
+/// before it (so a scan resumes there) and the problem.
+pub const MAX_RANGE: u64 = 100;
+
+pub fn scan_blocks(rpc: &dyn LezRpc, needle: &[u8; 32], from: u64, to: u64) -> (Option<u64>, u64, Option<Problem>) {
+    let mut last = from.saturating_sub(1);
+    let mut a = from;
+    while a <= to {
+        let b = to.min(a + MAX_RANGE - 1);
+        let got = match rpc.call("getBlockRange", json!([a, b])) {
+            Ok(v) => v,
+            Err(p) => return (None, last, Some(p)),
+        };
+        let Some(list) = got.as_array() else {
+            return (None, last, Some(Problem::new("unreachable", "getBlockRange gave no list".to_owned())));
+        };
+        for (k, blk) in list.iter().enumerate() {
+            let raw = state_bytes(blk).unwrap_or_default();
+            if raw.windows(32).any(|w| w == needle) {
+                return (Some(a + k as u64), a + k as u64, None);
+            }
+        }
+        last = b;
+        a = b + 1;
+    }
+    (None, last, None)
+}
+
 /// Bytes of a JSON actor state: an array of numbers (getAccount) or base64 text.
 pub fn state_bytes(v: &Value) -> Option<Vec<u8>> {
     match v {
@@ -206,7 +280,11 @@ pub struct RelayInfo {
 }
 
 pub fn relay_info(rpc: &dyn LezRpc) -> Result<RelayInfo, Problem> {
-    let v = rpc.call("bridge_relayInfo", json!([]))?;
+    parse_relay_info(&rpc.call("bridge_relayInfo", json!([]))?)
+}
+
+/// [`relay_info`] of an answer already read.
+pub fn parse_relay_info(v: &Value) -> Result<RelayInfo, Problem> {
     let payer = v["payer"].as_str().filter(|p| crate::util::lez_account(p).is_ok()).ok_or_else(|| Problem::new("relay_unavailable", "the relay names no payer account".to_owned()))?;
     let max_gas = v["max_gas"].as_u64().filter(|g| *g > 0).ok_or_else(|| Problem::new("relay_unavailable", "the relay gives no gas cap".to_owned()))?;
     let max_fee = v["max_fee"].as_str().and_then(|s| s.parse().ok()).or_else(|| v["max_fee"].as_u64().map(u128::from)).filter(|f| *f > 0)

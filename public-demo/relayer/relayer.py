@@ -7,8 +7,24 @@ alone (DESIGN.md §3.6). The claimer's own signature admits its account; this se
 the fee: it co-signs the claim as the transaction's fee payer, from a DEDICATED payer account
 (never the bridge admin/attestor/freezer; the CLI refuses one that holds a bridge role).
 
-  GET  /relay/info   {"payer", "bridge", "max_gas", "max_fee"}: what the CLI builds against
+  GET  /relay/info   {"payer", "bridge", "max_gas", "max_fee", "burns"}: what the CLI builds against
   POST /relay        {"tx": "<hex of a half-signed PublicTransaction>", "check_only": false}
+  POST /relay/burn   the same for a public BURN to this bridge ("Send back to Ethereum"): the
+                     token program's BurnWithNotice of one registered denomination, notifying this
+                     bridge's config (`relay-cosign --kind burn`: the same strict decode, signer,
+                     nonce, fee-cap and simulation checks as a claim, plus the burn's own shape:
+                     the root program is the bridge's token program, exactly the burner's token
+                     actor, the definition's and the config's, the amount a denomination, burns not
+                     frozen); its own caps (BURN_DAILY_MAX overall, IP_DAILY_BURNS per client, once
+                     per exit commitment: a burn has no nullifier to tell "it applied", so a burn
+                     that was included is never relayed again; one that was dropped may be). What a
+                     griefer can cost: a relayed burn that applies destroys one denomination of the
+                     sender's wrapped tokens; one that reverts is charged at most MAX_FEE; one that
+                     is dropped (never included) costs the payer nothing, and its client slot is
+                     NOT given back (the exit key is sender-chosen, so MAX_DROPS bounds nothing),
+                     so a sender can't loop drops past IP_DAILY_BURNS. The payer's spend in any
+                     24 h stays under (DAILY_MAX + BURN_DAILY_MAX) x MAX_FEE. Records are keyed
+                     "exit:<E>" beside the claims' nullifiers.
                      -> {"ok": true, "tx_hash": ...} | {"ok": true, "checked": true}
                       | {"ok": false, "reason": ..., "retry": bool[, "retry_after": seconds]}
 
@@ -56,7 +72,7 @@ which makes a relayed claim queued behind it free. (With the reviewed nullifier,
 second deposit with the same secret to another account could revert it: review L1, RAN.) This
 list is what we know, not a proof; the bound below holds whatever the cause. So the most a
 deposit can cost is MAX_RELAYS x MAX_FEE (defaults 1 x 2,500,000) and the most in any 24 h is
-DAILY_MAX x MAX_FEE native LEZ (defaults 100 x 2,500,000 = 250,000,000), and with DESK_STATE every
+(DAILY_MAX + BURN_DAILY_MAX) x MAX_FEE native LEZ with burns (claims alone: DAILY_MAX x MAX_FEE) (defaults 100 x 2,500,000 = 250,000,000), and with DESK_STATE every
 one of those deposits paid the desk's bridge fee on Sepolia (`feeBps`: 3% at deploy, 0.3% since
 2026-11-14).
 
@@ -114,6 +130,8 @@ BUSY_RETRY = int(E("BUSY_RETRY", "15"))                        # seconds the CLI
 STUCK_AFTER = int(E("STUCK_AFTER", "180"))                     # not included, no nonce moved: uncertain
 DROP_CONFIRM = int(E("DROP_CONFIRM", "20"))                    # drop evidence must hold this long (> 1 block)
 RECONCILE_EVERY = float(E("RECONCILE_EVERY", "3"))
+BURN_DAILY_MAX = int(E("BURN_DAILY_MAX", "50"))                # relayed burns per rolling 24 h
+IP_DAILY_BURNS = int(E("IP_DAILY_BURNS", "5"))                 # relayed burns per client per 24 h
 RELAY_QUEUE = int(E("RELAY_QUEUE", "2"))                       # requests waiting behind the running one
 WINDOW = 86400
 MAX_BODY = 20000
@@ -170,6 +188,7 @@ def load_state():
         s = {}
     s.setdefault("nullifiers", {})
     s.setdefault("window", {"relayed": [], "ips": {}})
+    s["window"].setdefault("burned", [])
     s.setdefault("ipkeys", {})
     s.setdefault("inflight", None)
     s.pop("days", None)        # the old per-UTC-day counters (raw addresses): dropped
@@ -236,11 +255,15 @@ def prune(state, now):
     cut = now - WINDOW
     w = state["window"]
     w["relayed"] = [t for t in w["relayed"] if t > cut]
+    w["burned"] = [t for t in w.get("burned", []) if t > cut]
     for tag in list(w["ips"]):
         e = w["ips"][tag]
         e["c"] = [t for t in e.get("c", []) if t > cut]
         e["r"] = [t for t in e.get("r", []) if t > cut]
-        if not e["c"] and not e["r"]:
+        e["b"] = [t for t in e.get("b", []) if t > cut]
+        if not e["b"]:
+            e.pop("b")
+        if not e["c"] and not e["r"] and not e.get("b"):
             del w["ips"][tag]
     keep = {_day(now), _day(now - WINDOW)}
     for d in list(state["ipkeys"]):
@@ -261,16 +284,19 @@ def add_event(state, tag, kind, t):
     state["window"]["ips"].setdefault(tag, {"c": [], "r": []}).setdefault(kind, []).append(t)
 
 
-def give_back(state, g):
-    """Undo the relayed-claim counters of a submission that never went out or was never included."""
+def give_back(state, g, keep_client=False):
+    """Undo the counters of a submission that never went out or was never included. A dropped
+    burn gives back only the global slot (`keep_client`): its exit key is the sender's choice, so
+    only the client's own daily count bounds how often one sender can make burns that are dropped."""
     t = g.get("counted_at")
     if t is None:
         return
-    if t in state["window"]["relayed"]:
-        state["window"]["relayed"].remove(t)
+    win, kind = ("burned", "b") if g.get("kind") == "burn" else ("relayed", "r")
+    if t in state["window"].get(win, []):
+        state["window"][win].remove(t)
     e = state["window"]["ips"].get(g.get("ip_tag") or "", {})
-    if t in e.get("r", []):
-        e["r"].remove(t)
+    if not keep_client and t in e.get(kind, []):
+        e[kind].remove(t)
     g.pop("counted_at", None)
 
 
@@ -372,7 +398,7 @@ def reconcile(state, now, chain, force=False):
             if now - g["drop_seen"] < DROP_CONFIRM:
                 changed = True
                 continue
-            give_back(state, g)
+            give_back(state, g, keep_client=g.get("kind") == "burn")
             drops = g.get("drops", 0) + 1
             earlier = g.get("txs", [])
             dropped_tx = g.get("tx_hash")
@@ -414,7 +440,7 @@ def _stale_inflight(state):
 
 # ---------------------------------------------------------------- the CLI
 
-def run_cli(tx_hex, submit):
+def run_cli(tx_hex, submit, kind="claim"):
     """`lez-bridge relay-cosign`; returns its RELAY dict, or a retryable error dict."""
     d = os.path.dirname(STATE)
     fd, path = tempfile.mkstemp(prefix="tx-", dir=d)   # mode 600
@@ -422,7 +448,8 @@ def run_cli(tx_hex, submit):
         with os.fdopen(fd, "w") as f:
             f.write(tx_hex)
         args = [CLI, "relay-cosign", "--tx-file", path, "--bridge", BRIDGE, "--token-program", TOKEN_PROGRAM,
-                "--payer", PAYER, "--max-gas", str(MAX_GAS), "--max-fee", str(MAX_FEE)] + (["--submit"] if submit else [])
+                "--payer", PAYER, "--max-gas", str(MAX_GAS), "--max-fee", str(MAX_FEE)] + (["--submit"] if submit else []) \
+            + (["--kind", "burn"] if kind == "burn" else [])
         env = dict(os.environ, LEE_WALLET_HOME_DIR=WALLET, LEE_WALLET_PASSWORD="", LEZ_BRIDGE_SEQUENCER=SEQUENCER)
         r = subprocess.run(args, env=env, capture_output=True, text=True, timeout=CLI_TIMEOUT)
         for line in r.stdout.splitlines():
@@ -445,8 +472,103 @@ def run_cli(tx_hex, submit):
 def busy():
     # "stale nonce" in the text: the Names Wallet's module (modules/lez_bridge/rust-lib/src/relayed.rs,
     # relay_refused) re-signs the same call on it once the payer's nonce moved; the CLI rebuilds.
-    return {"ok": False, "reason": "stale nonce: busy, the relay's payer has another claim in flight; wait for it to land, then rebuild the claim and send it again", "retry": True,
+    return {"ok": False, "reason": "stale nonce: busy, the relay's payer has another transaction in flight; wait for it to land, then build it again and send it", "retry": True,
             "retry_after": BUSY_RETRY}
+
+
+def handle_burn(body, ip, state, now=None, cli=run_cli, chain=None):
+    """Decide one POST /relay/burn (a public burn to this bridge). The same order as a claim:
+    shape, reconcile, busy, caps, the CLI's check, once per exit, the payer's floor, the intent on
+    disk, the CLI's submit."""
+    now = now or time.time()
+    chain = chain or CHAIN
+    if len(body) > MAX_BODY:
+        return {"ok": False, "reason": "request too large", "retry": False}
+    try:
+        req = json.loads(body)
+        tx = req["tx"]
+        check_only = bool(req.get("check_only", False))
+    except (ValueError, KeyError, TypeError):
+        return {"ok": False, "reason": "expected JSON {\"tx\": hex}", "retry": False}
+    if not isinstance(tx, str) or not re.fullmatch(r"(0x)?[0-9a-fA-F]{2,16384}", tx):
+        return {"ok": False, "reason": "tx is not hex (or too long)", "retry": False}
+    prune(state, now)
+    reconcile(state, now, chain)
+    if not check_only and state.get("inflight"):
+        return busy()
+    tg = tags(state, client_key(ip), now)
+    if count(state, tg, "c", now) >= IP_DAILY_CHECKS:
+        log("refused", ip=tg[0], kind="burn", reason="checks per client per 24 h")
+        return {"ok": False, "reason": "too many requests from this address in 24 h", "retry": False}
+    add_event(state, tg[0], "c", now)
+    save_state(state)
+    if not check_only:
+        if len(state["window"].setdefault("burned", [])) >= BURN_DAILY_MAX:
+            log("refused", ip=tg[0], kind="burn", reason="24 h burn cap")
+            return {"ok": False, "reason": "the relay's 24 h cap for burns is reached; try later or pay the fee yourself", "retry": False}
+        if count(state, tg, "b", now) >= IP_DAILY_BURNS:
+            log("refused", ip=tg[0], kind="burn", reason="burns per client per 24 h")
+            return {"ok": False, "reason": "too many relayed burns from this address in 24 h", "retry": False}
+    checked = cli(tx, False, kind="burn")
+    if not checked.get("ok"):
+        log("refused", ip=tg[0], kind="burn", stage="check", reason=scrub(checked.get("reason")), detail=scrub(checked.get("detail")))
+        return {"ok": False, "reason": public_reason(checked.get("reason")), "retry": bool(checked.get("retry"))}
+    if checked.get("kind") != "burn":
+        log("refused", ip=tg[0], kind="burn", reason="the CLI's answer is not a burn's")
+        return {"ok": False, "reason": GENERIC_ERROR, "retry": False}
+    key = "exit:" + checked["exit_commitment"].lower()
+    g = state["nullifiers"].get(key)
+    if g and g.get("drops", 0) >= MAX_DROPS and g["status"] == "dropped":
+        return {"ok": False, "reason": "this burn's relayed transactions were dropped %d times; pay its fee yourself" % g.get("drops"), "retry": False}
+    if g:
+        st = g["status"]
+        if st == "submitted":
+            log("refused", ip=tg[0], kind="burn", exit=key, reason="already relayed", tx=g.get("tx_hash"))
+            return {"ok": False, "reason": "this burn was already relayed (tx %s); if it did not apply, nothing was burned: start a new send-back (a new exit)" % g.get("tx_hash"), "retry": False}
+        if st == "sent":
+            return busy()
+        if st != "dropped":
+            return {"ok": False, "reason": "an earlier relay of this burn is %s; the operator checks it" % st, "retry": False}
+    if int(checked["payer_balance"]) - int(checked["max_fee"]) < MIN_PAYER_BALANCE:
+        log("STOP", reason="payer balance %s would fall under the floor %d" % (checked["payer_balance"], MIN_PAYER_BALANCE))
+        return {"ok": False, "reason": "the relay is out of funds; try later or pay the fee yourself", "retry": False}
+    if check_only or DRY:
+        log("checked", ip=tg[0], kind="burn", exit=key, burner=checked["burner"], gas=checked["gas_limit"], max_fee=checked["max_fee"], dry_run=DRY)
+        return {"ok": True, "checked": True}
+    try:
+        pn = int(checked["payer_nonce"])
+        cn = int(checked["burner_nonce"])
+    except (KeyError, ValueError):
+        return {"ok": False, "reason": GENERIC_ERROR, "retry": True}
+    prev = json.loads(json.dumps(g)) if g else None
+    state["nullifiers"][key] = {"kind": "burn", "status": "pending", "at": now, "counted_at": now, "ip_tag": tg[0], "claimer": checked["burner"],
+                                "exit": checked["exit_commitment"], "denom": checked.get("denom"), "max_fee": checked["max_fee"], "relays": 1,
+                                "txs": [], "drops": (g or {}).get("drops", 0), "payer_nonce": pn, "claimer_nonce": cn}
+    state["window"].setdefault("burned", []).append(now)
+    add_event(state, tg[0], "b", now)
+    state["inflight"] = key
+    save_state(state)
+    sent = cli(tx, True, kind="burn")
+    g = state["nullifiers"][key]
+    if sent.get("ok") and sent.get("tx_hash"):
+        g.update(status="sent", tx_hash=sent["tx_hash"], at=now)
+        save_state(state)
+        log("SENT", ip=tg[0], kind="burn", exit=key, burner=checked["burner"], tx=sent["tx_hash"])
+        return {"ok": True, "tx_hash": sent["tx_hash"]}
+    if sent.get("cli_failed") or sent.get("uncertain"):
+        g.update(status="uncertain", reason=scrub(sent.get("reason")), tx_hash=sent.get("tx_hash"), at=now)
+        save_state(state)
+        log("UNCERTAIN", kind="burn", exit=key, tx=sent.get("tx_hash"), reason=scrub(sent.get("reason")))
+        return {"ok": False, "reason": "the relay could not confirm the submission; the operator checks it", "retry": False}
+    give_back(state, g)
+    if prev:
+        state["nullifiers"][key] = prev
+    else:
+        del state["nullifiers"][key]
+    state["inflight"] = None
+    save_state(state)
+    log("refused", ip=tg[0], kind="burn", stage="submit", exit=key, reason=scrub(sent.get("reason")))
+    return {"ok": False, "reason": public_reason(sent.get("reason")), "retry": bool(sent.get("retry"))}
 
 
 def handle(body, ip, state, now=None, cli=run_cli, desk=desk_commitments, chain=None):
@@ -690,11 +812,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.rstrip("/") in ("/relay/info", "/info"):
-            return self.reply(200, {"payer": PAYER, "bridge": BRIDGE, "max_gas": MAX_GAS, "max_fee": str(MAX_FEE)})
+            return self.reply(200, {"payer": PAYER, "bridge": BRIDGE, "max_gas": MAX_GAS, "max_fee": str(MAX_FEE), "burns": True})
         self.reply(404, {"ok": False, "reason": "not found"})
 
     def do_POST(self):
-        if self.path.rstrip("/") not in ("/relay", ""):
+        path = self.path.rstrip("/")
+        if path not in ("/relay", "", "/relay/burn"):
             return self.reply(404, {"ok": False, "reason": "not found"})
         try:
             n = int(self.headers.get("Content-Length") or 0)
@@ -709,7 +832,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with LOCK:
                 state = load_state()
                 try:
-                    out = handle(body, self.client_ip(), state)
+                    out = (handle_burn if path == "/relay/burn" else handle)(body, self.client_ip(), state)
                 except Exception as e:  # never a stack trace to the client
                     log("error", error=scrub(e))
                     out = {"ok": False, "reason": GENERIC_ERROR, "retry": True}
@@ -770,7 +893,7 @@ def main():
     prune(s, time.time())
     save_state(s)
     log("start", listen=LISTEN, payer=PAYER, bridge=BRIDGE, token_program=TOKEN_PROGRAM, max_gas=MAX_GAS, max_fee=MAX_FEE,
-        daily_max=DAILY_MAX, ip_daily_max=IP_DAILY_MAX, floor=MIN_PAYER_BALANCE, desk_only=bool(DESK_STATE), dry_run=DRY,
+        daily_max=DAILY_MAX, ip_daily_max=IP_DAILY_MAX, burn_daily_max=BURN_DAILY_MAX, ip_daily_burns=IP_DAILY_BURNS, floor=MIN_PAYER_BALANCE, desk_only=bool(DESK_STATE), dry_run=DRY,
         proxy_auth=bool(AUTH), queue=RELAY_QUEUE)
     Server((host, int(port)), Handler).serve_forever()
 
