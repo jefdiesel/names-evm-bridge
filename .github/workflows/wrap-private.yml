@@ -1,0 +1,192 @@
+# The Groth16 wrap of a receipt whose journal must stay private (it names a person's Ethereum
+# address), on a public repository's runner. The input is an ENCRYPTED bundle committed as
+# public-demo/prove/receipts-enc/<id>.bin (made by public-demo/prove/wrap-private.sh: tar of
+# receipt.bin + journal.hex, `openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -md sha256` under a
+# random 32-byte key), decrypted here with the repository secret WRAP_KEY into the runner's temp
+# directory. On demand only (workflow_dispatch):
+#
+#   gh workflow run wrap-private.yml --repo <owner/repo> -f bundle=<id> -f journal_digest=0x… [-f image_id=0x…]
+#
+# What this job prints, uploads or keeps: only the image id, the journal's sha256 digest (the value
+# the vault's `release` passes to the verifier anyway), the seal, the wrap time and the read-only
+# on-chain result. Never the journal, its fields, the receipt or the plaintext bundle: no step
+# lists, cats or uploads them; outbound_wrap prints only image ids, digests and the seal; the
+# plaintext is deleted after the wrap. The artifact holds seal.bin, seal.hex and summary.txt only.
+# Same build, swap and prover image as wrap-outbound.yml (see its header for memory and runners).
+name: wrap-private
+
+on:
+  workflow_dispatch:
+    inputs:
+      bundle:
+        description: id of public-demo/prove/receipts-enc/<id>.bin (16 hex characters)
+        required: true
+      journal_digest:
+        description: sha256 of the journal (0x + 64 hex), as wrap-private.sh printed it
+        required: true
+      image_id:
+        description: the image the receipt proves (default the release image)
+        required: true
+        default: "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4"
+      swap_gb:
+        description: swap to add on /mnt, GB (0 = none)
+        required: true
+        default: "24"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wrap-private-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: never
+  VERIFIER: "0x8c915b5071206C6E328BC18529586c513408aB3b"
+  SEPOLIA_RPC: https://sepolia.gateway.tenderly.co
+  IMAGE: risczero/risc0-groth16-prover:v2026-10-20.1
+
+jobs:
+  wrap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Inputs (format only)
+        env:
+          BUNDLE: ${{ inputs.bundle }}
+          DIGEST: ${{ inputs.journal_digest }}
+          IMAGE_ID: ${{ inputs.image_id }}
+        run: |
+          set +x
+          [[ "$BUNDLE" =~ ^[0-9a-f]{16}$ ]] || { echo "bundle must be 16 lowercase hex characters"; exit 2; }
+          [[ "$DIGEST" =~ ^0x[0-9a-f]{64}$ ]] || { echo "journal_digest must be 0x + 64 lowercase hex"; exit 2; }
+          [[ "$IMAGE_ID" =~ ^0x[0-9a-f]{64}$ ]] || { echo "image_id must be 0x + 64 lowercase hex"; exit 2; }
+          test -f "public-demo/prove/receipts-enc/$BUNDLE.bin" || { echo "no bundle $BUNDLE"; exit 2; }
+          echo "BUNDLE_FILE=$PWD/public-demo/prove/receipts-enc/$BUNDLE.bin" >> "$GITHUB_ENV"
+          echo "DIGEST=$DIGEST" >> "$GITHUB_ENV"
+          echo "IMAGE_ID=$IMAGE_ID" >> "$GITHUB_ENV"
+          echo "IN=$RUNNER_TEMP/in" >> "$GITHUB_ENV"
+          echo "OUT=$RUNNER_TEMP/wrap-out" >> "$GITHUB_ENV"
+          echo "bundle $BUNDLE ($(wc -c < "public-demo/prove/receipts-enc/$BUNDLE.bin") bytes), image $IMAGE_ID, journal digest $DIGEST"
+          echo "CPUs $(nproc), memory $(awk '/MemTotal/ {print int($2 / 1048576)}' /proc/meminfo) GB"
+
+      - name: Free disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h / | tail -1
+
+      - name: Swap on /mnt
+        env:
+          SWAP_GB: ${{ inputs.swap_gb }}
+        run: |
+          case "$SWAP_GB" in ''|*[!0-9]*) echo "swap_gb must be a number"; exit 2 ;; esac
+          if [ "$SWAP_GB" -gt 0 ]; then
+            free_gb=$(df -P -BG /mnt | awk 'NR==2 {gsub("G","",$4); print $4}')
+            [ "$SWAP_GB" -le $((free_gb - 4)) ] || SWAP_GB=$((free_gb - 4))
+            sudo fallocate -l "${SWAP_GB}G" /mnt/wrap.swap && sudo chmod 600 /mnt/wrap.swap
+            sudo mkswap /mnt/wrap.swap >/dev/null && sudo swapon /mnt/wrap.swap
+          fi
+          swapon --show; free -g
+
+      - name: System packages
+        run: sudo apt-get update -q && sudo apt-get install -y -q build-essential clang pkg-config libssl-dev time
+
+      - name: Foundry (pinned)
+        uses: foundry-rs/foundry-toolchain@82dee4ba654bd2146511f85f0d013af94670c4de # v1.4.0
+        with:
+          version: v1.5.1
+
+      - name: Restore the cargo cache
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            lez-bridge/outbound/wrap/target
+          key: wrap-outbound-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lez-bridge/outbound/wrap/Cargo.lock', 'lez-bridge/rust-toolchain.toml') }}
+
+      - name: Rust toolchain from lez-bridge/rust-toolchain.toml
+        working-directory: lez-bridge
+        run: rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
+
+      - name: Build and test outbound_wrap
+        working-directory: lez-bridge/outbound/wrap
+        run: |
+          cargo build --release --locked -j "$(nproc)"
+          cargo test --release --locked -j "$(nproc)"
+
+      - name: Pull the prover image
+        run: |
+          /usr/bin/time -f "pull %e s" docker pull "$IMAGE"
+
+      # The only step that sees the plaintext. Prints nothing derived from it but "digest matches".
+      - name: Decrypt the bundle (WRAP_KEY), check its journal digest
+        env:
+          WRAP_KEY: ${{ secrets.WRAP_KEY }}
+        run: |
+          set +x
+          [ -n "$WRAP_KEY" ] || { echo "the repository secret WRAP_KEY is not set"; exit 2; }
+          umask 077; mkdir -p "$IN"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -md sha256 -pass env:WRAP_KEY -in "$BUNDLE_FILE" | tar -x -C "$IN" receipt.bin journal.hex \
+            || { echo "the bundle did not decrypt (wrong WRAP_KEY or a damaged file)"; exit 1; }
+          got=0x$(python3 -c 'import sys,hashlib; print(hashlib.sha256(bytes.fromhex(open(sys.argv[1]).read().strip().removeprefix("0x"))).hexdigest())' "$IN/journal.hex")
+          [ "$got" = "$DIGEST" ] || { echo "the bundle's journal digest is not the journal_digest input"; exit 1; }
+          echo "bundle decrypted; journal digest matches $DIGEST"
+
+      - name: Wrap (Groth16), verify natively
+        run: |
+          set +x
+          OUTBOUND_WRAP=$PWD/lez-bridge/outbound/wrap/target/release/outbound_wrap MIN_MEM_GB=4 MIN_DISK_GB=6 WRAP_LOCK=$RUNNER_TEMP/wrap.lock \
+            public-demo/prove/wrap-outbound.sh --receipt "$IN/receipt.bin" --image-id "$IMAGE_ID" --out "$OUT" > "$RUNNER_TEMP/wrap-console.log" 2>&1 \
+            && rc=0 || rc=$?
+          # print only lines that carry no journal content (outbound_wrap never prints the journal;
+          # this filter keeps it so if that ever changes)
+          grep -a -E "^(## |WRAPPED:|VERIFIED:|SEAL=|JOURNAL_DIGEST=|STOP:|CPU:|memory available|image |input: |WRAPPING|prover container|outbound_wrap \(host process\))" "$RUNNER_TEMP/wrap-console.log" || true
+          [ $rc = 0 ] || { echo "the wrap failed (exit $rc)"; exit 1; }
+          got=0x$(python3 -c 'import sys,hashlib; print(hashlib.sha256(bytes.fromhex(open(sys.argv[1]).read().strip().removeprefix("0x"))).hexdigest())' "$OUT/journal.hex")
+          [ "$got" = "$DIGEST" ] || { echo "the wrapped journal's digest is not the input's"; exit 1; }
+          python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["wrapSeconds"])' "$OUT/wrap.json" > "$RUNNER_TEMP/wrap-seconds"
+          # the plaintext goes now: nothing after this step can see the journal or the receipt
+          rm -rf "$IN" "$OUT/journal.hex" "$OUT/groth16.bin" "$RUNNER_TEMP/wrap-console.log" "$OUT/out-wrap.log" "$OUT/summary.txt" "$OUT/time.log"
+          echo "wrapped in $(cat "$RUNNER_TEMP/wrap-seconds") s; journal digest $DIGEST; plaintext removed"
+
+      - name: On-chain check (read only) on Sepolia's RiscZeroGroth16Verifier 3.1.0
+        run: |
+          set +x
+          SEAL=$(cat "$OUT/seal.hex")
+          if cast call "$VERIFIER" "verify(bytes,bytes32,bytes32)" "$SEAL" "$IMAGE_ID" "$DIGEST" --rpc-url "$SEPOLIA_RPC" > /dev/null 2>&1; then
+            RESULT=ACCEPTED
+          else
+            RESULT=REFUSED
+          fi
+          if cast call "$VERIFIER" "verify(bytes,bytes32,bytes32)" "$SEAL" "$IMAGE_ID" 0x$(echo other | sha256sum | cut -d' ' -f1) --rpc-url "$SEPOLIA_RPC" >/dev/null 2>&1; then
+            CONTROL="NOT refused (the check proves nothing)"
+          else
+            CONTROL="refused, as it must be"
+          fi
+          mkdir -p "$RUNNER_TEMP/artifact"
+          cp "$OUT/seal.bin" "$OUT/seal.hex" "$RUNNER_TEMP/artifact/"
+          {
+            echo "ON-CHAIN: $RESULT by RiscZeroGroth16Verifier 3.1.0 $VERIFIER on Sepolia (read-only eth_call)"
+            echo "negative control (changed journal digest): $CONTROL"
+            echo "image $IMAGE_ID"
+            echo "journal digest $DIGEST"
+            echo "wrap $(cat "$RUNNER_TEMP/wrap-seconds") s; seal $(wc -c < "$OUT/seal.bin") bytes"
+          } | tee "$RUNNER_TEMP/artifact/summary.txt" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/artifact/summary.txt"
+          [ "$RESULT" = ACCEPTED ] && [ "$CONTROL" = "refused, as it must be" ]
+
+      - name: Upload the seal and the summary (nothing else)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wrap-private-${{ inputs.bundle }}
+          path: |
+            ${{ runner.temp }}/artifact/seal.bin
+            ${{ runner.temp }}/artifact/seal.hex
+            ${{ runner.temp }}/artifact/summary.txt
+          if-no-files-found: warn
