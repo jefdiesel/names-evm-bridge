@@ -86,9 +86,9 @@ SAMPLER=$!
 say "WRAP"; status "wrapping since $(date +%H:%M); log $OUT/out-wrap.log"
 /usr/bin/time -v -o "$OUT/time.log" "$WRAP" wrap --receipt "$RECEIPT" --image-id "$IMAGE_ID" --out "$OUT" 2>&1 | tee "$OUT/out-wrap.log"
 grep -a -q "^WRAPPED:" "$OUT/out-wrap.log" || stop 2 "the wrap did not finish (see $OUT/out-wrap.log, $OUT/mem.log)"
-"$WRAP" check --receipt "$OUT/groth16.bin" --image-id "$IMAGE_ID" | tee -a "$OUT/out-wrap.log" | grep -a -q "^VERIFIED: groth16" || stop 6 "the Groth16 receipt did not verify natively"
+"$WRAP" check --receipt "$OUT/groth16.bin" --image-id "$IMAGE_ID" | tee -a "$OUT/out-wrap.log" | grep -a "^VERIFIED: groth16" >/dev/null || stop 6 "the Groth16 receipt did not verify natively"
 peak=$(awk '{for (i=1;i<=NF;i++) if ($i ~ /=/ && $i ~ /iB/) {split($i,a,"="); split(a[2],b,"/"); v=b[1]; u=v; gsub(/[0-9.]/,"",u); gsub(/[A-Za-z]/,"",v); if (u=="GiB") v*=1024; if (u=="KiB") v/=1024; if (v>m) m=v}} END {printf "%d", m}' "$OUT/mem.log")
-min_avail=$(sed -n 's/.*avail=\([0-9]*\)MB.*/\1/p' "$OUT/mem.log" | sort -n | head -1)
+min_avail=$(sed -n 's/.*avail=\([0-9]*\)MB.*/\1/p' "$OUT/mem.log" | sort -n | sed -n 1p)
 {
   echo "=== GROTH16 WRAP (send this) ==="
   grep -a -E "^WRAPPED:|^JOURNAL_DIGEST=" "$OUT/out-wrap.log"

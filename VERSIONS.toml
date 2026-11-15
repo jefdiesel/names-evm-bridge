@@ -148,7 +148,7 @@ reason = "v3 as deployed: initialG2State zero, so it accepts no update and can n
 check = "control-root"
 deployment = "v3"
 role = "lez_host"
-reason = "lez-bridge.v3 (sha256 40296ea6…, built at c9ec880 with recursion 4.1.0) makes no receipt: it serves v3's public operations only (relay co-sign, root attester, public claims). A PRIVATE claim on v3 needs a CLI on LEZ rc3's recursion 4.0.4: one built from lez-bridge/Cargo.lock since branch lez-host-lock (cli/tests/lez_receipts.rs), never lez-bridge.v3."
+reason = "lez-bridge.v3 (sha256 40296ea6…, built at c9ec880 with recursion 4.1.0) makes no receipt: it serves v3's public operations only (relay co-sign, root attester, public claims). A PRIVATE claim on v3 needs a CLI on LEZ rc3's recursion 4.0.4: one built from lez-bridge/Cargo.lock since branch lez-host-lock (cli/tests/lez_receipts.rs; the build host's build of 2026-11-15 is sha256 c0e5df01…0c90), never lez-bridge.v3."
 
 [[accepted]]
 check = "script-known-bad"
@@ -298,7 +298,7 @@ risc0_groth16 = { v = "3.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
 risc0_build = { v = "3.0.5", src = "LEZ v0.4.0-rc3 Cargo.lock" }
 
 [deployments.next.roles.lez_host]
-risc0_zkvm = { v = "3.0.5", src = "= lez_chain; lez-bridge/Cargo.toml =3.0.5" }
+risc0_zkvm = { v = "3.0.5", src = "= lez_chain; lez-bridge/cli/Cargo.toml =3.0.5" }
 risc0_circuit_recursion = { v = "4.0.4", src = "= lez_chain (LEZ refuses receipts from another control root); lez-bridge/cli/Cargo.toml =4.0.4; test lez-bridge/cli/tests/lez_receipts.rs" }
 risc0_groth16 = { v = "3.0.4", src = "= lez_chain; lez-bridge/cli/Cargo.toml =3.0.4" }
 

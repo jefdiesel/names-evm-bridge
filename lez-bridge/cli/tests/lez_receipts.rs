@@ -61,6 +61,7 @@ fn a_privacy_receipt_the_rc3_sequencer_accepted_verifies_here() {
         .unwrap_or_else(|e| panic!("refused by this build's verifier (control id {}): {e}", hex(succinct.control_id.as_bytes())));
     // Control: one seal word changed is refused.
     let mut bad = succinct.clone();
-    bad.seal[bad.seal.len() / 2] ^= 1;
+    let mid = bad.seal.len() / 2;
+    bad.seal[mid] ^= 1;
     assert!(InnerReceipt::Succinct(bad).verify_integrity_with_context(&ctx).is_err());
 }

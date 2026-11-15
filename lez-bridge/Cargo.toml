@@ -30,10 +30,11 @@ bridge_core = { path = "bridge" }
 eth_attest_core = { path = "attest/core" }
 eth_attest = { path = "attest/program" }
 lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
-# Exactly LEZ v0.4.0-rc3's risc0 (its Cargo.lock at bafd07be): the CLI makes the privacy receipts
-# the LEZ sequencer verifies, and a receipt from another recursion circuit (4.1.0: other control
-# ids) is refused. The circuit crates are pinned in cli/Cargo.toml; VERSIONS.toml role lez_host.
-risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+# Caret, not "=": bridge_core and bridge_token_core are also path dependencies of the release and
+# outbound workspaces, whose provers are on 3.1.0 (an "=" here made their resolution impossible,
+# CI 2026-11-15). This workspace's lock resolves 3.0.5 because the CLI pins it exactly
+# (cli/Cargo.toml, LEZ rc3's risc0; VERSIONS.toml role lez_host).
+risc0-zkvm = { version = "3.0.5", default-features = false, features = ["std"] }
 borsh = "1.5.7"
 
 # Same keccak patch LEZ applies, so the guests match what the zone builds.

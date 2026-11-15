@@ -44,7 +44,7 @@ libc = "0.2"
 # sequencer binary embeds the same). risc0-circuit-recursion 4.1.0 (which the tracked lock had
 # from 2026-11-14 to 2026-11-15) has other control ids: LEZ rc3 refuses its succinct receipts.
 # Test: tests/lez_receipts.rs. Change only together with LEZ (VERSIONS.toml, role lez_host).
-risc0-zkvm.workspace = true
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
 risc0-binfmt = "=3.0.4"
 risc0-circuit-recursion = { version = "=4.0.4", default-features = false }
 risc0-circuit-rv32im = { version = "=4.0.4", default-features = false }
