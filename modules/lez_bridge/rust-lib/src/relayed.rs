@@ -341,7 +341,9 @@ pub fn claim_call(bridge: &[u8; 32], token_program: &[u8; 32], definition: &[u8;
 /// A claim that passed the check: what proposing it needs (the key inside `file`).
 pub struct Checked {
     pub file: ClaimFile,
+    /// The deployment the claim was checked on (its own, not necessarily the current one) and its bridge.
     pub deployment: String,
+    pub bridge: String,
     pub call: Value,
     pub summary: String,
     pub symbol: String,
@@ -412,10 +414,15 @@ fn fee_state(rpc: &dyn LezRpc) -> Result<(u128, u128), Problem> {
 
 impl Bridge {
     pub(crate) fn lez_rpc(&self) -> Result<Arc<dyn LezRpc + Send + Sync>, Refusal> {
+        let d = self.deployment().clone();
+        self.lez_rpc_for(&d)
+    }
+
+    /// [`Self::lez_rpc`] of deployment `d` (a deposit or claim read on the deployment it is for).
+    pub(crate) fn lez_rpc_for(&self, d: &Deployment) -> Result<Arc<dyn LezRpc + Send + Sync>, Refusal> {
         if let Some(r) = &self.relayed.rpc_override {
             return Ok(r.clone());
         }
-        let d = self.deployment();
         if d.lez_rpc.is_empty() || d.relay != "rpc" {
             return refuse("no_relay", format!("{} has no claim relay: a public claim from the Names Wallet needs one. Choose the bridge test network deployment in Settings.", d.label));
         }
@@ -482,7 +489,8 @@ impl Bridge {
         if row["account_kind"] != "public" {
             return refuse("private_account", "This deposit is for a private account: it is claimed privately, with a proof your wallet makes (Deposits and claims).");
         }
-        let d = self.deployment().clone();
+        // The deployment the deposit was made on, never the current one by default.
+        let d = self.deposit_deployment(&row).map_err(|e| Refusal { code: "unknown_deployment", message: e })?;
         let bad = |what: &str| Refusal { code: "bad_config", message: format!("this deposit's stored {what} can't be read") };
         let token = eth_address(row["eth_token"].as_str().unwrap_or_default()).map_err(|_| bad("token"))?;
         let t = d.tokens.iter().find(|t| t.eth_token == token).ok_or(Refusal { code: "token_not_registered", message: "This deposit's token is not one this bridge lists.".into() })?.clone();
@@ -525,12 +533,30 @@ impl Bridge {
         }
     }
 
+    /// The deployment a claim file is for: the current one, else the built-in one whose chain and
+    /// vault the file names (a v3 file after v4 became the default). Unknown: the current one, whose
+    /// checks then say which vault the file is for.
+    fn claim_file_deployment(&self, text: &str) -> Deployment {
+        let cur = self.deployment().clone();
+        let Ok(f) = serde_json::from_str::<Value>(text) else { return cur };
+        let Ok(vault) = eth_address(f["vault"].as_str().unwrap_or_default()) else { return cur };
+        let chain = f["chainId"].as_str().and_then(|s| s.parse::<u64>().ok()).or_else(|| f["chainId"].as_u64());
+        if cur.vault == vault {
+            return cur;
+        }
+        crate::config::builtin_names()
+            .into_iter()
+            .filter_map(|n| crate::config::builtin(&n))
+            .find(|d| d.vault == vault && chain.is_none_or(|c| c == d.chain_id))
+            .unwrap_or(cur)
+    }
+
     fn relayed_check_inner(&mut self, source: &str, wallet_hint: bool) -> Result<Value, Refusal> {
-        let d = self.deployment().clone();
         let text = read_source(source)?;
+        let d = self.claim_file_deployment(&text);
         let file = parse_claim_file(&text, &d)?;
         drop(text);
-        let rpc = self.lez_rpc()?;
+        let rpc = self.lez_rpc_for(&d)?;
         let bridge = util::lez_account(&d.bridge_program).or_else(|_| refuse("bad_config", "the deployment's bridge program is not an account id"))?;
         let mut checks: Vec<Value> = vec![json!({ "key": "file", "ok": true, "text": "Claim file checked: its commitment follows from its claim key, account, token and amount." })];
 
@@ -576,7 +602,7 @@ impl Bridge {
         checks.push(json!({ "key": "bridge", "ok": true, "text": format!("Bridge read on {}: {sym} claims are open.", d.network) }));
 
         // The deposit on Ethereum, finalized, and its leaf.
-        let (events, finalized, _latest) = self.events().map_err(|e| Refusal { code: "eth_unreachable", message: format!("Sepolia can't be read now: {e}") })?;
+        let (events, finalized, _latest) = self.events_for(&d).map_err(|e| Refusal { code: "eth_unreachable", message: format!("Sepolia can't be read now: {e}") })?;
         let Some(ev) = events.iter().find(|e| e.commitment == file.commitment).cloned() else {
             return refuse("not_in_vault", "The vault has no deposit with this claim file's commitment. If you just deposited, wait for the transaction to be mined; otherwise this file is for another deposit.");
         };
@@ -631,7 +657,19 @@ impl Bridge {
 
         // The relay and the fee it pays.
         let info = lez::relay_info(rpc.as_ref())?;
-        if info.bridge.as_deref().is_some_and(|b| b != d.bridge_program) {
+        if let Some(other) = info.bridge.as_deref().filter(|b| *b != d.bridge_program) {
+            let cur = self.deployment();
+            if d.name != cur.name && other == cur.bridge_program {
+                // A deposit on an older deployment (v3) after the relay moved to the current one (v4).
+                let old = crate::config::plain_label(&d.name);
+                return refuse(
+                    "relay_other_bridge",
+                    format!(
+                        "This deposit is on the old vault ({old}). The bridge's relay now serves {} only, so it won't pay this claim's fee: a claim on {old} pays its own fee, which the Names Wallet can't send yet. Nothing was sent; the deposit stays claimable on {old}.",
+                        crate::config::plain_label(&cur.name)
+                    ),
+                );
+            }
             return refuse("relay_refused", "The relay serves another bridge than this one.");
         }
         let claimer = file.account_text();
@@ -672,7 +710,7 @@ impl Bridge {
         });
         self.relayed.checks.insert(
             id,
-            Checked { file, deployment: d.name.clone(), call, summary, symbol: sym, decimals: token.decimals, definition: token.definition, token_program: cfg.token_program, payer: info.payer, nullifier },
+            Checked { file, deployment: d.name.clone(), bridge: d.bridge_program.clone(), call, summary, symbol: sym, decimals: token.decimals, definition: token.definition, token_program: cfg.token_program, payer: info.payer, nullifier },
         );
         Ok(view)
     }
@@ -812,12 +850,12 @@ impl Bridge {
         }
         let (account, bridge, tp, call, summary, meta) = {
             let c = self.relayed.checks.get(id).ok_or("Check the claim file first (this app keeps the claim secret only in memory, so give the file again after a restart).")?;
-            if c.deployment != self.deployment().name {
+            if self.deployment_named(&c.deployment).is_none() {
                 return Err("the bridge deployment changed since this claim was checked; check the claim file again".to_owned());
             }
             (
                 c.file.account_text(),
-                self.deployment().bridge_program.clone(),
+                c.bridge.clone(),
                 lez::b58(&c.token_program),
                 c.call.to_string(),
                 c.summary.clone(),
@@ -886,7 +924,7 @@ impl Bridge {
     /// The facts a job keeps about a checked claim (public: amounts, ids, the nullifier).
     fn job_meta(c: &Checked) -> Value {
         json!({ "symbol": c.symbol, "decimals": c.decimals, "amount_text": format!("{} {}", format_amount(c.file.amount, c.decimals), c.symbol),
-                "definition": lez::b58(&c.definition), "token_program": lez::b58(&c.token_program), "nullifier": hex0x(&c.nullifier), "payer": c.payer })
+                "definition": lez::b58(&c.definition), "token_program": lez::b58(&c.token_program), "nullifier": hex0x(&c.nullifier), "payer": c.payer, "bridge": c.bridge, "deployment": c.deployment })
     }
 
     // ── Hosted by the Names app (modules/NAMES-EMBED.md, Part B) ────────
@@ -898,10 +936,9 @@ impl Bridge {
     /// claim publishes when it lands. Never the file's master secret.
     pub(crate) fn relayed_build_now(&self, id: &str) -> Result<Value, String> {
         let c = self.relayed.checks.get(id).ok_or("Check the claim file first (this app keeps the claim only in memory, so give the file again after a restart).")?;
-        if c.deployment != self.deployment().name {
+        let Some(d) = self.deployment_named(&c.deployment) else {
             return Err("the bridge deployment changed since this claim was checked; check the claim file again".to_owned());
-        }
-        let d = self.deployment();
+        };
         Ok(json!({
             "check": id, "account": format!("Public/{}", c.file.account_text()), "call": c.call, "summary": c.summary,
             "network": d.network, "deployment": d.name, "bridge_program": d.bridge_program, "token_program": lez::b58(&c.token_program),
@@ -938,7 +975,7 @@ impl Bridge {
         }
         let (account, meta) = {
             let c = self.relayed.checks.get(id).ok_or("Check the claim file first (this app keeps the claim only in memory, so give the file again after a restart).")?;
-            if c.deployment != self.deployment().name {
+            if self.deployment_named(&c.deployment).is_none() {
                 return Err("the bridge deployment changed since this claim was checked; check the claim file again".to_owned());
             }
             (c.file.account_text(), Self::job_meta(c))
@@ -1224,7 +1261,7 @@ impl Bridge {
         let before_p: u128 = job["nonce_payer"].as_str().and_then(|s| s.parse().ok()).unwrap_or(n[1]);
         if n[0] != before_a {
             // The account was used meanwhile: perhaps this very claim landed.
-            let bridge = util::lez_account(&self.deployment().bridge_program).unwrap_or([0; 32]);
+            let bridge = util::lez_account(job["meta"]["bridge"].as_str().unwrap_or(&self.deployment().bridge_program)).unwrap_or([0; 32]);
             let nullifier = util::hex32(job["meta"]["nullifier"].as_str().unwrap_or_default()).unwrap_or([0; 32]);
             if lez::bridge_pda_used(rpc.as_ref(), &bridge, &lez::nullifier_seed(&nullifier)).unwrap_or(false) {
                 Self::fail(job, "already_claimed", "This deposit was claimed meanwhile (perhaps by this same claim through another route). Check the account's holdings.");
@@ -1333,7 +1370,8 @@ impl Bridge {
     fn confirm_step(&mut self, job: &mut Value, id: &str) {
         let Ok(rpc) = self.lez_rpc() else { return };
         let hash = job["tx"].as_str().unwrap_or_default().to_owned();
-        let bridge = util::lez_account(&self.deployment().bridge_program).unwrap_or([0; 32]);
+        // The bridge the claim was checked on (kept in the job; older jobs: the current one).
+        let bridge = util::lez_account(job["meta"]["bridge"].as_str().unwrap_or(&self.deployment().bridge_program)).unwrap_or([0; 32]);
         let nullifier = util::hex32(job["meta"]["nullifier"].as_str().unwrap_or_default()).unwrap_or([0; 32]);
         if job["landed_check"] == true && job["tx"].is_null() {
             // The wallet says the account was used since the approval (`landed_or_used`).

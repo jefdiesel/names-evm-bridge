@@ -708,3 +708,11 @@ fn the_v3_vault_says_it_cannot_pay_out_and_claims_no_operator_release() {
     assert!(c["value"]["notices"]["release"].is_null());
     let _ = std::fs::remove_dir_all(root);
 }
+
+#[test]
+fn deployments_have_plain_labels() {
+    assert_eq!(config::plain_label("bridge-test-network"), "bridge v2");
+    assert_eq!(config::plain_label("bridge-test-network-v3"), "bridge v3");
+    assert_eq!(config::plain_label("bridge-test-network-v4"), "bridge v4");
+    assert_eq!(config::plain_label("my-local-chain"), "my-local-chain");
+}

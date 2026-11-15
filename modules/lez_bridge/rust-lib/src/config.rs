@@ -89,6 +89,15 @@ pub fn builtin(name: &str) -> Option<Deployment> {
     all["deployments"].as_array()?.iter().find(|d| d["name"] == name).and_then(|d| Deployment::from_json(d).ok())
 }
 
+/// A deployment's short name for people: "bridge v4", "bridge v3", "bridge v2" (the built-ins), else
+/// its own name.
+pub fn plain_label(name: &str) -> String {
+    match name {
+        "bridge-test-network" => "bridge v2".to_owned(),
+        n => n.strip_prefix("bridge-test-network-").map_or_else(|| n.to_owned(), |v| format!("bridge {v}")),
+    }
+}
+
 /// The names of the built-in deployments.
 pub fn builtin_names() -> Vec<String> {
     let all: Value = serde_json::from_str(DEPLOYMENTS).unwrap_or_default();

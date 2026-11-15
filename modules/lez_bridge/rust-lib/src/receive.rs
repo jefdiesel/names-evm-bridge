@@ -10,6 +10,10 @@
 //!   the recorded-root accounts of the newest final roots that include its leaf, newest first, up
 //!   to 8 (usually 1), and the deposit's nullifier account (1).
 //!
+//! Every deposit is read on the deployment it was made on (kept with it: `deployment`, `vault`,
+//! `chain_id`), not on the current one: after v4 became the default, a deposit made on v3 is still
+//! read in v3's vault and on v3's bridge. A deposit with none kept (an older build) is not guessed.
+//!
 //! Claimability is the relayed check's test (a root the bridge recorded on LEZ), not the RFP-021
 //! attestation anchor that `deposits()` shows. No wallet call: "claimed" comes from the
 //! nullifiers kept with the deposit when it was made or recovered.
@@ -26,8 +30,7 @@ const ROOT_TRIES: usize = 8;
 impl Bridge {
     /// The vault's deposit events, read again only when `depositCount()` moved. Returns
     /// (events, latest block, finalized block, Sepolia calls made).
-    fn receive_events(&mut self) -> Result<(Vec<DepositEvent>, u64, u64, u32), String> {
-        let d = self.deployment().clone();
+    fn receive_events(&mut self, d: &crate::config::Deployment) -> Result<(Vec<DepositEvent>, u64, u64, u32), String> {
         let vault = hex0x(&d.vault);
         let cached = self.relayed.log_cache.clone().filter(|(v, _, _)| *v == vault);
         let (events, latest, finalized, calls, count) = {
@@ -69,7 +72,9 @@ impl Bridge {
         let rows: Vec<Value> = list
             .iter()
             .map(|r| {
-                let decimals = d.token(r["symbol"].as_str().unwrap_or_default()).map(|t| t.decimals).unwrap_or(18);
+                // The deployment the deposit was made on (never guessed): its token's decimals, its label.
+                let own = self.deposit_deployment(r);
+                let decimals = own.as_ref().unwrap_or(&d).token(r["symbol"].as_str().unwrap_or_default()).map(|t| t.decimals).unwrap_or(18);
                 let amount = r["denom"].as_str().and_then(|x| util::units(x).ok()).unwrap_or(0);
                 let last = &r["receive"];
                 let claimed = r["claimed"] == true || last["stage"] == "claimed";
@@ -82,6 +87,8 @@ impl Bridge {
                     "claimed": claimed,
                     "stage": if claimed { Value::from("claimed") } else { last.get("stage").cloned().filter(|s| !s.is_null()).unwrap_or(Value::from("unknown")) },
                     "text": last["text"], "leaf": last["leaf"], "block": last["block"], "tx": last["tx"], "claimed_block": last["claimed_block"], "as_of": last["as_of"],
+                    "deployment": own.as_ref().map_or(Value::Null, |o| self.deployment_view(o)),
+                    "deployment_problem": own.as_ref().err().map_or(Value::Null, |e| Value::from(e.clone())),
                 })
             })
             .collect();
@@ -140,17 +147,30 @@ impl Bridge {
     fn receive_status_read(&mut self, id: &str) -> Result<Value, String> {
         let row = self.store().deposit(id)?;
         let commitment = hex32(row["commitment"].as_str().unwrap_or_default())?;
-        let d = self.deployment().clone();
+        let kind0 = row["account_kind"].as_str().unwrap_or("private").to_owned();
+        // Read on the deployment the deposit was made on; none kept: say so, read nothing.
+        let d = match self.deposit_deployment(&row) {
+            Ok(d) => d,
+            Err(why) => {
+                return Ok(json!({
+                    "id": id, "commitment": hex0x(&commitment), "compare": crate::compare::json(&commitment), "account": row["account"], "account_kind": kind0,
+                    "claim": if kind0 == "public" { "relayed" } else { "private" }, "deployment": null, "network": null,
+                    "stage": "unknown", "text": why, "action": "recover",
+                    "leaf": null, "block": null, "tx": null, "confirmations": null, "final_in_min": null, "claimed_block": null, "as_of": now_ms(),
+                    "reads": { "sepolia": 0, "lez": 0 },
+                }));
+            }
+        };
         let decimals = d.token(row["symbol"].as_str().unwrap_or_default()).map(|t| t.decimals).unwrap_or(18);
         let amount = row["denom"].as_str().and_then(|x| util::units(x).ok()).unwrap_or(0);
         let kind = row["account_kind"].as_str().unwrap_or("private").to_owned();
         let mut v = json!({
             "id": id, "commitment": hex0x(&commitment), "compare": crate::compare::json(&commitment), "account": row["account"], "account_kind": kind,
             "amount_text": format!("{} {}", format_amount(amount, decimals), row["symbol"].as_str().unwrap_or("")),
-            "network": d.network, "claim": if kind == "public" { "relayed" } else { "private" },
+            "network": d.network, "deployment": self.deployment_view(&d), "claim": if kind == "public" { "relayed" } else { "private" },
             "leaf": null, "block": null, "tx": null, "confirmations": null, "final_in_min": null, "claimed_block": null, "as_of": now_ms(),
         });
-        let (events, latest, finalized, eth_calls) = self.receive_events()?;
+        let (events, latest, finalized, eth_calls) = self.receive_events(&d)?;
         let mut lez_reads = 0u32;
         let Some(ev) = events.iter().find(|e| e.commitment == commitment).cloned() else {
             v["stage"] = json!("requested");
@@ -176,7 +196,7 @@ impl Bridge {
             v["reads"] = json!({ "sepolia": eth_calls, "lez": lez_reads });
             return Ok(v);
         }
-        let rpc = self.lez_rpc().map_err(|r| r.message)?;
+        let rpc = self.lez_rpc_for(&d).map_err(|r| r.message)?;
         let bridge = util::lez_account(&d.bridge_program)?;
         // Claimed? From the nullifier kept with the deposit (the bridge's formula, read once).
         let pre_fix = match self.relayed.pre_fix.clone().filter(|(n, _)| *n == d.name) {
@@ -218,7 +238,24 @@ impl Bridge {
             v["text"] = json!(format!("Final on Sepolia; waiting for the bridge to record it on {} (about a minute).", d.network));
         } else {
             v["stage"] = json!("claimable");
-            v["text"] = json!(if kind == "public" {
+            // A public claim on a deployment that is not the current one: does the relay still pay
+            // for it? One read, only then (the relay serves one bridge).
+            let relay_elsewhere = if kind == "public" && d.name != self.deployment().name {
+                lez_reads += 1;
+                lez::relay_info(rpc.as_ref()).ok().and_then(|i| i.bridge).filter(|b| *b != d.bridge_program)
+            } else {
+                None
+            };
+            v["text"] = json!(if let Some(other) = relay_elsewhere {
+                v["relay"] = json!(false);
+                format!(
+                    "Arrived: {} is ready to claim on {} (an older vault). The bridge's relay now serves {} only, so this claim pays its own fee, which the Names Wallet can't send yet. It stays claimable on {}.",
+                    v["amount_text"].as_str().unwrap_or(""),
+                    crate::config::plain_label(&d.name),
+                    if other == self.deployment().bridge_program { crate::config::plain_label(&self.deployment().name) } else { "another bridge".to_owned() },
+                    crate::config::plain_label(&d.name)
+                )
+            } else if kind == "public" {
                 format!("Arrived: {} is ready to claim (the bridge's relay pays the fee).", v["amount_text"].as_str().unwrap_or(""))
             } else {
                 format!("Arrived: {} is ready to claim privately (your wallet makes a proof).", v["amount_text"].as_str().unwrap_or(""))

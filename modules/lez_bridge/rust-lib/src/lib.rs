@@ -60,13 +60,19 @@ use util::{format_amount, hex0x, now_ms, units};
 /// The calls this build answers beyond the original set (`config().features`).
 /// `account_add`: asks the Names Wallet to add an account to this app's access when the wallet
 /// lists `grant_add_account` (wallet::add_account).
-pub const FEATURES: [&str; 14] = [
+/// `receive_deployment`: `receives`/`receive_status` read each deposit on the deployment it was made
+/// on and name it (`deployment: {id, label, current, network}`).
+pub const FEATURES: [&str; 15] = [
     "relayed_claim", "relayed_claim_check_with", "relayed_claim_build", "relayed_claim_submit", "account_hint",
     "receive", "deposit_code", "public_receive", "receive_status", "receives", "relayed_claim_check_deposit", "account_add", "build_id",
-    "receive_request",
+    "receive_request", "receive_deployment",
 ];
 
 pub const MODULE_VERSION: &str = "0.1.0";
+
+/// A stored deposit with no deployment kept (a build from before 2026-11-15 kept none): what is
+/// said instead of guessing which vault to read it on.
+pub(crate) const NO_DEPLOYMENT_TEXT: &str = "This deposit was stored by an older build of this app, which didn't record which bridge it is on, so its status can't be read without guessing. Nothing was read. Recover finds it again and records its bridge: run Recover with the bridge it was made on chosen (bridge v3 for a deposit made before 15 November 2026, when v4 became the default).";
 
 pub trait LezBridgeModule: Send + 'static {
     // ── Settings ────────────────────────────────────────────────────────
@@ -506,6 +512,46 @@ impl Bridge {
         &self.cfg.deployment
     }
 
+    /// The deployment named `name`: this install's own when the name is the current one (its
+    /// settings), else the built-in one; none for an unknown or empty name.
+    pub(crate) fn deployment_named(&self, name: &str) -> Option<Deployment> {
+        if name.is_empty() {
+            None
+        } else if self.deployment().name == name {
+            Some(self.deployment().clone())
+        } else {
+            config::builtin(name)
+        }
+    }
+
+    /// The deployment a stored deposit was made on: the one kept with it, checked against its kept
+    /// chain and vault. Never the current one by default: a deposit made on v3 is read on v3 after
+    /// v4 became the default. Err: plain words and what to do (a deposit from an older build kept
+    /// no deployment; Recover records it).
+    pub(crate) fn deposit_deployment(&self, row: &Value) -> Result<Deployment, String> {
+        let name = row["deployment"].as_str().unwrap_or_default();
+        if name.is_empty() {
+            return Err(NO_DEPLOYMENT_TEXT.to_owned());
+        }
+        let d = self.deployment_named(name).ok_or_else(|| {
+            format!("This deposit was made on \"{name}\", a bridge this build of the app doesn't know, so its status can't be read. Nothing was read; update the app.")
+        })?;
+        let vault_ok = row["vault"].as_str().map_or(true, |v| util::eth_address(v).is_ok_and(|v| v == d.vault));
+        let chain_ok = row["chain_id"].as_u64().map_or(true, |c| c == d.chain_id);
+        if !vault_ok || !chain_ok {
+            return Err(format!(
+                "This deposit's stored vault is not the vault of {} in this build, so its status can't be read without guessing. Nothing was read; update the app.",
+                config::plain_label(name)
+            ));
+        }
+        Ok(d)
+    }
+
+    /// `{id, label, current, network}` of a deployment, for a reply row.
+    pub(crate) fn deployment_view(&self, d: &Deployment) -> Value {
+        json!({ "id": d.name, "label": config::plain_label(&d.name), "current": d.name == self.deployment().name, "network": d.network })
+    }
+
     // ── Registry ────────────────────────────────────────────────────────
 
     fn registry_now(&mut self) -> Result<Value, String> {
@@ -576,8 +622,13 @@ impl Bridge {
     // ── Deposits ────────────────────────────────────────────────────────
 
     fn events(&self) -> Result<(Vec<eth::DepositEvent>, eth::BlockInfo, u64), String> {
+        let d = self.deployment().clone();
+        self.events_for(&d)
+    }
+
+    /// [`Self::events`] of deployment `d`'s vault (a deposit read on the deployment it was made on).
+    pub(crate) fn events_for(&self, d: &Deployment) -> Result<(Vec<eth::DepositEvent>, eth::BlockInfo, u64), String> {
         let eth = self.eth()?;
-        let d = self.deployment();
         let latest = eth.block("latest")?;
         let finalized = eth.block("finalized")?;
         let count_raw = eth.call(&d.vault, &eth::calldata("depositCount()", &[]))?;

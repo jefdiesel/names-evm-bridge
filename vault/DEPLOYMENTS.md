@@ -38,7 +38,10 @@ demo chain: the v3 bridge program (image `0dabbd6c…9ffa`) deployed again at a 
   - LEZ finality is the submitter's word;
   - the update image takes private transactions on the sequencer's word (no privacy-receipt check,
     `public-demo/v4/BUILD-outbound.txt`).
-- **No update or release yet** (`g2State()` = the genesis state, read 2026-11-15).
+- **First relayed claim and burn on the LEZ side** (team deposit, leaf 0): claim LEZ block 10359, burn LEZ
+  block 10361, exit toward the deployer; the claim relay serves v4 since about 18:50 UTC
+  (`public-demo/RUNBOOK.md` (not published) §18, §18.1). **No update or release on Sepolia yet** (`g2State()` = the
+  genesis state, read 2026-11-15); the first update proof is the owner's to start.
 
 | What | Value |
 |---|---|

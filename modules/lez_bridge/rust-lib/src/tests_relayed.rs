@@ -62,6 +62,8 @@ struct Net {
     tx_blocks: Mutex<HashMap<String, u64>>,
     nonces: Mutex<HashMap<String, u64>>,
     fee: Mutex<(u64, u64)>,
+    /// The bridge `bridge_relayInfo` names (default: the world's own, `BRIDGE`).
+    relay_bridge: Mutex<String>,
 }
 
 impl LezRpc for Net {
@@ -76,7 +78,7 @@ impl LezRpc for Net {
                 let (e, s) = *self.fee.lock().unwrap();
                 Ok(json!({ "base_fee_exec": e, "base_fee_stor": s }))
             }
-            "bridge_relayInfo" => Ok(json!({ "payer": PAYER, "bridge": BRIDGE, "max_gas": 250000, "max_fee": "2500000" })),
+            "bridge_relayInfo" => Ok(json!({ "payer": PAYER, "bridge": self.relay_bridge.lock().unwrap().clone(), "max_gas": 250000, "max_fee": "2500000" })),
             "bridge_relayClaim" => {
                 let mut q = self.relay.lock().unwrap();
                 if q.is_empty() { Ok(json!({ "ok": false, "reason": "no answer queued", "retry": false })) } else { q.remove(0) }
@@ -226,7 +228,7 @@ fn world(name: &str, final_upto: u64) -> World {
     let mut accounts = HashMap::new();
     accounts.insert(lez::b58(&lez::pda(&bridge, &lez::CONFIG_SEED)), json!({ "nonce": 0, "data": { "actor_states": { BRIDGE: bytes_json(&config_bytes(&d, false)) } } }));
     accounts.insert(lez::b58(&lez::pda(&bridge, &lez::root_seed(&roots[3]))), json!({ "nonce": 0, "data": { "actor_states": { BRIDGE: [1] } } }));
-    let net = Arc::new(Net { accounts: Mutex::new(accounts), calls: Mutex::new(vec![]), relay: Mutex::new(vec![]), tx_blocks: Mutex::new(HashMap::new()), nonces: Mutex::new(HashMap::new()), fee: Mutex::new((8, 1)) });
+    let net = Arc::new(Net { accounts: Mutex::new(accounts), calls: Mutex::new(vec![]), relay: Mutex::new(vec![]), tx_blocks: Mutex::new(HashMap::new()), nonces: Mutex::new(HashMap::new()), fee: Mutex::new((8, 1)), relay_bridge: Mutex::new(BRIDGE.to_owned()) });
     let mut cfgm = Config::default();
     cfgm.deployment = d.clone();
     let mut b = Bridge {
@@ -994,8 +996,78 @@ fn stored_receive(w: &mut World) -> String {
     o.insert("derivation".into(), json!("names-app"));
     o.insert("nullifier".into(), json!(hex0x(&claim_nullifier(&w.k, &claimer, &[0; 20], 10u128.pow(16)))));
     o.insert("nullifier_pre_fix".into(), json!(hex0x(&claim_nullifier_pre_fix(&w.k))));
+    // What deposit_reply keeps with a deposit: the deployment it was made on, its chain and vault.
+    o.insert("deployment".into(), json!(d.name));
+    o.insert("chain_id".into(), json!(d.chain_id));
+    o.insert("vault".into(), json!(eth::addr_hex(&d.vault)));
     w.b.store().put_deposit(row).unwrap();
     store::deposit_id(&hex0x(&c))
+}
+
+/// A deposit made on one deployment (here the world's, v2) after another became the default (here
+/// v3, standing in for v4 after v3): `receive_status`, `receives` and the deposit's claim check read
+/// it on its OWN deployment, name it, and say plainly when the relay no longer serves its bridge.
+#[test]
+fn a_deposit_is_read_on_the_deployment_it_was_made_on_after_the_default_changed() {
+    let mut w = world("own-dep", 200);
+    let id = stored_receive(&mut w);
+    let from_file = w.b.relayed_check_now(&w.file);
+    assert_eq!(from_file["ok"], true, "{from_file}");
+    // The default moves on.
+    w.b.cfg.deployment = config::builtin("bridge-test-network-v3").unwrap();
+    let s = w.b.receive_status_now(&id).unwrap();
+    // Claimable on its own bridge: the world's root and Config exist only under the v2 bridge, so a
+    // read on the current (v3) bridge would have said "final".
+    assert_eq!((s["stage"].as_str(), s["leaf"].as_u64()), (Some("claimable"), Some(2)), "{s}");
+    assert_eq!(s["deployment"], json!({ "id": "bridge-test-network", "label": "bridge v2", "current": false, "network": "LEZ 0.4 · bridge test network" }));
+    assert!(s["text"].as_str().unwrap().contains("the bridge's relay pays the fee"), "the relay still serves its bridge: {s}");
+    let l = w.b.receives_now();
+    assert_eq!((l["receives"][0]["deployment"]["label"].as_str(), l["receives"][0]["deployment"]["current"].as_bool()), (Some("bridge v2"), Some(false)), "{l}");
+    assert!(l["receives"][0]["deployment_problem"].is_null());
+    // The claim file of that deposit is checked on its own deployment too: the same check as before.
+    let again = w.b.relayed_check_now(&w.file);
+    assert_eq!((again["ok"].as_bool(), again["id"].as_str()), (Some(true), from_file["id"].as_str()), "{again}");
+    // The relay moves to the current bridge: the status and the check say so, plainly.
+    let v3 = config::builtin("bridge-test-network-v3").unwrap();
+    *w.net.relay_bridge.lock().unwrap() = v3.bridge_program.clone();
+    let s = w.b.receive_status_now(&id).unwrap();
+    assert_eq!((s["stage"].as_str(), s["relay"].as_bool()), (Some("claimable"), Some(false)), "{s}");
+    let text = s["text"].as_str().unwrap();
+    assert!(text.contains("on bridge v2 (an older vault)") && text.contains("serves bridge v3 only") && text.contains("pays its own fee"), "{text}");
+    let c = w.b.relayed_check_now(&w.file);
+    assert_eq!(c["error"]["code"], "relay_other_bridge", "{c}");
+    let m = c["error"]["message"].as_str().unwrap();
+    assert!(m.starts_with("This deposit is on the old vault (bridge v2).") && m.contains("pays its own fee") && m.contains("Nothing was sent"), "{m}");
+}
+
+/// A deposit stored by an older build (no deployment kept): no guess, no read, the reason and Recover.
+#[test]
+fn a_deposit_with_no_deployment_kept_is_not_guessed() {
+    let mut w = world("no-dep", 200);
+    let id = stored_receive(&mut w);
+    let mut row = w.b.store().deposit(&id).unwrap();
+    for k in ["deployment", "chain_id", "vault"] {
+        row.as_object_mut().unwrap().remove(k);
+    }
+    w.b.store().put_deposit(row).unwrap();
+    let calls_before = w.net.calls.lock().unwrap().len();
+    let s = w.b.receive_status_now(&id).unwrap();
+    assert_eq!((s["stage"].as_str(), s["action"].as_str()), (Some("unknown"), Some("recover")), "{s}");
+    assert_eq!(s["reads"], json!({ "sepolia": 0, "lez": 0 }));
+    assert_eq!(w.net.calls.lock().unwrap().len(), calls_before, "nothing read on LEZ");
+    assert!(s["text"].as_str().unwrap().contains("Recover"), "{s}");
+    let l = w.b.receives_now();
+    assert!(l["receives"][0]["deployment"].is_null());
+    assert!(l["receives"][0]["deployment_problem"].as_str().unwrap().contains("older build"), "{l}");
+    // Its claim check is refused the same way, not run against the current deployment.
+    let v = w.b.relayed_check_deposit_now(&id, &json!({}));
+    assert_eq!(v["error"]["code"], "unknown_deployment", "{v}");
+    // A deposit whose kept vault is not its deployment's: refused, not read.
+    let mut row = w.b.store().deposit(&id).unwrap();
+    row["deployment"] = json!("bridge-test-network");
+    row["vault"] = json!("0x26af59855b99a8af199361289a5ed6088729e60e");
+    w.b.store().put_deposit(row).unwrap();
+    assert_eq!(w.b.receive_status_now(&id).unwrap()["stage"], "unknown");
 }
 
 #[test]
@@ -1029,6 +1101,7 @@ fn receive_status_follows_a_deposit_from_the_vault_to_claimable_and_claimed_with
     // Not in the vault at all.
     let mut row = store::new_deposit("0x0000000000000000000000000000000000000000", "ETH", 0, 10u128.pow(16), &w.claimer, "public", &hex0x(&[5; 32]), "", "wallet");
     row.as_object_mut().unwrap().remove("secret");
+    row["deployment"] = json!(w.b.deployment().name);
     w.b.store().put_deposit(row).unwrap();
     assert_eq!(w.b.receive_status_now(&store::deposit_id(&hex0x(&[5; 32]))).unwrap()["stage"], "requested");
 }
