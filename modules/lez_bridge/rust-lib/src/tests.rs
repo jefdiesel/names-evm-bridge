@@ -660,6 +660,23 @@ fn real_cli_cancel_and_timings() {
     println!("CANCEL OK: job {jid} cancelled, group {pgid} empty, wallet unchanged");
 }
 
+/// v4 releases by proof: once listed (public-demo/v4/apply-v4-entries.py), the release words are its own
+/// and say neither that it never pays out nor that the outbound proof is not built.
+#[test]
+fn the_v4_vault_says_it_releases_by_proof() {
+    let Some(d) = config::builtin("bridge-test-network-v4") else { return };
+    assert_eq!(d.release, "proof");
+    let r = release_unavailable(true, &d);
+    assert_eq!(r["available"], false);
+    assert_eq!(r["reason"], d.release_note.as_str());
+    assert_eq!(r["detail"], d.release_detail.as_str());
+    for text in [r["reason"].as_str().unwrap(), r["what_happens_next"].as_str().unwrap()] {
+        let t = text.to_lowercase();
+        assert!(!t.contains("never") && !t.contains("not built") && !t.contains("can't pay"), "{text}");
+    }
+    assert!(r["what_happens_next"].as_str().unwrap().contains("proved update"));
+}
+
 /// The v3 vault can't pay out (its outbound state was deployed at zero, vault/DEPLOYMENTS.md): the
 /// release, exits and redeem words say so from deployments.json, without "never"/"ever" and
 /// without the operator-attested claim; v2 keeps its placeholder-image words.

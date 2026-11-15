@@ -595,6 +595,8 @@ const SIG = {
   VERSION: '0xffa1ad74', SELECTOR: '0x053c238d', CONTROL_ROOT_0: '0x9181e4b1', CONTROL_ROOT_1: '0x8989fa2e',
   BN254_CONTROL_ID: '0x258038e2', KIND: '0xc872da3c', updateImageId: '0x522d9a28', releaseImageId: '0x7b4d5f9a',
   g2State: '0xfd64db0a', cfgId: '0xed9305e3', verifier: '0x2b7ac3f3', programId: '0x98812da8',
+  // UpdateGatedVerifier (vault/src/UpdateGatedVerifier.sol): KIND() shares the selector above
+  VERIFIER: '0x08c84e70', UPDATE_IMAGE_ID: '0x872109a5', SUBMITTER: '0xf28a6123',
 };
 
 const revBytes = (h) => normHex(h).match(/../g).reverse().join('');
@@ -673,9 +675,33 @@ async function onchainChecks({ V, deps, only, add, rpc, fetchImpl }) {
       cmp('releaseImageId', val(d.release_image));
       cmp('cfgId', val(d.cfg_id));
       cmp('programId', val(d.program_id));
-      cmp('verifier', vaddr);
+      // A vault behind an UpdateGatedVerifier ([deployments.X.gate], v4) names the gate as its
+      // verifier; the gate names the RISC Zero verifier, the vault's update image and the submitter.
+      const gate = d.gate || null;
+      const gaddr = val(gate?.address);
+      cmp('verifier', gaddr || vaddr);
       if (bad.length) add('FAIL', 'onchain', `${dname}: vault ${vault}: ${bad.join('; ')}`, scope);
-      else add('OK', 'onchain', `${dname}: vault ${short(vault)} pins the declared image ids, cfgId, programId and verifier`, scope);
+      else add('OK', 'onchain', `${dname}: vault ${short(vault)} pins the declared image ids, cfgId, programId and ${gaddr ? 'gate' : 'verifier'}`, scope);
+      if (gaddr) {
+        const gcode = await call('eth_getCode', [gaddr, 'latest']);
+        if (!gcode || gcode === '0x') add('FAIL', 'onchain', `${dname}: no contract at gate ${gaddr}`, scope);
+        else {
+          const gbad = [];
+          const gv = normHex(await read(gaddr, 'VERIFIER')).slice(24);
+          if (gv !== normHex(vaddr)) gbad.push(`VERIFIER() ${short(gv)} ≠ ${short(vaddr)}`);
+          const gu = normHex(await read(gaddr, 'UPDATE_IMAGE_ID'));
+          if (gu !== normHex(val(d.update_image))) gbad.push(`UPDATE_IMAGE_ID() ${short(gu)} ≠ ${short(val(d.update_image))}`);
+          const gs = normHex(await read(gaddr, 'SUBMITTER')).slice(24);
+          if (!val(gate.submitter)) gbad.push('no submitter declared');
+          else if (gs !== normHex(val(gate.submitter))) gbad.push(`SUBMITTER() ${short(gs)} ≠ ${short(val(gate.submitter))}`);
+          if (val(gate.kind_text)) {
+            const k = abiString(await read(gaddr, 'KIND'));
+            if (k !== val(gate.kind_text)) gbad.push(`KIND() "${k.slice(0, 40)}…" ≠ the declared text`);
+          }
+          if (gbad.length) add('FAIL', 'onchain', `${dname}: gate ${gaddr}: ${gbad.join('; ')}`, scope);
+          else add('OK', 'onchain', `${dname}: gate ${short(gaddr)} in front of verifier ${short(vaddr)}, update image ${short(gu)}, submitter ${short(gs)}`, scope);
+        }
+      }
       if (/^0+$/.test(got.g2State)) add('FAIL', 'g2-zero', `${dname}: vault ${short(vault)} g2State() reads zero on chain: it can take no update and never release`, scope);
       else if (val(d.genesis_g2_state) && got.g2State !== normHex(val(d.genesis_g2_state))) {
         if (Number(val(d.g2_updates) || 0) > 0) add('OK', 'onchain', `${dname}: g2State() ${short(got.g2State)} (moved on from the genesis state; VERSIONS records ${val(d.g2_updates)} accepted update(s))`, scope);

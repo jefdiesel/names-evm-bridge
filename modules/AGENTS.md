@@ -1,6 +1,6 @@
 # AGENTS.md: LEZ Bridge mini-app and core module
 
-For coding agents (and people in a hurry). Last checked: 2026-11-15 (branch `receive-request`: `receive_request(id)` shows a stored deposit's code again; `compare` on `receives` and `receive_status`; v3 reads as a vault that can't pay out; before that `compare-words`).
+For coding agents (and people in a hurry). Last checked: 2026-11-15 (branch `v4-live`: v4 is the default deployment, a vault that releases by proof, with its own release words; before that `receive-request`: `receive_request(id)` shows a stored deposit's code again; `compare` on `receives` and `receive_status`; v3 reads as a vault that can't pay out; before that `compare-words`).
 Latest version: <!-- LATEST-URL: set when the repository is published -->
 
 Two Logos Basecamp packages for the private Ethereum ↔ LEZ bridge (RFP-022):
@@ -37,11 +37,19 @@ Deployments live in **one file**, `lez_bridge/rust-lib/deployments.json` (Sepoli
 
 | Deployment | Vault (Sepolia) | Deposit desk (0.3% fee) | Bridge program (LEZ) | Token program (LEZ) |
 |---|---|---|---|---|
-| `bridge-test-network-v3` (default) | `0x26af59855b99a8af199361289A5Ed6088729E60E` | `0x6b7F38D05751b1ed432a0A0d377A63cFB8c4DBc5` | `4eaeK3yiqATXhpCEYEFMMtjUn1bS7HLxPwfrH31mXCvr` | `5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7` |
+| `bridge-test-network-v4` (default) | `0xC2c6A059eAB928966B24FA5549d441A3B17B54Ed` | `0x25C1653888e7a4E2c35393A5656b7d1645487fd5` | `BKXe3q5JcKeiSrKv9FUBjZw3AowbvYgyHZ3SYPgDxJBf` | `5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7` |
+| `bridge-test-network-v3` | `0x26af59855b99a8af199361289A5Ed6088729E60E` | `0x6b7F38D05751b1ed432a0A0d377A63cFB8c4DBc5` | `4eaeK3yiqATXhpCEYEFMMtjUn1bS7HLxPwfrH31mXCvr` | `5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7` |
 | `bridge-test-network` (v2) | `0x8C8b2664De28e5287158db4DB65D448638871b74` | `0x77E37E1D6e886d8fb988496B9c2EfF3E78e27DF2` | `JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7` | `3gF78HRJNCfabkWFiszahVVacq181aU8SSGua8Cj9ZE4` |
 
-v2 stays selectable: `use_deployment("bridge-test-network")`. Both are demo vaults, and neither
-pays anything out on Ethereum: v2's update image is a placeholder; v3 was deployed with its outbound
+v4 is the default since 2026-11-15. Its vault checks update and release proofs on Ethereum with RISC
+Zero's Groth16 verifier 3.1.0, behind an update gate; `release: "proof"`. Its note: "Withdrawals back
+to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn
+waits." `release` / `exits` / redeem `blocked` give that note and the order of a payout: a proved
+update, then the release proof, then the delay (test `the_v4_vault_says_it_releases_by_proof`).
+
+v3 and v2 stay selectable: `use_deployment("bridge-test-network-v3")` and
+`use_deployment("bridge-test-network")`. Neither pays anything out on Ethereum: v2's update image is a
+placeholder; v3 was deployed with its outbound
 starting state (`g2State`) at zero, so no update can start from it (`../vault/DEPLOYMENTS.md`).
 Deposits on both can be claimed on the bridge test network. In `deployments.json` v3 has
 `release: "never"` with `release_note` (the one line the apps show) and `release_detail` (the
@@ -112,7 +120,7 @@ encodes it twice**: parse up to twice (`lez_bridge_ui/qml/logic.mjs` `unwrap`). 
 
 | Call | Reply (`value`) |
 |---|---|
-| `config()` | Settings, the deployment, `features` (what this build answers), `notices.not_private` (the words before a public-account receive), `notices.release` (`{text, detail}` for a vault that can't pay out, v3; null otherwise), `scaffold`, `build` (`{commit, built, version}`) |
+| `config()` | Settings, the deployment, `features` (what this build answers), `notices.not_private` (the words before a public-account receive), `notices.release` (`{text, detail}`: the deployment's own words about paying out, v4's or v3's; null for a deployment without them), `scaffold`, `build` (`{commit, built, version}`) |
 | `registry()` | Tokens with denominations (`tokens[].denoms[]`: `index`, `value`, `text`, fees), caps, freeze state on both sides, release delay. Reads both chains: once per screen, not a poll. |
 | `plan_deposit(token, amount)` | A split of an amount into denominations, with fees and anonymity sets |
 | `receives()` | This install's wallet-made deposits with the stage `receive_status` last saw, each with `compare`; no chain read |
@@ -157,7 +165,7 @@ from `tools/make-compare-words-vectors.py` (python3, independent of both).
 The Names app declares `lez_bridge` as an optional dependency, and Basecamp starts the module when
 Names opens. Names bundles only the module. The mini-app need not be installed for that.
 
-- The module needs no setup. With no settings file it uses v3.
+- The module needs no setup. With no settings file it uses v4.
 - It has **no timer**. A claim job moves only while someone calls `relayed_claim_status`, and
   `receive_status` reads only when called. The host's screen polls, one call at a time.
 - The wallet keys every request to the app `lez_bridge`, whoever calls the module. A grant or

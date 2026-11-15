@@ -1,7 +1,47 @@
 {
  "_about": "The bridge deployments this module knows, in ONE place (config.rs reads this file at build time; use_deployment takes a name from it, a path or a JSON object of the same shape). A new bridge instance is a new entry here, never a code change. Sources: vault/DEPLOYMENTS.md, public-demo/RUNBOOK.md (not published) (sections 11 and 13), web/deposit/src/lib/deployments.js. To switch the app to another bridge, change `default` (the ONE switch).",
- "default": "bridge-test-network-v3",
+ "default": "bridge-test-network-v4",
  "deployments": [
+  {
+   "name": "bridge-test-network-v4",
+   "label": "Sepolia vault v4 (proof-checked) → bridge test network (LEZ 0.4)",
+   "network": "LEZ 0.4 · bridge test network",
+   "chain_id": 11155111,
+   "vault": "0xC2c6A059eAB928966B24FA5549d441A3B17B54Ed",
+   "vault_create_block": 12142003,
+   "desk": "0x25C1653888e7a4E2c35393A5656b7d1645487fd5",
+   "cfg_id": "0x0c0f00c30fbe03c00e566a332fe73aa2f11d9e0fd6b8684e509a8be33cbd8be5",
+   "bridge_program": "BKXe3q5JcKeiSrKv9FUBjZw3AowbvYgyHZ3SYPgDxJBf",
+   "token_program": "5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7",
+   "lez_rpc": "https://lez.nameswallet.app/",
+   "relay": "rpc",
+   "attest_program": "",
+   "attest_instance": "",
+   "tokens": [
+    {
+     "eth_token": "0x0000000000000000000000000000000000000000",
+     "symbol": "ETH",
+     "decimals": 18,
+     "definition": "9tcLmjKixcGZJMnXS381Dhuzd8u9jPvQYF21F3vDhGE2"
+    },
+    {
+     "eth_token": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e",
+     "symbol": "dUSDC",
+     "decimals": 6,
+     "definition": "92PJXZ2E3QPupUFuhc5f4rgsRiAZKv62TpSYfZEgLeru"
+    }
+   ],
+   "notes": [
+    "Sepolia is an Ethereum test network: its coins have no value. Deposits are claimed on the bridge test network (LEZ 0.4), the team's own chain.",
+    "Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.",
+    "Which bridge test network blocks count is the bridge operator's word until a finality proof for that chain exists; the vault's caps and a one-hour delay bound a wrong update.",
+    "The bridge's relay pays a public claim's fee: the account needs no LEZ.",
+    "v4 vault: RISC Zero's Groth16 verifier 3.1.0 checks every update and release proof (gate 0xe5236Bc2a03235145C0FaCF327fdc9D1c90F4967; updates only from its submitter); deposit desk at 30 bps."
+   ],
+   "release": "proof",
+   "release_note": "Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.",
+   "release_detail": "How: RISC Zero's verifier on Sepolia checks every update and release proof. Which bridge test network blocks count is the bridge operator's word until a finality proof for that chain exists; the vault's caps and a one-hour delay bound a wrong update."
+  },
   {
    "name": "bridge-test-network-v3",
    "label": "Sepolia demo vault v3 → bridge test network (LEZ 0.4)",

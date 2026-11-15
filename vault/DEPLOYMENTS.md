@@ -17,6 +17,63 @@ SEPOLIA_PK=<deployer key> EXPECTED_DESK=<DESK from the simulation> forge script 
 
 `DESK_FEE_BPS` (default 300, at most 300) sets the starting rate. The script refuses a key that is not the deployer and a vault whose `cfgId` is not v2's. After it: the desk address goes into `web/deposit/src/lib/deployments.js` (`desk`, the page's one switch) and, with its creation block, into the grants daemon's `DESK` and `DESK_FROM_BLOCK` (`public-demo/RUNBOOK.md` (not published) §12).
 
+## Sepolia vault v4 (2026-11-15): RISC Zero's Groth16 verifier 3.1.0, behind an update gate
+
+**Deployed on Sepolia on 2026-11-15** from `public-demo/V4-PLAN.md`; the record
+is `public-demo/RUNBOOK.md` (not published) §18. **The default for the deposit page and the bridge app** since branch
+`v4-live`; v3 and v2 stay listed. Paired with a new bridge instance on the team's public LEZ rc3
+demo chain: the v3 bridge program (image `0dabbd6c…9ffa`) deployed again at a new header,
+`BKXe3q5JcKeiSrKv9FUBjZw3AowbvYgyHZ3SYPgDxJBf`.
+
+- **Its proofs are checked on Ethereum.** The verifier is RISC Zero's bare `RiscZeroGroth16Verifier` 3.1.0,
+  not an operator key. Before the broadcast, the stop step (V4-PLAN S0) passed: one real Groth16 seal of
+  each pinned image was accepted by `verify` on that verifier, wrapped in 163 s each on a GitHub runner.
+- **Updates come only through the gate's `submitUpdate`, from one fixed submitter.** Releases are
+  permissionless. Which LEZ blocks count as final is the submitter's word: the pinned update image is
+  TrustedTip, and LEZ rc3 headers are unsigned (`src/UpdateGatedVerifier.sol`).
+- **The genesis state is not zero:** it is `outbound_host genesis` at LEZ block 10265, right after the
+  bridge's deploy and before its `Initialize` in block 10286. The first update starts from it.
+- **Not trustless yet:**
+  - deposit roots reach LEZ through the operator's attester (stand-in root source);
+  - LEZ finality is the submitter's word;
+  - the update image takes private transactions on the sequencer's word (no privacy-receipt check,
+    `public-demo/v4/BUILD-outbound.txt`).
+- **No update or release yet** (`g2State()` = the genesis state, read 2026-11-15).
+
+| What | Value |
+|---|---|
+| RISC Zero verifier | `0x8c915b5071206C6E328BC18529586c513408aB3b` (`RiscZeroGroth16Verifier` 3.1.0, selector `0xe71e6620`, control root `e6feef13…551d`; RISC Zero's deployment, not ours) |
+| `UpdateGatedVerifier` (the vault's `verifier()`) | `0xe5236Bc2a03235145C0FaCF327fdc9D1c90F4967`, block 12142002, tx `0xb0305e338d15f70cbe2332eaa026ad0d62d4d582c0c3c97ab2ecf69ae306678c`, 2,954,104 gas |
+| `SUBMITTER()` | `0xB81aa37D80F8a9588ce9B09B6d6145D1FC4095f4` (a fresh key, not the deployer; funded 0.05 Sepolia ETH with `script/SepoliaFund.s.sol`) |
+| `BridgeVault` | `0xC2c6A059eAB928966B24FA5549d441A3B17B54Ed`, block 12142003, tx `0xdc48a114879acfe1d844336e17b21d0f1dfbb23339ba7e187ef39693691b2e2f`, 33,048,001 gas |
+| `cfgId()` | `0x0c0f00c30fbe03c00e566a332fe73aa2f11d9e0fd6b8684e509a8be33cbd8be5` (= the v4 bridge Config's) |
+| `programId()` | `0x9953f79a352801f441d113dc338e2b6f9be6320729b61d743b1509af9772a486` (bridge `BKXe3q5J…xJBf`) |
+| `lezChainId()` / `zoneId()` | `0x2da7f7df…5374` (the demo chain's channel id) / `0x4bd1c1bd…2afb` (stand-in source id), as v3 |
+| `updateImageId()` | `0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017` (G2-lite trusted tip, risc0-zkvm 3.1.0, `public-demo/v4/BUILD-outbound.txt`) |
+| `releaseImageId()` | `0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4` (G3, unchanged) |
+| `g2State()` | `0x3d1b762a529d2c0d9eed637913c64e65aabab0961a5a2fbdb1384f6b85a24155` (the genesis state at LEZ block 10265) |
+| `minReleaseDelay()` | 3,600 s (1 hour: the freezer's window against a stolen submitter key) |
+| Admin, freezer, fee recipient | `0x37a46E7334Dd061E0C7E2298247EE9278d0d321F` (the throwaway deployer) |
+| Tokens | ETH 0.01/0.1/1 and dUSDC `0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e` (reused) 100/1,000/10,000; zero vault fees; 0.5%/1% relay-fee menus; caps as v3; release delay 1 hour |
+| `configure()` | blocks 12142006–12142014, 9 transactions, 6,972,240 gas: `registerToken` ×2 (`0x4710066d…244e`, `0xe8081cab…af46`), `setRelayFeeMenu` ×2 (`0x6176501b…63df`, `0x91c2e223…4e89`), `setCaps` ×2 (`0xbefad04d…154a`, `0xe982cdff…848e`), `setGlobalCaps` (`0x728ed102…9699`), `setCapWeight` ×2 (`0x055a43d3…78c6`, `0x030eb4d1…4b72`) |
+| DepositDesk v4 | `0x25C1653888e7a4E2c35393A5656b7d1645487fd5`, block 12142016, tx `0x866acbcf67ed21f57e216e378252457e4818f5e958738a5ebd0dcbf31304c877`, 6,516,024 gas; `vault()` = the v4 vault, `feeBps()` 30, owner the deployer |
+| First deposit | 0.01 ETH through the v4 desk, a team deposit for the deploy wallet's account D4, leaf 0, Sepolia tx `0x0d4fb073e3984460fa87234ab1b680606d2d507b0ca7a0b6a5901a11c3955387`, block 12142034 (`depositCount()` 1) |
+
+- **Read back on 2026-11-15 through `https://sepolia.gateway.tenderly.co`:**
+  - the vault: `g2State`, `cfgId`, `programId`, `verifier()`, both image ids, `minReleaseDelay`, `lezChainId`, `zoneId`, `admin`;
+  - the gate: `VERIFIER()`, `SUBMITTER()`, `UPDATE_IMAGE_ID()`;
+  - the desk: `vault`, `feeBps`, `owner`.
+  - `node scripts/check-versions.mjs --onchain --deployment v4` reads the same and passes.
+- **Hashes and gas** are from the forge broadcast records (`broadcast/SepoliaV4.s.sol/11155111/`,
+  `broadcast/SepoliaDesk.s.sol/11155111/`, not in git).
+- **Fees:** every transaction paid 10,000,016 wei per gas (0.01 gwei): 49,490,369 gas,
+  0.000495 Sepolia ETH in all.
+
+Scripts: `script/SepoliaV4.s.sol` (`run()`, then `configure()`), `script/SepoliaDesk.s.sol`
+(`DESK_VAULT`, `DESK_VAULT_CFG_ID`, `DESK_FEE_BPS=30`), `script/SepoliaFund.s.sol` (test ETH to the
+submitter: a plain transfer to a never-used address now needs about 204,600 gas on Sepolia, so it
+uses a gas multiplier of 3000). The plan followed: `public-demo/V4-PLAN.md`.
+
 ## Sepolia DEMO vault v3 (2026-11-14): operator-attested, with the fixed LEZ programs
 
 **Deployed on Sepolia on 2026-11-14 and paired with the fixed bridge** (the 2026-11-14 security

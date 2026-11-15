@@ -509,6 +509,9 @@ enum Command {
     },
     /// Write a seed-derived release address's private key to a file (mode 600).
     EthKey(recover::EthKeyArgs),
+    /// Write a seed-derived exit's secret (the release proof's witness) to a file (mode 600) and
+    /// print its public exit commitment, to compare with the burn's.
+    ExitSecret(recover::ExitSecretArgs),
     /// Every wrapped token this wallet holds.
     Balances {
         #[arg(long)]
@@ -1209,6 +1212,7 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
         Command::Recover(args) => recover::recover(wallet, args).await,
         Command::Positions { bridge } => recover::positions(wallet, bridge).await,
         Command::EthKey(args) => recover::eth_key(wallet, args).await,
+        Command::ExitSecret(args) => recover::exit_secret(wallet, args).await,
         Command::Balances { token_program } => {
             wallet.sync_to_latest_block().await?;
             let synced_to = wallet.get_last_block_id().await.ok();

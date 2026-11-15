@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="/assets/tokens.css?v=586856d3">
 <link rel="stylesheet" href="/assets/chrome.css?v=a2a40c35">
 <!-- /site:assets -->
-  <link rel="stylesheet" href="../../app.css?v=bef66ad2e4ca">
+  <link rel="stylesheet" href="../../app.css?v=dabfacc3d643">
 </head>
 <body>
 <!-- site:header -->
@@ -90,7 +90,8 @@
         <li>A public claim links the Sepolia deposit to the Logos account, publicly.</li>
         <li>Private claims are not in the wallet yet.</li>
         <li>The bridge’s relay pays the claim’s fee, so the account needs no LEZ. The relay has daily limits; when it will not pay, nothing is sent.</li>
-        <li>This test vault was set up with a wrong starting value, so it can’t pay ETH back out. Deposits can be claimed on the bridge test network; withdrawals come with the next vault.</li>
+        <li>Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.</li>
+        <li>Which bridge test network blocks count is the bridge operator’s word until a finality proof for that chain exists; the vault’s caps and a one-hour delay bound a wrong update.</li>
         <li>Fixed amounts only: 0.01, 0.1 or 1 Sepolia ETH, or 100, 1,000 or 10,000 demo USDC (a test token only the team can hand out).</li>
       </ul>
       <details class="more">

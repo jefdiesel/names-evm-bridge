@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="/assets/tokens.css?v=586856d3">
 <link rel="stylesheet" href="/assets/chrome.css?v=a2a40c35">
 <!-- /site:assets -->
-  <link rel="stylesheet" href="../../app.css?v=bef66ad2e4ca">
+  <link rel="stylesheet" href="../../app.css?v=dabfacc3d643">
 </head>
 <body>
 <!-- site:header -->
@@ -62,10 +62,11 @@
       </ul>
       <p>A token approval is for the exact amount, never unlimited.</p>
       <h2>Your wallet is the last check</h2>
-      <p>It must show Sepolia and the demo vault, <code>0x26af59855b99a8af199361289A5Ed6088729E60E</code>. When the bridge fee is on, it shows the deposit desk instead; the page shows the desk’s address before you confirm, and the desk passes the deposit to the vault in the same transaction. That catches a page that sends you to another vault. It cannot show a swapped commitment, so that depends on the page being genuine.</p>
+      <p>It must show Sepolia and the vault, <code>0xC2c6A059eAB928966B24FA5549d441A3B17B54Ed</code>. When the bridge fee is on, it shows the deposit desk instead; the page shows the desk’s address before you confirm, and the desk passes the deposit to the vault in the same transaction. That catches a page that sends you to another vault. It cannot show a swapped commitment, so that depends on the page being genuine.</p>
       <h2>Limits today</h2>
       <ul>
-        <li>This test vault was set up with a wrong starting value, so it can’t pay ETH back out. Deposits can be claimed on the bridge test network; withdrawals come with the next vault.</li>
+        <li>Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.</li>
+        <li>Which bridge test network blocks count is the bridge operator’s word until a finality proof for that chain exists; the vault’s caps and a one-hour delay bound a wrong update.</li>
         <li>A claim is signed by the receiving account and needs the claim file. You claim in the Names Wallet (Wallet → LEZ 0.4 → “Claim a bridge deposit”), into a public account; that wallet build (0.17) is not released yet, so you can’t claim to your own account yourself today. The bridge pays a claim’s fee, so the account needs no LEZ. A claim to a public account links the Sepolia deposit to that account publicly.</li>
         <li>A LEZ account ID has no checksum: a mistyped account, or a key pasted instead of an ID, is accepted and makes the deposit unclaimable. The page shows the account for checking and asks you to confirm it.</li>
         <li>Tested with real Sepolia deposits through this page and MetaMask, and with a scripted wallet; not yet in Safari or Firefox, or with a screen reader.</li>

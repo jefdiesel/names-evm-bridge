@@ -103,13 +103,34 @@ const SEPOLIA_DEMO_V3 = {
 };
 
 /**
+ * v4 (public-demo/V4-PLAN.md; vault/DEPLOYMENTS.md, v4): RISC Zero's Groth16 verifier 3.1.0 checks every
+ * update and release proof on Sepolia, behind an UpdateGatedVerifier (updates only from its submitter: the
+ * LEZ finality is the operator's word until a finality proof exists). Written by public-demo/v4/apply-v4-entries.py.
+ */
+const SEPOLIA_V4 = {
+    id: 'sepolia-v4',
+    label: 'Sepolia vault v4',
+    chainId: 11155111,
+    vault: '0xc2c6a059eab928966b24fa5549d441a3b17b54ed',
+    deployBlock: 12142003,
+    cfgId: '0x0c0f00c30fbe03c00e566a332fe73aa2f11d9e0fd6b8684e509a8be33cbd8be5',
+    desk: '0x25C1653888e7a4E2c35393A5656b7d1645487fd5',
+    demo: true,
+    demoAccount: null,
+    demoNote: 'How: RISC Zero’s verifier on Sepolia checks every update and release proof. Which bridge test network blocks count is the bridge operator’s word until a finality proof for that chain exists; the vault’s caps and a one-hour delay bound a wrong update. Test coins only.',
+    demoShort: 'Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.',
+    tokens: SEPOLIA_DEMO_V2.tokens,
+};
+
+/**
  * THE ONE LINE that picks the page's deployment: new deposits go into `DEPLOYMENTS[0]`
  * (src/app.js). v3 since 2026-11-14; both stay listed, so wallet requests for either vault are
  * recognised (a v2 deposit is claimed on the v2 bridge, self-paid since the relay moved to v3).
  */
-const LIVE_DEFAULT = 'sepolia-demo-v3';
+const LIVE_DEFAULT = 'sepolia-v4';
 
-export const DEPLOYMENTS = LIVE_DEFAULT === SEPOLIA_DEMO_V3.id ? [SEPOLIA_DEMO_V3, SEPOLIA_DEMO_V2] : [SEPOLIA_DEMO_V2, SEPOLIA_DEMO_V3];
+const ALL_DEPLOYMENTS = [SEPOLIA_V4, SEPOLIA_DEMO_V3, SEPOLIA_DEMO_V2];
+export const DEPLOYMENTS = [...ALL_DEPLOYMENTS.filter((d) => d.id === LIVE_DEFAULT), ...ALL_DEPLOYMENTS.filter((d) => d.id !== LIVE_DEFAULT)];
 
 /**
  * Where the bridge's Logos side runs, and whether visitors can claim there themselves. ONE

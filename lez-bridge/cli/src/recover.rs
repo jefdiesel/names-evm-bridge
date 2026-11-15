@@ -969,6 +969,97 @@ pub async fn eth_key(wallet: &WalletCore<SequencerClient>, a: EthKeyArgs) -> Res
     Ok(())
 }
 
+#[derive(clap::Args, Debug)]
+pub struct ExitSecretArgs {
+    #[arg(long)]
+    pub bridge: AccountId,
+    /// The account that burned (its key derives the exit).
+    #[arg(long)]
+    pub from: AccountId,
+    #[arg(long)]
+    pub eth_token: String,
+    #[arg(long)]
+    pub denom: u128,
+    /// The release address the burn used: `derived` (the default, as `burn`) or the address given
+    /// to `burn --eth-dest`.
+    #[arg(long)]
+    pub eth_dest: Option<String>,
+    /// Default: the 2% cap, as `burn` uses.
+    #[arg(long)]
+    pub max_relay_fee: Option<u128>,
+    /// The exit's index (`burn` printed it: "derived exit: index N").
+    #[arg(long)]
+    pub key_index: u64,
+    /// File to write the exit secret to (created with mode 600; must not exist; never printed).
+    #[arg(long)]
+    pub out: PathBuf,
+}
+
+/// The exit secret `k` of a seed-derived exit, the G3 release proof's witness
+/// (`prove-release-rc3.sh --secret-file`), written to a new mode-600 file. Prints only public
+/// values: the exit commitment `E` (compare it with the burn's), the release address, the fee cap.
+pub async fn exit_secret(wallet: &WalletCore<SequencerClient>, a: ExitSecretArgs) -> Result<()> {
+    let config = bridge_config(wallet, a.bridge).await?;
+    let token = eth(&a.eth_token)?;
+    let fee = a.max_relay_fee.unwrap_or_else(|| kdf::max_relay_fee_cap(a.denom));
+    let dest = match a.eth_dest.as_deref() {
+        None | Some("derived") => Dest::Derived,
+        Some(x) => Dest::Address(eth(x)?),
+    };
+    let root = root_or_bail(wallet, a.from)?;
+    let c = scan::exit_candidate(&root, &config.cfg_id, &a.from, &token, a.denom, &dest, fee, a.key_index);
+    write_secret_file(&a.out, &c.secret)?;
+    println!(
+        "exit index {}: E 0x{}, release address 0x{}, maxRelayFee {fee}; secret written to {}",
+        a.key_index,
+        hex(&c.exit_commitment),
+        hex(&c.eth_dest),
+        a.out.display()
+    );
+    out::doc(&json!({
+        "key_index": a.key_index,
+        "exit_commitment": format!("0x{}", hex(&c.exit_commitment)),
+        "eth_dest": format!("0x{}", hex(&c.eth_dest)),
+        "max_relay_fee": fee.to_string(),
+        "secret_file": a.out.display().to_string(),
+    }));
+    Ok(())
+}
+
+/// `0x<hex>` and a newline into a NEW file (mode 600; an existing file is refused, never overwritten).
+pub fn write_secret_file(path: &std::path::Path, secret: &[u8; 32]) -> Result<()> {
+    use std::io::Write as _;
+    use std::os::unix::fs::OpenOptionsExt as _;
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)
+        .with_context(|| format!("{} (must not exist)", path.display()))?;
+    writeln!(f, "0x{}", hex(secret))?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod exit_secret_file_tests {
+    use super::write_secret_file;
+    use std::os::unix::fs::PermissionsExt as _;
+
+    #[test]
+    fn the_secret_file_is_new_mode_600_and_holds_the_hex_line() {
+        let dir = std::env::temp_dir().join(format!("exit-secret-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let p = dir.join("k");
+        write_secret_file(&p, &[0xab; 32]).unwrap();
+        assert_eq!(std::fs::metadata(&p).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), format!("0x{}\n", "ab".repeat(32)));
+        // never overwritten
+        assert!(write_secret_file(&p, &[0xcd; 32]).is_err());
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), format!("0x{}\n", "ab".repeat(32)));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+}
+
 /// `--eth-rpc` lists against fake Sepolia RPCs on loopback (synthetic deposits): pruned history
 /// moves to the next RPC, a silently short answer is refused and resets the cache, a hole already
 /// in the cache is read again from scratch. Exercises `sync_eth_list` end to end over HTTP.

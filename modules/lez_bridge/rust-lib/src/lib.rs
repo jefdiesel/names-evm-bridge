@@ -1567,6 +1567,16 @@ fn release_unavailable(exits_possible: bool, d: &Deployment) -> Value {
             "what_happens_next": "A burn on this vault can't be paid out on Ethereum: withdrawals come with the next vault.",
         });
     }
+    // A vault that releases by proof (v4): its own words, and what has to happen before a payout.
+    if d.release == "proof" && exits_possible && !d.release_note.is_empty() {
+        return json!({
+            "available": false,
+            "reason": d.release_note,
+            "vault_note": d.release_note,
+            "detail": d.release_detail,
+            "what_happens_next": "First a proved update records your burn's exit on Ethereum (the bridge operator sends it). Then the release needs its own proof, which this app doesn't make yet. After the vault's delay, anyone can send it, and the vault pays the recipient you fixed when burning.",
+        });
+    }
     if d.release == "operator" && exits_possible {
         return json!({
             "available": false,
@@ -1611,7 +1621,7 @@ impl LezBridgeModule for Bridge {
         v["features"] = json!(FEATURES);
         v["scaffold"] = Value::from(SCAFFOLD_LINE);
         v["build"] = build_info();
-        // `release`: the words for a vault that can't pay out (v3), or null.
+        // `release`: the vault's own words about paying out (v3: it can't; v4: by proof, not yet), or null.
         let d = &self.cfg.deployment;
         let release_notice = if d.release_note.is_empty() { Value::Null } else { json!({ "text": d.release_note, "detail": d.release_detail }) };
         v["notices"] = json!({ "not_private": relayed::not_private_notice(None), "release": release_notice });

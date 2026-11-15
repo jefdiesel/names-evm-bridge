@@ -170,7 +170,8 @@ test('--deployment <planned>: a missing genesis G2 state and missing image ids f
 });
 
 // --- on chain, against a stand-in JSON-RPC
-const SEL = { '0xffa1ad74': 'VERSION', '0x053c238d': 'SELECTOR', '0x9181e4b1': 'CR0', '0x8989fa2e': 'CR1', '0x258038e2': 'BN', '0x522d9a28': 'upd', '0x7b4d5f9a': 'rel', '0xfd64db0a': 'g2', '0xed9305e3': 'cfg', '0x2b7ac3f3': 'ver', '0x98812da8': 'pid' };
+const SEL = { '0xffa1ad74': 'VERSION', '0x053c238d': 'SELECTOR', '0x9181e4b1': 'CR0', '0x8989fa2e': 'CR1', '0x258038e2': 'BN', '0x522d9a28': 'upd', '0x7b4d5f9a': 'rel', '0xfd64db0a': 'g2', '0xed9305e3': 'cfg', '0x2b7ac3f3': 'ver', '0x98812da8': 'pid',
+  '0x08c84e70': 'gver', '0x872109a5': 'gupd', '0xf28a6123': 'gsub', '0xc872da3c': 'gkind' };
 const word = (h) => `0x${h.replace(/^0x/, '').padEnd(64, '0')}`;
 const abiStr = (s) => `0x${'20'.padStart(64, '0')}${s.length.toString(16).padStart(64, '0')}${Buffer.from(s).toString('hex').padEnd(64, '0')}`;
 function fakeChain(over = {}) {
@@ -227,4 +228,27 @@ test('helpers: value matching, requirements, base58, the on-chain control root',
   assert.equal(base58ToHex('4eaeK3yiqATXhpCEYEFMMtjUn1bS7HLxPwfrH31mXCvr'), '363397603aee2f10bc26aad792cd96692e8bda7faa7c952879564513c822e5af');
   // The v1/v2 verifier (3.0.0) as read on Sepolia (vault/DEPLOYMENTS.md): CONTROL_ROOT_0/1 → the crate's root.
   assert.equal(controlRootFromChain('0x41af18736dc9d7921c859fc95ac84da5', '0x561f8c992a424deb37ccdf4e19c0e7db'), 'a54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56');
+});
+
+// --- a vault behind an UpdateGatedVerifier (v4): the vault names the gate, the gate the RISC Zero verifier
+const GATE = '0xe5236Bc2a03235145C0FaCF327fdc9D1c90F4967';
+const SUBM = '0xB81aa37D80F8a9588ce9B09B6d6145D1FC4095f4';
+const GATE_KIND = 'update-gated: RISC Zero Groth16 verifies every proof; updates only from SUBMITTER (LEZ finality is its word)';
+const gateEdit = { 'VERSIONS.toml': [['', `\n[deployments.v1.gate]\naddress = { v = "${GATE}", src = "fixture" }\nsubmitter = { v = "${SUBM}", src = "fixture" }\nkind_text = { v = "${GATE_KIND}", src = "fixture" }\n`]] };
+const behindGate = (over = {}) => fakeChain({
+  ver: `0x${'0'.repeat(24)}${GATE.slice(2).toLowerCase()}`, gver: '0x0000000000000000000000008c915b5071206c6e328bc18529586c513408ab3b',
+  gupd: '0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017', gsub: `0x${'0'.repeat(24)}${SUBM.slice(2).toLowerCase()}`, gkind: abiStr(GATE_KIND), ...over,
+});
+
+test('--onchain with a gate: the vault names the gate, the gate the verifier, the image and the submitter', async () => {
+  const ok = await run(gateEdit, { onchain: true, rpc: 'http://stand-in', fetchImpl: behindGate() });
+  assert.deepEqual(ok.fails, [], ok.text);
+  assert.ok(ok.res.findings.some((f) => f.level === 'OK' && /v1: gate 0xe5236b.* in front of verifier 0x8c915b/i.test(f.msg)), ok.text);
+  const sub = await run(gateEdit, { onchain: true, rpc: 'http://stand-in', fetchImpl: behindGate({ gsub: word('0'.repeat(24) + '11'.repeat(20)) }) });
+  failsWith(sub, 'onchain', /v1: gate 0xe5236B.*SUBMITTER\(\)/);
+  // the vault pointing straight at the bare verifier while a gate is declared
+  const bare = await run(gateEdit, { onchain: true, rpc: 'http://stand-in', fetchImpl: behindGate({ ver: '0x0000000000000000000000008c915b5071206c6e328bc18529586c513408ab3b' }) });
+  failsWith(bare, 'onchain', /v1: vault .*verifier\(\)/);
+  const img = await run(gateEdit, { onchain: true, rpc: 'http://stand-in', fetchImpl: behindGate({ gupd: word('ab') }) });
+  failsWith(img, 'onchain', /v1: gate .*UPDATE_IMAGE_ID\(\)/);
 });

@@ -28,9 +28,9 @@
 
 schema = 1
 # The deployment the code in this tree builds for: workspace checks compare against its roles.
-builds_for = "next"
+builds_for = "v4"
 # The deployment the module and the deposit page default to.
-live = "v3"
+live = "v4"
 
 [walk]
 # Directories the checker never walks for Cargo files (fixtures are test inputs of the checker).
@@ -266,24 +266,24 @@ risc0_zkvm = { v = "3.0.5", src = "git show c9ec880:lez-bridge/outbound/Cargo.lo
 risc0_circuit_recursion = { v = "4.0.5", src = "git show c9ec880:lez-bridge/outbound/Cargo.lock" }
 risc0_groth16 = { v = "3.0.5", src = "git show c9ec880:lez-bridge/outbound/Cargo.lock" }
 
-[deployments.next]
-label = "v4, the next vault (not deployed): real RISC Zero verifier, non-zero genesis state"
-status = "planned"
+[deployments.v4]
+label = "Sepolia vault v4 (2026-11-15): RISC Zero Groth16 verifier 3.1.0 behind an UpdateGatedVerifier, genesis G2 state at LEZ block 10265"
+status = "deployed"
 lez = "rc3"
 chain_id = 11155111
-web_id = ""
-vault = { v = "", src = "not deployed; fill in after the deploy and run --onchain again" }
-vault_create_block = { v = 0, src = "not deployed" }
-cfg_id = { v = "", src = "not deployed" }
-program_id = { v = "", src = "not deployed" }
-desk = { v = "", src = "not deployed" }
+web_id = "sepolia-v4"
+vault = { v = "0xC2c6A059eAB928966B24FA5549d441A3B17B54Ed", src = "vault/DEPLOYMENTS.md v4 (tx 0xdc48a114…2e2f); code read 2026-11-15 (Tenderly)" }
+vault_create_block = { v = 12142003, src = "vault/DEPLOYMENTS.md v4" }
+cfg_id = { v = "0x0c0f00c30fbe03c00e566a332fe73aa2f11d9e0fd6b8684e509a8be33cbd8be5", src = "cfgId() read 2026-11-15 (Tenderly); = the v4 bridge Config's cfg_id" }
+program_id = { v = "0x9953f79a352801f441d113dc338e2b6f9be6320729b61d743b1509af9772a486", src = "programId() read 2026-11-15; base58 of BKXe3q5J…xJBf" }
+desk = { v = "0x25C1653888e7a4E2c35393A5656b7d1645487fd5", src = "vault/DEPLOYMENTS.md v4 (block 12142016; vault() = the v4 vault, feeBps 30, read 2026-11-15)" }
 build_commit = { v = "adc0bcacc2ca7827c6836f061cf11727c81b3533", src = "public-demo/v4/BUILD-outbound.txt (the v4 canonical outbound build)" }
 update_image = { v = "0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017", elf_sha256 = "cf06043dd43f99c185b9995050854ae9f30479c071937a0de00c656a81604fe7", risc0_zkvm = "3.1.0", src = "public-demo/v4/BUILD-outbound.txt UPDATE_IMAGE_ID_TRUSTED_TIP (G2-lite trusted tip, feature unchecked-private); public-demo/prove/prove-outbound-rc3.sh" }
 release_image = { v = "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4", elf_sha256 = "2353c51e8366f2379a0acf703257a15a6eff449575e17b12e55e6700ea102d8a", risc0_zkvm = "3.0.5", src = "public-demo/v4/BUILD-outbound.txt RELEASE_IMAGE_ID (release guest unchanged, on 3.0.5)" }
-genesis_g2_state = { v = "", src = "outbound_host genesis --block <tip before the bridge's Initialize>: must be non-zero (AGENTS.md Conventions); --deployment next fails until it is set" }
-g2_updates = { v = 0, src = "not deployed" }
+genesis_g2_state = { v = "0x3d1b762a529d2c0d9eed637913c64e65aabab0961a5a2fbdb1384f6b85a24155", src = "outbound_host genesis --block 10265 (the tip right after the v4 bridge program BKXe3q5J…xJBf was deployed, before its Initialize), 2026-11-15; formerly: outbound_host genesis --block <tip before the bridge's Initialize>: must be non-zero (AGENTS.md Conventions); --deployment next fails until it is set" }
+g2_updates = { v = 0, src = "g2State() = genesis_g2_state, read 2026-11-15 (no update yet); count every accepted update here" }
 
-[deployments.next.verifier]
+[deployments.v4.verifier]
 kind = "risc0-groth16"
 address = { v = "0x8c915b5071206C6E328BC18529586c513408aB3b", src = "GHSA-mm6c-35cm-g4x2 (patched Sepolia verifier); code read 2026-11-15 (Tenderly)" }
 version = { v = "3.1.0", src = "VERSION() read 2026-11-15" }
@@ -291,31 +291,45 @@ selector = { v = "0xe71e6620", src = "SELECTOR() read 2026-11-15" }
 control_root = { v = "e6feef13db7aed4a731c7b0852de1f5c89b137726073f625d05333184d3a551d", src = "CONTROL_ROOT_0/1 read 2026-11-15, byte-reversed (= risc0-circuit-recursion 4.1.0)" }
 bn254_control_id = { v = "de81d091ba14062acb5023b3b36deee95624e3fd47475cb7ff64aed5f9eac20a", src = "BN254_CONTROL_ID read 2026-11-15, byte-reversed" }
 
-[deployments.next.roles.lez_chain]
+# The vault's verifier() is the gate; the gate's VERIFIER() is the RISC Zero verifier above (--onchain reads both).
+[deployments.v4.gate]
+address = { v = "0xe5236Bc2a03235145C0FaCF327fdc9D1c90F4967", src = "verifier() of the v4 vault, read 2026-11-15; vault/DEPLOYMENTS.md v4 (block 12142002)" }
+submitter = { v = "0xB81aa37D80F8a9588ce9B09B6d6145D1FC4095f4", src = "SUBMITTER() read 2026-11-15" }
+kind_text = { v = "update-gated: RISC Zero Groth16 verifies every proof; updates only from SUBMITTER (LEZ finality is its word)", src = "KIND() of vault/src/UpdateGatedVerifier.sol" }
+
+[[deployments.v4.lez_side]]
+name = "public"
+module_entry = "bridge-test-network-v4"
+bridge_program = { v = "BKXe3q5JcKeiSrKv9FUBjZw3AowbvYgyHZ3SYPgDxJBf", src = "public-demo/RUNBOOK.md (not published) §18 (deployed LEZ block 10265)" }
+token_program = { v = "5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7", src = "v3's token program, reused (public-demo/V4-PLAN.md §1)" }
+bridge_image = { v = "0dabbd6c4c3035d1824c7d5ccb958ab93e3d57871bfd1efea76ab72718ef9ffa", elf_sha256 = "8914861af35f1193c5a2d309ddfd1f5f041a6781d5baafab0509f7b60e4b9d24", src = "the v3 canonical ELF (v4/lez/BUILD.txt); the header's image read through the public RPC 2026-11-15" }
+token_image = { v = "ac175cb59bff0f5e59d51b566552546087f082a9bcea9571b705633f031eafba", elf_sha256 = "7704844f97a96dbef20cf76804f05129de5239f9b4b8fa9629c0d54a778edfa6", src = "= v3 (reused program)" }
+
+[deployments.v4.roles.lez_chain]
 risc0_zkvm = { v = "3.0.5", src = "LEZ v0.4.0-rc3 Cargo.lock at bafd07be (read 2026-11-15); the judge demo kit's lock at 96a0a502 has the same three" }
 risc0_circuit_recursion = { v = "4.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
 risc0_groth16 = { v = "3.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
 risc0_build = { v = "3.0.5", src = "LEZ v0.4.0-rc3 Cargo.lock" }
 
-[deployments.next.roles.lez_host]
+[deployments.v4.roles.lez_host]
 risc0_zkvm = { v = "3.0.5", src = "= lez_chain; lez-bridge/cli/Cargo.toml =3.0.5" }
 risc0_circuit_recursion = { v = "4.0.4", src = "= lez_chain (LEZ refuses receipts from another control root); lez-bridge/cli/Cargo.toml =4.0.4; test lez-bridge/cli/tests/lez_receipts.rs" }
 risc0_groth16 = { v = "3.0.4", src = "= lez_chain; lez-bridge/cli/Cargo.toml =3.0.4" }
 
-[deployments.next.roles.lez_guests]
+[deployments.v4.roles.lez_guests]
 risc0_zkvm = { v = "3.0.5", src = "= lez_chain" }
 risc0_build = { v = "3.0.5", src = "= lez_chain" }
 
-[deployments.next.roles.eth_guests]
+[deployments.v4.roles.eth_guests]
 risc0_zkvm = { v = "3.1.0", src = "the G2-lite guests' Cargo.lock since adc0bca; a workspace with `image` takes that image's risc0_zkvm instead (the release guest: 3.0.5)" }
 
-[deployments.next.roles.eth_provers]
+[deployments.v4.roles.eth_provers]
 risc0_zkvm = { v = "3.1.0", src = "GHSA-g6qg-9j8p-7j87 fixed version; the 3.1.0 verifier needs receipts from risc0-zkvm 3.1.0; public-demo/v4/BUILD-outbound.txt host line" }
 risc0_circuit_recursion = { v = "4.1.0", src = "risc0-zkvm 3.1.0 Cargo.toml" }
 risc0_groth16 = { v = "3.0.6", src = "risc0-zkvm 3.1.0 Cargo.toml" }
 risc0_build = { v = "3.0.7", src = "risc0-zkvm 3.1.0 Cargo.toml (risc0-build 3.0.7)" }
 
-[deployments.next.roles.research]
+[deployments.v4.roles.research]
 risc0_zkvm = { v = "3.0.5", src = "= lez_chain (they link lee_core)" }
 
 # ---------------------------------------------------------------------------------------------
@@ -718,71 +732,83 @@ re = 'bridge `([0-9a-f]{64})`, token'
 value = "deployments.v3.lez_side.public.bridge_image"
 private = true
 
-# next (v4)
+# v4
 [[pin]]
 file = "public-demo/prove/prove-outbound-rc3.sh"
 re = '^IMAGE_DEFAULT=(0x[0-9a-f]{64})'
-value = "deployments.next.update_image"
+value = "deployments.v4.update_image"
 private = true
 
 [[pin]]
 file = "public-demo/prove/prove-outbound-rc3.sh"
 re = '^ELF_SHA=([0-9a-f]{64})'
-value = "deployments.next.update_image.elf_sha256"
+value = "deployments.v4.update_image.elf_sha256"
+private = true
+
+[[pin]]
+file = "public-demo/prove/prove-release-rc3.sh"
+re = '^IMAGE_DEFAULT=(0x[0-9a-f]{64})'
+value = "deployments.v4.release_image"
+private = true
+
+[[pin]]
+file = "public-demo/prove/prove-release-rc3.sh"
+re = '^ELF_SHA=([0-9a-f]{64})'
+value = "deployments.v4.release_image.elf_sha256"
 private = true
 
 [[pin]]
 file = "public-demo/v4/BUILD-outbound.txt"
 re = '^commit: ([0-9a-f]{40})'
-value = "deployments.next.build_commit"
+value = "deployments.v4.build_commit"
 private = true
 
 [[pin]]
 file = "public-demo/v4/BUILD-outbound.txt"
 re = '^UPDATE_IMAGE_ID_TRUSTED_TIP=(0x[0-9a-f]{64})'
-value = "deployments.next.update_image"
+value = "deployments.v4.update_image"
 private = true
 
 [[pin]]
 file = "public-demo/v4/BUILD-outbound.txt"
 re = '^RELEASE_IMAGE_ID=(0x[0-9a-f]{64})'
-value = "deployments.next.release_image"
+value = "deployments.v4.release_image"
 private = true
 
 [[pin]]
 file = "public-demo/v4/BUILD-outbound.txt"
 re = '^([0-9a-f]{64})  elf/outbound_guest_trusted_tip\.bin'
-value = "deployments.next.update_image.elf_sha256"
+value = "deployments.v4.update_image.elf_sha256"
 private = true
 
 [[pin]]
 file = "public-demo/v4/BUILD-outbound.txt"
 re = '^([0-9a-f]{64})  elf/release_guest\.bin'
-value = "deployments.next.release_image.elf_sha256"
+value = "deployments.v4.release_image.elf_sha256"
 private = true
 
 [[pin]]
 file = "public-demo/v4/BUILD-outbound.txt"
 re = '^GROTH16_SELECTOR=(0x[0-9a-f]{8})'
-value = "deployments.next.verifier.selector"
+value = "deployments.v4.verifier.selector"
 private = true
 
 [[pin]]
 file = "public-demo/v4/BUILD-outbound.txt"
 re = '^host: risc0-zkvm ([0-9.]+),'
-value = "deployments.next.roles.eth_provers.risc0_zkvm"
+value = "deployments.v4.roles.eth_provers.risc0_zkvm"
 private = true
 
 [[pin]]
 file = "public-demo/v4/BUILD-outbound.txt"
 re = 'risc0-circuit-recursion ([0-9.]+),'
-value = "deployments.next.roles.eth_provers.risc0_circuit_recursion"
+value = "deployments.v4.roles.eth_provers.risc0_circuit_recursion"
 private = true
 
 [[pin]]
 file = "public-demo/v4/BUILD-outbound.txt"
 re = 'risc0-groth16 ([0-9.]+),'
-value = "deployments.next.roles.eth_provers.risc0_groth16"
+value = "deployments.v4.roles.eth_provers.risc0_groth16"
 private = true
 
 [[pin]]

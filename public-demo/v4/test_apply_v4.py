@@ -39,6 +39,16 @@ class ApplyV4(unittest.TestCase):
             (self.tmp / rel).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(ROOT / rel, self.tmp / rel)
         self.before = {rel: (self.tmp / rel).read_text() for rel in (MOD, JS)}
+        # Once v4 is applied (branch v4-live, 2026-11-15) the lists hold it: a second apply is refused.
+        self.applied = "bridge-test-network-v4" in self.before[MOD]
+
+    def skip_if_applied(self):
+        if self.applied:
+            r = self.run_apply(ENV)
+            self.assertNotEqual(r.returncode, 0)
+            self.assertIn("already", r.stderr)
+            self.unchanged()
+            self.skipTest("v4 is already in the deployment lists; a second apply is refused (checked)")
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
@@ -54,6 +64,7 @@ class ApplyV4(unittest.TestCase):
             self.assertEqual((self.tmp / rel).read_text(), self.before[rel], rel)
 
     def test_listed_not_default(self):
+        self.skip_if_applied()
         r = self.run_apply(ENV)
         self.assertEqual(r.returncode, 0, r.stderr)
         m = json.loads((self.tmp / MOD).read_text())
@@ -73,6 +84,7 @@ class ApplyV4(unittest.TestCase):
         self.assertIn("already", r2.stderr)
 
     def test_default(self):
+        self.skip_if_applied()
         r = self.run_apply(ENV, "--default")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads((self.tmp / MOD).read_text())["default"], "bridge-test-network-v4")

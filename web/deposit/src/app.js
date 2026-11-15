@@ -945,7 +945,7 @@ function notes(s, { sent, refused }) {
   if (refused || ui.mode === 'paste' || sent) return null;
   const lines = h('div', { class: 'notes' });
   const dep = s.deployment || DEP;
-  if (dep.demoNote) lines.append(h('p', { class: 'locked' }, dep.demoShort || dep.demoNote), more('About the demo vault', dep.demoShort ? h('p', {}, dep.demoNote) : null));
+  if (dep.demoNote) lines.append(h('p', { class: 'locked' }, dep.demoShort || dep.demoNote), more('About this test vault', dep.demoShort ? h('p', {}, dep.demoNote) : null));
   lines.append(h('p', {}, 'Public on Sepolia: your address, amount and time. Not public: who receives it on Logos. ', h('a', { href: 'about/privacy/' }, 'Privacy')));
   lines.append(h('p', {}, hashLink('Settings', '#settings', openSettings), ' · ', h('a', { href: TESTING_PAGE }, 'Testing this bridge')));
   return lines;
@@ -1029,7 +1029,7 @@ function nextSteps(s) {
     ...claim,
     h('p', { class: 'wallet-link' }, walletLink()),
     dep?.demoNote ? h('p', { class: 'locked' }, dep.demoShort || dep.demoNote) : null,
-    dep?.demoShort ? more('About the demo vault', h('p', {}, dep.demoNote)) : null,
+    dep?.demoShort ? more('About this test vault', h('p', {}, dep.demoNote)) : null,
   );
 }
 
