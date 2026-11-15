@@ -1,11 +1,13 @@
-# The Groth16 wrap of a proved outbound update, on a GitHub-hosted x86-64 runner (no machine of
+# The Groth16 wrap of a proved outbound update or G3 release, on a GitHub-hosted x86-64 runner (no machine of
 # ours needed), then the read-only on-chain check against RISC Zero's RiscZeroGroth16Verifier 3.1.0
 # on Sepolia. On demand only (workflow_dispatch): the owner starts it.
 #
 #   gh workflow run wrap-outbound.yml --ref main -f receipt=first-4524-4533
 #
-# Input: a directory under public-demo/prove/receipts/ holding receipt.bin (a succinct receipt from
-# outbound_host --prove), journal.hex and image-id. Steps: build lez-bridge/outbound/wrap (its own
+# Input: a directory under public-demo/prove/receipts/ (layout: its README.md) holding receipt.bin
+# (a succinct receipt from outbound_host --prove: an update from prove-outbound-rc3.sh or a release
+# from prove-release-rc3.sh), journal.hex and image-id.txt (or image-id): the image the on-chain
+# call names (the update image, or the release image 0x6bcbd714…72a4 for a release). Steps: build lez-bridge/outbound/wrap (its own
 # workspace: risc0-zkvm 3.1.0, no guests) and run its tests; add swap; pull RISC Zero's prover image
 # (risc0-groth16 3.0.6: risczero/risc0-groth16-prover:v2026-10-20.1, gnark, linux/amd64, 2.3 GB
 # compressed); public-demo/prove/wrap-outbound.sh (compress to Groth16, verify natively, seal =
@@ -60,9 +62,14 @@ jobs:
         run: |
           case "$RECEIPT" in ''|*/*|.*) echo "receipt must be a plain directory name"; exit 2 ;; esac
           D=public-demo/prove/receipts/$RECEIPT
-          test -f "$D/receipt.bin" && test -f "$D/journal.hex" && test -f "$D/image-id"
+          test -f "$D/receipt.bin" && test -f "$D/journal.hex"
+          if [ -f "$D/image-id.txt" ]; then IDF=$D/image-id.txt; else IDF=$D/image-id; fi
+          IMAGE_ID=$(tr -d ' \n' < "$IDF")
+          case "$IMAGE_ID" in 0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4) KIND=release ;; *) KIND=update ;; esac
           echo "IN=$PWD/$D" >> "$GITHUB_ENV"
-          echo "IMAGE_ID=$(tr -d ' \n' < "$D/image-id")" >> "$GITHUB_ENV"
+          echo "IMAGE_ID=$IMAGE_ID" >> "$GITHUB_ENV"
+          echo "KIND=$KIND" >> "$GITHUB_ENV"
+          echo "input: $KIND receipt, image $IMAGE_ID"
           echo "OUT=$RUNNER_TEMP/wrap-out" >> "$GITHUB_ENV"
           echo "CPUs $(nproc), memory $(awk '/MemTotal/ {print int($2 / 1048576)}' /proc/meminfo) GB; $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2-)"
           echo "CPU flags: $(grep -o -w -E 'adx|bmi2|avx2|avx512f' /proc/cpuinfo | sort -u | tr '\n' ' ')"
@@ -158,7 +165,7 @@ jobs:
             CONTROL="refused, as it must be"
           fi
           {
-            echo "ON-CHAIN: $RESULT by RiscZeroGroth16Verifier 3.1.0 $VERIFIER on Sepolia (read-only eth_call via $SEPOLIA_RPC)"
+            echo "ON-CHAIN: $RESULT by RiscZeroGroth16Verifier 3.1.0 $VERIFIER on Sepolia (read-only eth_call via $SEPOLIA_RPC), $KIND receipt"
             echo "negative control (changed journal digest): $CONTROL"
             echo "image $IMAGE_ID, journal digest $DIGEST, seal $(wc -c < "$OUT/seal.bin") bytes"
           } | tee -a "$OUT/summary.txt" "$GITHUB_STEP_SUMMARY"
