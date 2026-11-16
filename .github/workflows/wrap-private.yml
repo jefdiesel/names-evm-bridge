@@ -7,6 +7,14 @@
 #
 #   gh workflow run wrap-private.yml --repo <owner/repo> -f bundle=<id> -f journal_digest=0x… [-f image_id=0x…]
 #
+# Or, started by the bridge's settlement service (public-demo/settle/settle.py), with no commit:
+#
+#   … -f fetch_id=<32 hex> -f journal_digest=0x…
+#
+# The runner then fetches the same kind of encrypted bundle from the bridge's public endpoint
+# (JSON-RPC `bridge_settleBundle [fetch_id]`, served by the settlement service only while that job
+# is wrapping): ciphertext only, never written to the repository.
+#
 # What this job prints, uploads or keeps: only the image id, the journal's sha256 digest (the value
 # the vault's `release` passes to the verifier anyway), the seal, the wrap time and the read-only
 # on-chain result. Never the journal, its fields, the receipt or the plaintext bundle: no step
@@ -14,13 +22,19 @@
 # plaintext is deleted after the wrap. The artifact holds seal.bin, seal.hex and summary.txt only.
 # Same build, swap and prover image as wrap-outbound.yml (see its header for memory and runners).
 name: wrap-private
+run-name: wrap-private ${{ inputs.fetch_id || inputs.bundle }}
 
 on:
   workflow_dispatch:
     inputs:
       bundle:
-        description: id of public-demo/prove/receipts-enc/<id>.bin (16 hex characters)
-        required: true
+        description: id of public-demo/prove/receipts-enc/<id>.bin (16 hex characters), or empty with fetch_id
+        required: false
+        default: ""
+      fetch_id:
+        description: the settlement service's fetch id (32 hex characters), instead of a committed bundle
+        required: false
+        default: ""
       journal_digest:
         description: sha256 of the journal (0x + 64 hex), as wrap-private.sh printed it
         required: true
@@ -44,6 +58,7 @@ env:
   CARGO_TERM_COLOR: never
   VERIFIER: "0x8c915b5071206C6E328BC18529586c513408aB3b"
   SEPOLIA_RPC: https://sepolia.gateway.tenderly.co
+  SETTLE_ENDPOINT: https://lez.nameswallet.app/
   IMAGE: risczero/risc0-groth16-prover:v2026-10-20.1
 
 jobs:
@@ -58,20 +73,34 @@ jobs:
       - name: Inputs (format only)
         env:
           BUNDLE: ${{ inputs.bundle }}
+          FETCH_ID: ${{ inputs.fetch_id }}
           DIGEST: ${{ inputs.journal_digest }}
           IMAGE_ID: ${{ inputs.image_id }}
         run: |
           set +x
-          [[ "$BUNDLE" =~ ^[0-9a-f]{16}$ ]] || { echo "bundle must be 16 lowercase hex characters"; exit 2; }
           [[ "$DIGEST" =~ ^0x[0-9a-f]{64}$ ]] || { echo "journal_digest must be 0x + 64 lowercase hex"; exit 2; }
           [[ "$IMAGE_ID" =~ ^0x[0-9a-f]{64}$ ]] || { echo "image_id must be 0x + 64 lowercase hex"; exit 2; }
-          test -f "public-demo/prove/receipts-enc/$BUNDLE.bin" || { echo "no bundle $BUNDLE"; exit 2; }
-          echo "BUNDLE_FILE=$PWD/public-demo/prove/receipts-enc/$BUNDLE.bin" >> "$GITHUB_ENV"
+          if [ -n "$FETCH_ID" ]; then
+            [[ "$FETCH_ID" =~ ^[0-9a-f]{32}$ ]] || { echo "fetch_id must be 32 lowercase hex characters"; exit 2; }
+            # Ciphertext only, from the settlement service; printed: its size, nothing else.
+            BUNDLE=$FETCH_ID
+            BUNDLE_FILE=$RUNNER_TEMP/bundle.bin
+            curl -fsS --max-time 120 -H 'Content-Type: application/json' \
+              -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"bridge_settleBundle\",\"params\":[\"$FETCH_ID\"]}" \
+              "$SETTLE_ENDPOINT" -o "$RUNNER_TEMP/fetched.json" || { echo "the endpoint did not serve the bundle"; exit 2; }
+            python3 -c 'import base64,json,sys; r=json.load(open(sys.argv[1])).get("result") or {}; b=r.get("bundle"); sys.exit("no bundle in the answer") if not b else open(sys.argv[2],"wb").write(base64.b64decode(b))' "$RUNNER_TEMP/fetched.json" "$BUNDLE_FILE" || exit 2
+            rm -f "$RUNNER_TEMP/fetched.json"
+          else
+            [[ "$BUNDLE" =~ ^[0-9a-f]{16}$ ]] || { echo "bundle must be 16 lowercase hex characters (or give fetch_id)"; exit 2; }
+            BUNDLE_FILE=$PWD/public-demo/prove/receipts-enc/$BUNDLE.bin
+            test -f "$BUNDLE_FILE" || { echo "no bundle $BUNDLE"; exit 2; }
+          fi
+          echo "BUNDLE_FILE=$BUNDLE_FILE" >> "$GITHUB_ENV"
           echo "DIGEST=$DIGEST" >> "$GITHUB_ENV"
           echo "IMAGE_ID=$IMAGE_ID" >> "$GITHUB_ENV"
           echo "IN=$RUNNER_TEMP/in" >> "$GITHUB_ENV"
           echo "OUT=$RUNNER_TEMP/wrap-out" >> "$GITHUB_ENV"
-          echo "bundle $BUNDLE ($(wc -c < "public-demo/prove/receipts-enc/$BUNDLE.bin") bytes), image $IMAGE_ID, journal digest $DIGEST"
+          echo "bundle $BUNDLE ($(wc -c < "$BUNDLE_FILE") bytes), image $IMAGE_ID, journal digest $DIGEST"
           echo "CPUs $(nproc), memory $(awk '/MemTotal/ {print int($2 / 1048576)}' /proc/meminfo) GB"
 
       - name: Free disk
@@ -184,7 +213,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: wrap-private-${{ inputs.bundle }}
+          name: wrap-private-${{ inputs.fetch_id || inputs.bundle }}
           path: |
             ${{ runner.temp }}/artifact/seal.bin
             ${{ runner.temp }}/artifact/seal.hex
