@@ -84,7 +84,7 @@ demo chain: the v3 bridge program (image `0dabbd6c…9ffa`) deployed again at a 
 - **First relayed claim and burn on the LEZ side** (team deposit, leaf 0): claim LEZ block 10359, burn LEZ
   block 10361, exit toward the deployer; the claim relay serves v4 since about 18:50 UTC
   (`public-demo/RUNBOOK.md` (not published) §18, §18.1).
-- **The first proof-verified round trip (2026-11-15):** the update over LEZ blocks 10266..10362, proved
+- **Our first round trip with real proofs (2026-11-15):** the update over LEZ blocks 10266..10362, proved
   and wrapped, was accepted through the gate in Sepolia block 12142209 (tx
   `0x7fd725cd4480a247760aa4abca19fef20d67b39c3e1c43a64c8c192c9a3bb369`, 899,746 gas); exit 0 (the burn
   of LEZ block 10361) was released by proof after the one-hour delay in Sepolia block 12142503 (tx
@@ -93,7 +93,8 @@ demo chain: the v3 bridge program (image `0dabbd6c…9ffa`) deployed again at a 
   12143000 (tx `0xf7519de9d2964e8d720a81cda7309ab89ef45cca99bd6baedf4dfa1b3d1cab62`, 671,254 gas).
   Proofs, wraps and numbers: `public-demo/prove/receipts/v4-update-1/`, `v4-release-1/`,
   `v4-update-2/`. Read 2026-11-16 through Tenderly: `g2State()` `0x155b12e6…dab0`, `depositCount()` 6,
-  two `Released` events.
+  two `Released` events. Read-only re-check: `docs/VERIFY-ROUND-TRIP.md`.
+- **Source-verified on Sourcify, exact match (2026-11-16, `forge verify-contract --verifier sourcify`, forge 1.5.1):** the v4 vault `0xC2c6…54Ed`, its gate `0xe523…4967` and its desk `0x25C1…7fd5`; the v5 vault `0xAFbD…eD10`, its gate `0x0F3F…15d1` and its desk `0xbAf1…9880` (creation and runtime bytecode both `exact_match`).
 
 | What | Value |
 |---|---|

@@ -1,6 +1,6 @@
 # Security review of 2026-11-14: findings, fixes, and what the live v2 demo still carries
 
-Two independent reviews of commit `d5d27e9` (2026-11-14): **review A** (the LEZ bridge, token and
+Two internal reviews of commit `d5d27e9` (2026-11-14), each by an AI agent in its own session, separate from the sessions that wrote the code; not a third-party audit: **review A** (the LEZ bridge, token and
 attestation programs) and **review B** (the claim relay). This file records, for each finding,
 whether we confirmed it, how branch `security-fixes` fixes it, the tests, and what stays true of
 the **live v2 demo** (the public demo chain's bridge `JECKB…nUx7`, its token program, the claim
