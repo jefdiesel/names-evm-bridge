@@ -336,8 +336,8 @@ export async function resolve(name, options = {}) {
       return fail('expired', `The LNS name ${shown} has expired. Ask its holder for a LEZ account.`, at);
     }
     if (!used.profile || !used.profile.account) {
-      const why = used.profile?.payablePrivately ? 'accepts private payments only' : 'has no public account set';
-      return fail('no_public_account', `The LNS name ${shown} ${why}, so the bridge can't pay it. Paste a LEZ account instead.`, at);
+      if (used.profile?.payablePrivately) return fail('no_public_account', `The LNS name ${shown} accepts private payments only, so the bridge can't pay it. Paste a LEZ account instead.`, at);
+      return fail('no_public_account', `The LNS name ${shown} has no public account set, so the bridge can't pay it yet. If it is yours: in the Names Wallet, open Names and press "Let people pay it…" next to ${shown}, then check again. Or paste a LEZ account instead.`, at);
     }
     return {
       ok: true,

@@ -44,6 +44,13 @@ interface IRiscZeroGroth16Selector {
 ///                     Initialize> --bridge <BP4>` (G2_STATE=), not zero
 ///   EXPECTED_GATE, EXPECTED_VAULT, EXPECTED_CFG_ID   optional: what the simulation predicted
 ///   REUSE_USDC        optional: an existing DemoUSDC minted by DEPLOYER
+///   MIN_RELEASE_DELAY_SECONDS  REQUIRED, no default: the vault's immutable `minReleaseDelay`
+///   RELEASE_DELAY_SECONDS      REQUIRED, no default (also for configure()): each token's delay;
+///                     must be >= MIN_RELEASE_DELAY_SECONDS. A stated decision every time, printed
+///                     before anything is sent. v4 (2026-11-15) used 3600 / 3600; v5 uses 0 / 0 (the
+///                     owner's decision for the test network: the delay is the freezer's window
+///                     against a stolen SUBMITTER key, and with 0 only the caps bound one).
+///   Used for v4 and v5 (public-demo/V5-PLAN.md): the same script, the delays as inputs.
 ///
 ///   forge script script/SepoliaV4.s.sol --rpc-url <sepolia>                  # simulate
 ///   ... --broadcast --slow --gas-estimate-multiplier 1000 --with-gas-price <cap> --priority-gas-price <tip>
@@ -57,11 +64,9 @@ contract SepoliaV4 is Script {
     bytes4 constant SELECTOR_V3_1 = 0xe71e6620;
     bytes4 constant SELECTOR_V3_0 = 0x73c457ba; // vulnerable (GHSA-g6qg-9j8p-7j87)
     bytes32 constant PLACEHOLDER_UPDATE_IMAGE_ID = keccak256("RFP022/demo/no-update-image");
-    /// One hour, not v3's 10 minutes: the delay is the freezer's window against an update over a
-    /// forged LEZ tip (a stolen SUBMITTER key), and every release already waits hours for its
-    /// Groth16 proof, so the hour costs users little. Real deployments: a day or more.
-    uint64 constant MIN_RELEASE_DELAY = 1 hours;
-    uint64 constant RELEASE_DELAY = 1 hours;
+    /// The delays are inputs (MIN_RELEASE_DELAY_SECONDS, RELEASE_DELAY_SECONDS), bounded here only
+    /// against a typo (milliseconds for seconds). v4: 1 hour; v5: 0.
+    uint64 constant MAX_DELAY = 30 days;
     uint64 constant CAP_WINDOW = 1 days;
     bytes32 constant GATE_KIND_HASH = keccak256(
         "update-gated: RISC Zero Groth16 verifies every proof; updates only from SUBMITTER (LEZ finality is its word)"
@@ -80,6 +85,8 @@ contract SepoliaV4 is Script {
         bytes32 lezChainId;
         bytes32 zoneId;
         bytes32 initialG2State;
+        uint64 minReleaseDelay;
+        uint64 releaseDelay;
     }
 
     /// Virtual only so the test harness can use a public test key (test/SepoliaV4Script.t.sol).
@@ -102,6 +109,22 @@ contract SepoliaV4 is Script {
         p.lezChainId = vm.envBytes32("LEZ_CHAIN_ID");
         p.zoneId = vm.envBytes32("ZONE_ID");
         p.initialG2State = vm.envBytes32("INITIAL_G2_STATE");
+        p.minReleaseDelay = _delayEnv("MIN_RELEASE_DELAY_SECONDS");
+        p.releaseDelay = _delayEnv("RELEASE_DELAY_SECONDS");
+    }
+
+    /// A required delay in seconds: no default, so the value is always a stated decision.
+    function _delayEnv(string memory name) internal view returns (uint64) {
+        uint256 s = vm.envUint(name);
+        require(s <= MAX_DELAY, string.concat(name, " above 30 days (seconds, not milliseconds?)"));
+        return uint64(s);
+    }
+
+    function _printDelays(uint64 minDelay, uint64 delay) internal pure {
+        console.log("==================================================================");
+        console.log("RELEASE DELAY (a stated decision): MIN_RELEASE_DELAY_SECONDS=%s RELEASE_DELAY_SECONDS=%s", uint256(minDelay), uint256(delay));
+        if (delay == 0) console.log("  0: an exit is releasable in the block its update lands; only the caps bound a bad update");
+        console.log("==================================================================");
     }
 
     /// Refuses everything that would strand the vault or weaken it.
@@ -125,6 +148,8 @@ contract SepoliaV4 is Script {
         // The G2-lite guest's prevState is SHA256(tag | state), never zero: zero here means the
         // vault can never accept an update (the v3 deployment's mistake).
         require(p.initialG2State != bytes32(0), "INITIAL_G2_STATE is zero");
+        require(p.releaseDelay >= p.minReleaseDelay, "RELEASE_DELAY_SECONDS < MIN_RELEASE_DELAY_SECONDS");
+        require(p.minReleaseDelay <= MAX_DELAY && p.releaseDelay <= MAX_DELAY, "delay above 30 days");
         if (p.reuseUsdc != address(0)) {
             require(p.reuseUsdc.code.length > 0 && DemoUSDC(p.reuseUsdc).minter() == _deployer(), "REUSE_USDC");
         }
@@ -135,6 +160,7 @@ contract SepoliaV4 is Script {
         console.log(BANNER);
         uint256 pk = _pk();
         Params memory p = params();
+        _printDelays(p.minReleaseDelay, p.releaseDelay);
         (UpdateGatedVerifier g, BridgeVault v, DemoUSDC usdc) = deploy(pk, p);
 
         address wantGate = vm.envOr("EXPECTED_GATE", address(0));
@@ -154,7 +180,7 @@ contract SepoliaV4 is Script {
         console.log("UPDATE_IMAGE_ID=%s", vm.toString(v.updateImageId()));
         console.log("RELEASE_IMAGE_ID=%s", vm.toString(v.releaseImageId()));
         console.log("G2_STATE=%s (the first update's prevState)", vm.toString(v.g2State()));
-        console.log("MIN_RELEASE_DELAY=%s s", uint256(MIN_RELEASE_DELAY));
+        console.log("MIN_RELEASE_DELAY=%s s", uint256(v.minReleaseDelay()));
     }
 
     /// Creates the gate, the vault and (unless reused) the DemoUSDC from `pk`, and checks them.
@@ -176,7 +202,7 @@ contract SepoliaV4 is Script {
             p.zoneId,
             p.programId,
             p.initialG2State,
-            MIN_RELEASE_DELAY,
+            p.minReleaseDelay,
             me, // admin
             me, // freezer
             me // fee recipient
@@ -189,21 +215,26 @@ contract SepoliaV4 is Script {
         require(g.SUBMITTER() == p.submitter, "gate SUBMITTER");
         require(keccak256(bytes(g.KIND())) == GATE_KIND_HASH, "gate KIND");
         require(v.updateImageId() == p.updateImageId && v.releaseImageId() == p.releaseImageId, "image ids");
-        require(v.minReleaseDelay() == MIN_RELEASE_DELAY, "minReleaseDelay");
+        require(v.minReleaseDelay() == p.minReleaseDelay, "minReleaseDelay");
         require(v.g2State() == p.initialG2State, "g2State");
         require(v.cfgId() == v.computeCfgId(SEPOLIA, address(v), p.lezChainId, p.zoneId, p.programId), "cfgId");
     }
 
-    /// Registry, relay-fee menus, caps and the 1-hour delay. Values as v3 except the delay.
-    /// Re-runnable: tokens already registered are skipped (the setters set the same values again).
+    /// Registry, relay-fee menus, caps and the tokens' release delay (RELEASE_DELAY_SECONDS,
+    /// required). Values as v3 except the delay. Re-runnable: tokens already registered are
+    /// skipped (the setters set the same values again; a registered token's delay is not changed).
     function configure() external {
         require(block.chainid == SEPOLIA, "not Sepolia");
         console.log(BANNER);
-        configureVault(_pk(), BridgeVault(vm.envAddress("VAULT")), vm.envAddress("USDC"));
+        BridgeVault v = BridgeVault(vm.envAddress("VAULT"));
+        uint64 delay = _delayEnv("RELEASE_DELAY_SECONDS");
+        _printDelays(v.minReleaseDelay(), delay);
+        configureVault(_pk(), v, vm.envAddress("USDC"), delay);
     }
 
-    function configureVault(uint256 pk, BridgeVault v, address usdc) public {
+    function configureVault(uint256 pk, BridgeVault v, address usdc, uint64 releaseDelay) public {
         require(v.admin() == _deployer(), "not our vault");
+        require(releaseDelay >= v.minReleaseDelay(), "RELEASE_DELAY_SECONDS < the vault's minReleaseDelay");
         require(
             keccak256(bytes(UpdateGatedVerifier(address(v.verifier())).KIND())) == GATE_KIND_HASH,
             "not a v4 (update-gated) vault"
@@ -222,8 +253,8 @@ contract SepoliaV4 is Script {
         (bool eReg,,,,,,,,) = v.tokenConfig(address(0));
 
         vm.startBroadcast(pk);
-        if (!uReg) v.registerToken(usdc, 6, ud, new uint256[](3), new uint256[](3), RELEASE_DELAY);
-        if (!eReg) v.registerToken(address(0), 18, ed, new uint256[](3), new uint256[](3), RELEASE_DELAY);
+        if (!uReg) v.registerToken(usdc, 6, ud, new uint256[](3), new uint256[](3), releaseDelay);
+        if (!eReg) v.registerToken(address(0), 18, ed, new uint256[](3), new uint256[](3), releaseDelay);
         // Relay-fee menus: 0.5% and 1% of each denomination (bound is 2%; fee 0 always allowed).
         v.setRelayFeeMenu(usdc, _menu(ud));
         v.setRelayFeeMenu(address(0), _menu(ed));

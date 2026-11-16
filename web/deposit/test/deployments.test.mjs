@@ -5,11 +5,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEPLOYMENTS, deskOf, findDeployment } from '../src/lib/deployments.js';
 
-test('v3 is the default (or v4 once public-demo/v4/apply-v4-entries.py made it so); v2 and v3 stay listed', () => {
+test('the default is the newest listed of v3, v4, v5; the older ones stay listed', () => {
   const ids = DEPLOYMENTS.map((d) => d.id);
-  const v4 = ids.includes('sepolia-v4');
-  assert.deepEqual([...ids].sort(), v4 ? ['sepolia-demo-v2', 'sepolia-demo-v3', 'sepolia-v4'] : ['sepolia-demo-v2', 'sepolia-demo-v3']);
-  assert.ok(['sepolia-demo-v3', ...(v4 ? ['sepolia-v4'] : [])].includes(DEPLOYMENTS[0].id), DEPLOYMENTS[0].id);
+  const want = ['sepolia-demo-v2', 'sepolia-demo-v3', ...['sepolia-v4', 'sepolia-v5'].filter((x) => ids.includes(x))];
+  assert.deepEqual([...ids].sort(), [...want].sort());
+  assert.ok(want.slice(1).includes(DEPLOYMENTS[0].id), DEPLOYMENTS[0].id);
 });
 
 // v4 (public-demo/V4-PLAN.md step C1): only once the apply script wrote it. Its visible line says the way
@@ -22,10 +22,29 @@ test('v4, when listed: a proof-checked vault, honestly labelled', (t) => {
   assert.ok(Number.isInteger(v4.deployBlock) && v4.deployBlock > 12134824);
   assert.ok(deskOf(v4));
   assert.equal(v4.demoAccount, null);
-  assert.equal(v4.demoShort, 'Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.');
+  // The default's line until v5 (public-demo/v5/apply-v5-entries.py --default), then an earlier vault's.
+  assert.equal(v4.demoShort, DEPLOYMENTS[0].id === 'sepolia-v4'
+    ? 'Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.'
+    : 'An earlier test vault: withdrawals work, with a one-hour wait.');
   assert.match(v4.demoNote, /operator’s word until a finality proof/);
   assert.doesNotMatch(v4.demoShort + v4.demoNote, /\bnever\b|can’t pay|wrong starting value/i);
   assert.equal(findDeployment(11155111, v4.vault), v4);
+});
+
+// v5 (public-demo/V5-PLAN.md step C1): only once the apply script wrote it.
+test('v5, when listed: v4\'s design with no release delay, honestly labelled', (t) => {
+  const v5 = DEPLOYMENTS.find((d) => d.id === 'sepolia-v5');
+  if (!v5) return t.skip('v5 is not listed yet');
+  assert.match(v5.vault, /^0x[0-9a-f]{40}$/);
+  assert.match(v5.cfgId, /^0x[0-9a-f]{64}$/);
+  assert.ok(Number.isInteger(v5.deployBlock) && v5.deployBlock > 12142003);
+  assert.ok(deskOf(v5));
+  assert.equal(v5.demoAccount, null);
+  assert.equal(v5.demoShort, 'Withdrawals back to Ethereum are checked by proof on Ethereum.');
+  assert.match(v5.demoNote, /operator’s word until a finality proof/);
+  assert.doesNotMatch(v5.demoShort + v5.demoNote, /\bnever\b|can’t pay|one-hour|delay/i);
+  assert.notEqual(v5.vault, DEPLOYMENTS.find((d) => d.id === 'sepolia-v4').vault);
+  assert.equal(findDeployment(11155111, v5.vault), v5);
 });
 
 test('v3 values as deployed (vault/DEPLOYMENTS.md)', () => {

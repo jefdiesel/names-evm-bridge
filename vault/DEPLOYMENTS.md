@@ -17,11 +17,54 @@ SEPOLIA_PK=<deployer key> EXPECTED_DESK=<DESK from the simulation> forge script 
 
 `DESK_FEE_BPS` (default 300, at most 300) sets the starting rate. The script refuses a key that is not the deployer and a vault whose `cfgId` is not v2's. After it: the desk address goes into `web/deposit/src/lib/deployments.js` (`desk`, the page's one switch) and, with its creation block, into the grants daemon's `DESK` and `DESK_FROM_BLOCK` (`public-demo/RUNBOOK.md` (not published) §12).
 
+## Sepolia vault v5 (2026-11-15): v4's design with no release delay
+
+**Deployed on Sepolia on 2026-11-15** from `public-demo/V5-PLAN.md`. The record is
+`public-demo/RUNBOOK.md` (not published) §21. **The default for the deposit page and the bridge app** since branch
+`v5-live`; v4, v3 and v2 stay listed.
+- **What it is:** v4's design. RISC Zero's bare `RiscZeroGroth16Verifier` 3.1.0 sits behind a new
+  `UpdateGatedVerifier` instance with the SAME submitter key; the same two images; the v3 canonical
+  bridge program at a new header, `CuV1ctZ2qJG4wQcXP4TBudVGKzNmdoYT3DpP1veHnDMA`; the same token
+  program with new wrapped definitions.
+- **What differs:** **`minReleaseDelay` 0 and each token's delay 0** (the owner's decision for this
+  test network). An exit is releasable at the timestamp of the update that recorded it.
+- **What that costs:** only the caps bound an update over a forged LEZ tip (a stolen submitter key);
+  `public-demo/V5-PLAN.md` §1.
+- **S0 was not repeated:** the same images on the same verifier, accepted for v4.
+- **No deposit, update or release yet** (`depositCount()` 0, `g2State()` = the genesis state, read 2026-11-15
+  and again 2026-11-16; no `StateUpdated` or `Released` log).
+
+| What | Value |
+|---|---|
+| RISC Zero verifier | `0x8c915b5071206C6E328BC18529586c513408aB3b` (3.1.0, selector `0xe71e6620`), as v4 |
+| `UpdateGatedVerifier` (the vault's `verifier()`) | `0x0F3F80D37B1616C0E9B182D3A87FE4f6220715d1`, block 12143639, tx `0x8152f34e5cc411d34d2a891d2b9cc7ab8f65cb56f459b9200f9f0e1c38cab37c`, 2,954,104 gas |
+| `SUBMITTER()` | `0xB81aa37D80F8a9588ce9B09B6d6145D1FC4095f4` (the same key as v4) |
+| `BridgeVault` | `0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10`, block 12143640, tx `0xc1eaa2ddbd495018176656cbe63cd6f4c1d35965cfacd100daa85e5d203efe21`, 33,047,965 gas |
+| `cfgId()` | `0xc513c0f6a949cd81f7e834d0bcf771fd1e89f7430fa1b713c5aad71e1eb4f7d1` (= the v5 bridge Config's) |
+| `programId()` | `0xb0e26e1628be4dd9d35319baf2075ffa260c13af3c43abd8ebd1b34d0a7dd3a9` (bridge `CuV1ctZ2…nMA`) |
+| `lezChainId()` / `zoneId()` | as v3 and v4 |
+| `updateImageId()` / `releaseImageId()` | `0x098f5a1a…3017` / `0x6bcbd714…72a4`, as v4 |
+| `g2State()` | `0xa339efab8cc3c73264e144d6b07b093a2258334dedf1ec00cb65095270954051` (the genesis state at LEZ block 11598; `Initialize` in 11617) |
+| `minReleaseDelay()` | 0; the ETH token's delay 0 (read back) |
+| Admin, freezer, fee recipient | `0x37a46E7334Dd061E0C7E2298247EE9278d0d321F` (the throwaway deployer) |
+| Tokens | as v4: ETH 0.01/0.1/1, dUSDC 100/1,000/10,000; zero vault fees; 0.5%/1% relay-fee menus; caps as v3 |
+| `configure()` | blocks 12143642–12143650, 9 transactions, 6,972,192 gas: `registerToken` ×2 (`0xe0eb1a32…f758`, `0x5dd70708…239f`), `setRelayFeeMenu` ×2 (`0x48f37d7a…7b47`, `0x92e2f67d…dc1f`), `setCaps` ×2 (`0xd1b204a1…bb70`, `0x1df5318b…2c81`), `setGlobalCaps` (`0x60b02c97…4ad2`), `setCapWeight` ×2 (`0x9c1385d4…49f3`, `0xc7e23e62…3d77`) |
+| DepositDesk v5 | `0xbAf1F99145D4F09c731273fc78709785dD959880`, block 12143651, tx `0x24cbd5e98d40d835095ae62cbdad8e924010e2929202f99bf8992d5bc4226301`, 6,516,024 gas; `vault()` = the v5 vault, `feeBps()` 30 |
+
+- **Read back on 2026-11-15 through Tenderly:** the vault's `g2State`, `cfgId`, `programId`,
+  `verifier()`, both image ids and `minReleaseDelay`; the ETH `tokenConfig` (delay 0); the gate's
+  `VERIFIER()`, `SUBMITTER()` and `UPDATE_IMAGE_ID()`; the desk's `vault` and `feeBps`.
+- `node scripts/check-versions.mjs --onchain --deployment v5` passes.
+- **Hashes and gas** are from the forge broadcast records (not in git). Every transaction paid about
+  10,000,015 wei per gas: 49,490,285 gas, 0.000495 Sepolia ETH in all.
+- **Script:** `script/SepoliaV4.s.sol` with `MIN_RELEASE_DELAY_SECONDS=0 RELEASE_DELAY_SECONDS=0`
+  (`run()`, then `configure()`); the desk with `script/SepoliaDesk.s.sol`.
+
 ## Sepolia vault v4 (2026-11-15): RISC Zero's Groth16 verifier 3.1.0, behind an update gate
 
 **Deployed on Sepolia on 2026-11-15** from `public-demo/V4-PLAN.md`; the record
-is `public-demo/RUNBOOK.md` (not published) §18. **The default for the deposit page and the bridge app** since branch
-`v4-live`; v3 and v2 stay listed. Paired with a new bridge instance on the team's public LEZ rc3
+is `public-demo/RUNBOOK.md` (not published) §18. **The default for the deposit page and the bridge app from branch `v4-live` until v5** (branch `v5-live`);
+listed since, as an earlier vault: withdrawals work, with a one-hour wait. Paired with a new bridge instance on the team's public LEZ rc3
 demo chain: the v3 bridge program (image `0dabbd6c…9ffa`) deployed again at a new header,
 `BKXe3q5JcKeiSrKv9FUBjZw3AowbvYgyHZ3SYPgDxJBf`.
 
@@ -40,8 +83,17 @@ demo chain: the v3 bridge program (image `0dabbd6c…9ffa`) deployed again at a 
     `public-demo/v4/BUILD-outbound.txt`).
 - **First relayed claim and burn on the LEZ side** (team deposit, leaf 0): claim LEZ block 10359, burn LEZ
   block 10361, exit toward the deployer; the claim relay serves v4 since about 18:50 UTC
-  (`public-demo/RUNBOOK.md` (not published) §18, §18.1). **No update or release on Sepolia yet** (`g2State()` = the
-  genesis state, read 2026-11-15); the first update proof is the owner's to start.
+  (`public-demo/RUNBOOK.md` (not published) §18, §18.1).
+- **The first proof-verified round trip (2026-11-15):** the update over LEZ blocks 10266..10362, proved
+  and wrapped, was accepted through the gate in Sepolia block 12142209 (tx
+  `0x7fd725cd4480a247760aa4abca19fef20d67b39c3e1c43a64c8c192c9a3bb369`, 899,746 gas); exit 0 (the burn
+  of LEZ block 10361) was released by proof after the one-hour delay in Sepolia block 12142503 (tx
+  `0x8b39bdc7df743f9b6bb23b90866586b02908e64b0d06beaa88e5d1820d74c7bb`, 447,552 gas; the deployer's
+  balance +0.01 ETH). A second update (LEZ 10363..10873, 2 exits) was accepted in Sepolia block
+  12143000 (tx `0xf7519de9d2964e8d720a81cda7309ab89ef45cca99bd6baedf4dfa1b3d1cab62`, 671,254 gas).
+  Proofs, wraps and numbers: `public-demo/prove/receipts/v4-update-1/`, `v4-release-1/`,
+  `v4-update-2/`. Read 2026-11-16 through Tenderly: `g2State()` `0x155b12e6…dab0`, `depositCount()` 6,
+  two `Released` events.
 
 | What | Value |
 |---|---|
@@ -72,7 +124,7 @@ demo chain: the v3 bridge program (image `0dabbd6c…9ffa`) deployed again at a 
 - **Fees:** every transaction paid 10,000,016 wei per gas (0.01 gwei): 49,490,369 gas,
   0.000495 Sepolia ETH in all.
 
-Scripts: `script/SepoliaV4.s.sol` (`run()`, then `configure()`), `script/SepoliaDesk.s.sol`
+Scripts: `script/SepoliaV4.s.sol` (`run()`, then `configure()`; since branch `v5-plan` the delays are required env, and v4's were `MIN_RELEASE_DELAY_SECONDS=3600 RELEASE_DELAY_SECONDS=3600`), `script/SepoliaDesk.s.sol`
 (`DESK_VAULT`, `DESK_VAULT_CFG_ID`, `DESK_FEE_BPS=30`), `script/SepoliaFund.s.sol` (test ETH to the
 submitter: a plain transfer to a never-used address now needs about 204,600 gas on Sepolia, so it
 uses a gas multiplier of 3000). The plan followed: `public-demo/V4-PLAN.md`.

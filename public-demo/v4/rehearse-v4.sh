@@ -10,7 +10,11 @@
 #
 #   R=<new dir> SEQ_BIN=<rc3 sequencer_service> NETCFG=<rc3 networks/local.json> CLI=<lez-bridge>
 #   ELF=<dir with bridge_guest.bin, token_guest.bin> HOST=<outbound_host> VAULT_DIR=<vault/ with lib/>
-#   RPC=127.0.0.1:<port> METRICS=127.0.0.1:<port> ANVIL_PORT=<port> public-demo/v4/rehearse-v4.sh [stop]
+#   RPC=127.0.0.1:<port> METRICS=127.0.0.1:<port> ANVIL_PORT=<port>
+#   MIN_RELEASE_DELAY_SECONDS=<s> RELEASE_DELAY_SECONDS=<s>   (required: v4 3600/3600, v5 0/0)
+#   public-demo/v4/rehearse-v4.sh [stop]
+# With delay 0 (v5) the release is sent right after the update, in the next block, and no
+# ReleaseTooEarly is expected.
 #
 # Order (V4-PLAN step numbers in brackets):
 #   1. a LEZ rc3 chain and an anvil with chain id 11155111 (so SepoliaV4.s.sol runs unchanged)
@@ -28,6 +32,7 @@
 #      account that is neither the depositor nor the submitter
 # Executor runs of HOST go through the build host's lock (LOCK), niced.
 set -uo pipefail
+: "${MIN_RELEASE_DELAY_SECONDS:?}" "${RELEASE_DELAY_SECONDS:?}"
 : "${R:?}" "${SEQ_BIN:?}" "${NETCFG:?}" "${CLI:?}" "${ELF:?}" "${HOST:?}" "${VAULT_DIR:?}" "${RPC:?}" "${METRICS:?}" "${ANVIL_PORT:?}"
 for p in "$RPC" "$METRICS" "127.0.0.1:$ANVIL_PORT"; do
   case "$p" in *:3062|*:3071|*:3230|*:3250|*:3290|*:3291|*:3295|*:3297|*:3298|*:3340|*:3341|*:3860|*:8550|*:8545) echo "refusing port $p"; exit 1 ;; esac
@@ -131,7 +136,8 @@ say "4. Ethereum: mock Groth16 verifier (selector 0xe71e6620), then SepoliaV4.s.
 MOCK=$(sed -n 's/^Deployed to: //p' "$OUT/mock.out"); echo "MockGroth16Verifier $MOCK (stands in for 0x8c91…aB3b)"
 ( cd "$VAULT_DIR" && SEPOLIA_PK=$K0 RISC0_VERIFIER=$MOCK SUBMITTER=$SUBMITTER RELEASE_IMAGE_ID=$RELEASE_IMAGE_ID \
     UPDATE_IMAGE_ID=$UPDATE_IMAGE_ID PROGRAM_ID=$PROGRAM_ID LEZ_CHAIN_ID=$LEZ_CHAIN_ID ZONE_ID=$ZONE_ID \
-    INITIAL_G2_STATE=$G2_STATE0 forge script test/SepoliaV4Script.t.sol:SepoliaV4Harness \
+    INITIAL_G2_STATE=$G2_STATE0 MIN_RELEASE_DELAY_SECONDS=$MIN_RELEASE_DELAY_SECONDS RELEASE_DELAY_SECONDS=$RELEASE_DELAY_SECONDS \
+    forge script test/SepoliaV4Script.t.sol:SepoliaV4Harness \
     --rpc-url "$ETH_RPC" --broadcast --slow ) > "$OUT/sepoliav4.out" 2>&1 || { cat "$OUT/sepoliav4.out"; die "SepoliaV4 deploy"; }
 grep -E '^ *[A-Z_0-9]+=' "$OUT/sepoliav4.out" | sed 's/^ *//' | tee "$R/v4.env"
 val() { sed -n "s/^$1=\([^ ]*\).*/\1/p" "$R/v4.env" | sed -n 1p; }
@@ -145,9 +151,10 @@ echo "vault g2State() $ONCHAIN_G2; genesis $G2_STATE0"
 [ "$(ecall $GATE 'VERIFIER()(address)' | lower)" = "$(echo $MOCK | lower)" ] || die "gate VERIFIER"
 [ "$(ecall $GATE 'SUBMITTER()(address)' | lower)" = "$(echo $SUBMITTER | lower)" ] || die "gate SUBMITTER"
 ok "g2State = genesis; verifier = gate -> Groth16 stand-in; SUBMITTER = $SUBMITTER"
-( cd "$VAULT_DIR" && SEPOLIA_PK=$K0 VAULT=$VAULT USDC=$USDC forge script test/SepoliaV4Script.t.sol:SepoliaV4Harness \
+( cd "$VAULT_DIR" && SEPOLIA_PK=$K0 VAULT=$VAULT USDC=$USDC RELEASE_DELAY_SECONDS=$RELEASE_DELAY_SECONDS forge script test/SepoliaV4Script.t.sol:SepoliaV4Harness \
     --sig "configure()" --rpc-url "$ETH_RPC" --broadcast --slow ) > "$OUT/configure.out" 2>&1 || { cat "$OUT/configure.out"; die configure; }
-ok "configure(): ETH 0.01/0.1/1, dUSDC 100/1,000/10,000, 1-hour release delay"
+[ "$(ecall $VAULT 'minReleaseDelay()(uint64)')" = "$MIN_RELEASE_DELAY_SECONDS" ] || die "minReleaseDelay"
+ok "configure(): ETH 0.01/0.1/1, dUSDC 100/1,000/10,000, release delay $RELEASE_DELAY_SECONDS s (min $MIN_RELEASE_DELAY_SECONDS s)"
 
 say "5. LEZ: wrapped ETH for BP4 on the shared token program, Initialize BP4 against the v4 vault, register"
 must wrap-eth d create-wrapped --token-program $TP --bridge $BP4 --name "Wrapped Sepolia ETH (v4 rehearsal)" --payer $D
@@ -197,7 +204,7 @@ echo "vault ETH 0.01 counters (deposits claims burns releases): $COUNTERS"
 erevert $K4 StaleState $GATE "submitUpdate(address,bytes,bytes)" $VAULT $J $S
 ok "update accepted from the genesis state through the gate only; a replay is stale"
 
-say "8. G3 release proof (executor), the 1-hour delay, then a release sent by anyone"
+say "8. G3 release proof (executor), the release delay ($RELEASE_DELAY_SECONDS s), then a release sent by anyone"
 cast logs --from-block 0 --address $VAULT "StateUpdated(bytes32,bytes32,bytes32,uint64,bytes32[])" --rpc-url "$ETH_RPC" --json > "$OUT/stateupdated.json"
 python3 - "$OUT/stateupdated.json" > "$R/exit-leaves.txt" <<'EOF'
 import json, sys
@@ -212,8 +219,14 @@ grep -E '^(ROOT|NULLIFIER|USER_CYCLES)=' "$OUT/release.out"
 XROOT=$(sed -n 's/^ROOT=//p' "$OUT/release.out"); NF=$(sed -n 's/^NULLIFIER=//p' "$OUT/release.out")
 RS=0xe71e6620$(sed -n 's/^SEAL=//p' "$OUT/release.out" | sed 's/^0x//')
 SIG="release(bytes,bytes32,bytes32,address,uint32,address,address,uint256)"
-erevert $K5 ReleaseTooEarly $VAULT "$SIG" $RS $XROOT $NF $ETH 0 $DEST $ETH 0
-cast rpc evm_increaseTime 3601 --rpc-url "$ETH_RPC" >/dev/null && cast rpc evm_mine --rpc-url "$ETH_RPC" >/dev/null
+if [ "$RELEASE_DELAY_SECONDS" -gt 0 ]; then
+  erevert $K5 ReleaseTooEarly $VAULT "$SIG" $RS $XROOT $NF $ETH 0 $DEST $ETH 0
+  cast rpc evm_increaseTime $((RELEASE_DELAY_SECONDS + 1)) --rpc-url "$ETH_RPC" >/dev/null && cast rpc evm_mine --rpc-url "$ETH_RPC" >/dev/null
+else
+  echo "release delay 0: no wait, no time moved (releasableAt $(ecall $VAULT 'releasableAt(address,bytes32)(uint256)' $ETH $XROOT), now $(cast block latest -f timestamp --rpc-url "$ETH_RPC"))"
+  BADRS=0xe71e6620$(printf 'ab%.0s' {1..64})
+  erevert $K5 BadSeal $VAULT "$SIG" $BADRS $XROOT $NF $ETH 0 $DEST $ETH 0
+fi
 B0=$(cast balance $DEST --rpc-url "$ETH_RPC")
 esend $K5 $VAULT "$SIG" $RS $XROOT $NF $ETH 0 $DEST $ETH 0 > "$OUT/release.json" || die "release"
 B1=$(cast balance $DEST --rpc-url "$ETH_RPC")

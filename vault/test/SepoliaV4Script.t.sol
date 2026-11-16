@@ -49,7 +49,8 @@ contract SepoliaV4ScriptTest is Test {
 
     function _p() internal view returns (SepoliaV4.Params memory) {
         return SepoliaV4.Params(
-            address(r0), submitter, RELEASE_ID, UPDATE_ID, PROGRAM_ID, address(0), LEZ_CHAIN_ID, ZONE_ID, G2_STATE0
+            address(r0), submitter, RELEASE_ID, UPDATE_ID, PROGRAM_ID, address(0), LEZ_CHAIN_ID, ZONE_ID, G2_STATE0,
+            1 hours, 1 hours // v4's delays
         );
     }
 
@@ -69,12 +70,12 @@ contract SepoliaV4ScriptTest is Test {
         assertEq(v.g2State(), G2_STATE0);
         assertEq(v.cfgId(), v.computeCfgId(SEPOLIA, address(v), LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID));
 
-        h.configureVault(ANVIL0_PK, v, address(usdc));
+        h.configureVault(ANVIL0_PK, v, address(usdc), 1 hours);
         (bool reg,,,, uint64 delay, uint256[] memory denoms,,,) = v.tokenConfig(address(0));
         assertTrue(reg);
         assertEq(delay, 1 hours);
         assertEq(denoms[0], 0.01 ether);
-        h.configureVault(ANVIL0_PK, v, address(usdc)); // re-runnable
+        h.configureVault(ANVIL0_PK, v, address(usdc), 1 hours); // re-runnable
 
         vm.prank(ANVIL0);
         v.depositETH{value: 0.01 ether}(0, keccak256("C"));
@@ -159,6 +160,13 @@ contract SepoliaV4ScriptTest is Test {
         p = _p();
         p.reuseUsdc = address(0xDEAD);
         _expectDeployRevert(p, "REUSE_USDC");
+        p = _p();
+        p.minReleaseDelay = 2 hours; // tokens' delay below the vault's minimum
+        _expectDeployRevert(p, "RELEASE_DELAY_SECONDS < MIN_RELEASE_DELAY_SECONDS");
+        p = _p();
+        p.releaseDelay = 31 days;
+        p.minReleaseDelay = 31 days;
+        _expectDeployRevert(p, "delay above 30 days");
         vm.chainId(1);
         _expectDeployRevert(_p(), "not Sepolia");
     }
@@ -170,8 +178,8 @@ contract SepoliaV4ScriptTest is Test {
             r0, UPDATE_ID, RELEASE_ID, LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID, G2_STATE0, 0, ANVIL0, ANVIL0, ANVIL0
         );
         vm.expectRevert();
-        h.configureVault(ANVIL0_PK, plain, address(usdc));
-        h.configureVault(ANVIL0_PK, v, address(usdc));
+        h.configureVault(ANVIL0_PK, plain, address(usdc), 1 hours);
+        h.configureVault(ANVIL0_PK, v, address(usdc), 1 hours);
     }
 
     /// The only test that touches the process environment, with values no other test reads.
@@ -184,7 +192,11 @@ contract SepoliaV4ScriptTest is Test {
         vm.setEnv("LEZ_CHAIN_ID", vm.toString(LEZ_CHAIN_ID));
         vm.setEnv("ZONE_ID", vm.toString(ZONE_ID));
         vm.setEnv("INITIAL_G2_STATE", vm.toString(G2_STATE0));
+        vm.setEnv("MIN_RELEASE_DELAY_SECONDS", "0");
+        vm.setEnv("RELEASE_DELAY_SECONDS", "0");
         SepoliaV4.Params memory p = h.params();
+        assertEq(p.minReleaseDelay, 0);
+        assertEq(p.releaseDelay, 0);
         assertEq(p.risc0Verifier, address(r0));
         assertEq(p.submitter, submitter);
         assertEq(p.releaseImageId, RELEASE_ID);
@@ -193,5 +205,49 @@ contract SepoliaV4ScriptTest is Test {
         assertEq(p.lezChainId, LEZ_CHAIN_ID);
         assertEq(p.zoneId, ZONE_ID);
         assertEq(p.initialG2State, G2_STATE0);
+    }
+
+    /// v5: no release delay (0 / 0). The first update starts from the genesis state through the
+    /// gate, and its exit is released in the SAME block; a release with a wrong proof still fails,
+    /// and so does a replay. Nothing else in the vault assumes a delay above zero.
+    function test_ZeroDelay_ReleaseInTheSameBlock() public {
+        SepoliaV4.Params memory p = _p();
+        p.minReleaseDelay = 0;
+        p.releaseDelay = 0;
+        (UpdateGatedVerifier g, BridgeVault v, DemoUSDC usdc) = h.deploy(ANVIL0_PK, p);
+        assertEq(v.minReleaseDelay(), 0);
+        h.configureVault(ANVIL0_PK, v, address(usdc), 0);
+        (,,,, uint64 delay,,,,) = v.tokenConfig(address(0));
+        assertEq(delay, 0);
+
+        vm.prank(ANVIL0);
+        v.depositETH{value: 0.01 ether}(0, keccak256("C"));
+        BridgeVault.ClaimDelta[] memory cl = new BridgeVault.ClaimDelta[](1);
+        cl[0] = BridgeVault.ClaimDelta(address(0), 0, 1);
+        BridgeVault.Exit[] memory ex = new BridgeVault.Exit[](1);
+        ex[0] = BridgeVault.Exit(address(0), 0, keccak256("E"));
+        bytes memory j = abi.encode(BridgeVault.UpdateJournal(v.cfgId(), G2_STATE0, keccak256("s1"), new bytes32[](0), cl, ex));
+        bytes memory s = r0.sealFor(UPDATE_ID, sha256(j));
+        uint256 t0 = block.timestamp;
+        vm.prank(submitter);
+        g.submitUpdate(IGatedVault(address(v)), j, s);
+        bytes32 root = v.exitRoot();
+        assertEq(v.releasableAt(address(0), root), t0, "releasable at the update's own timestamp");
+
+        bytes32 nf = keccak256("nf");
+        bytes memory bad = r0.sealFor(RELEASE_ID, sha256(abi.encode(v.cfgId(), root, nf, address(0), uint256(0.01 ether), address(0xBAD), address(0), uint256(0))));
+        vm.expectRevert(MockGroth16Verifier.BadSeal.selector);
+        v.release(bad, root, nf, address(0), 0, bob, address(0), 0); // a proof for another recipient
+        bytes memory rs = r0.sealFor(RELEASE_ID, sha256(abi.encode(v.cfgId(), root, nf, address(0), uint256(0.01 ether), bob, address(0), uint256(0))));
+        v.release(rs, root, nf, address(0), 0, bob, address(0), 0); // same block, same timestamp
+        assertEq(block.timestamp, t0);
+        assertEq(bob.balance, 0.01 ether);
+        vm.expectRevert(BridgeVault.NullifierSpent.selector);
+        v.release(rs, root, nf, address(0), 0, bob, address(0), 0);
+        // The admin can still raise the delay later (an emergency brake); a lowering back to 0 is allowed.
+        vm.prank(ANVIL0);
+        v.setReleaseDelay(address(0), 1 hours);
+        vm.prank(ANVIL0);
+        v.setReleaseDelay(address(0), 0);
     }
 }

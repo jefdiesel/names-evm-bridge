@@ -106,6 +106,9 @@ ALLOWED = {
 DENIED = {"getCrossZoneDeadLetters", "requeueCrossZoneDeadLetter"}
 # Served by the proxy itself from the claim relay (--relay), never sent to the sequencer.
 RELAY_METHODS = {"bridge_relayInfo", "bridge_relayClaim", "bridge_relayBurn"}
+# Served by the test-LEZ faucet (--faucet, public-demo/faucet/faucet.py), never sent to the sequencer.
+FAUCET_METHODS = {"bridge_faucetInfo", "bridge_faucet"}
+LOOPBACK_METHODS = RELAY_METHODS | FAUCET_METHODS
 
 DEFAULTS = dict(
     SEND_MAX=768 * 1024,  # a ~256 KB private transaction is ~342 KB as base64 JSON
@@ -125,6 +128,7 @@ DEFAULTS = dict(
     MAX_CLIENTS=20000,  # per-IP table size before it is pruned
     # the claim relay (--relay)
     IP_RELAY=(0.05, 5),  # 5 at once, then one per 20 s per client
+    IP_FAUCET=(0.05, 3),  # bridge_faucet: 3 at once, then one per 20 s per client (the faucet caps grants itself)
     RELAY_MAX=20000,  # body cap of a relay call (the relay's own cap)
     RELAY_INFLIGHT=2,
     RELAY_TIMEOUT=120.0,  # a relayed claim is checked, then checked again, signed and sent
@@ -158,6 +162,7 @@ class Limits:
         self.global_bucket = Bucket(*cfg["GLOBAL"])
         self.inflight = threading.BoundedSemaphore(cfg["MAX_INFLIGHT"])
         self.relay_inflight = threading.BoundedSemaphore(int(cfg["RELAY_INFLIGHT"]))
+        self.faucet_inflight = threading.BoundedSemaphore(2)
         self.counters = {}
 
     def new_entry(self):
@@ -167,6 +172,7 @@ class Limits:
             "send": Bucket(*cfg["IP_SEND"]),
             "range": Bucket(*cfg["IP_RANGE"]),
             "relay": Bucket(*cfg["IP_RELAY"]),
+            "faucet": Bucket(*cfg["IP_FAUCET"]),
             "preflight": Bucket(*cfg["IP_PREFLIGHT"]),
         }
 
@@ -218,6 +224,8 @@ class Limits:
                 return "client"
             elif method == "getBlockRange" and not entry["range"].take():
                 return "client"
+            elif method == "bridge_faucet" and not entry["faucet"].take():
+                return "client"
             elif method in RELAY_METHODS and method != "bridge_relayInfo" and not entry["relay"].take():
                 # bridge_relayInfo (a cached read of the relay's payer and caps) costs only the
                 # client's general budget: wallets read it before every claim and burn
@@ -247,13 +255,14 @@ class Server(ThreadingHTTPServer):
     allow_reuse_address = True
     request_queue_size = 64
 
-    def __init__(self, addr, handler, cfg, upstream, log, allowed=None, client_ip_header="CF-Connecting-IP", relay=None, relay_auth=None, cors_origins=()):
+    def __init__(self, addr, handler, cfg, upstream, log, allowed=None, client_ip_header="CF-Connecting-IP", relay=None, relay_auth=None, cors_origins=(), faucet=None):
         super().__init__(addr, handler)
         self.cfg, self.upstream, self.log = cfg, upstream, log
         self.cors_origins = frozenset(cors_origins)  # exact origins only, never "*"
         self.relay = relay
         self.relay_auth = relay_auth  # shared secret for the relay (X-Relay-Auth); never logged
-        self.allowed = set(ALLOWED if allowed is None else allowed) | (RELAY_METHODS if relay else set())
+        self.faucet = faucet
+        self.allowed = set(ALLOWED if allowed is None else allowed) | (RELAY_METHODS if relay else set()) | (FAUCET_METHODS if faucet else set())
         self.client_ip_header = client_ip_header
         self.limits = Limits(cfg)
         self.open_conns = 0
@@ -435,7 +444,7 @@ class Handler(BaseHTTPRequestHandler):
         rid, method, params = req.get("id"), req["method"], req.get("params", [])
         if self.server.limits.allow(self.client_key(), method) == "client":
             return self.reply(429, rpc_error(-32005, "rate limited; slow down", rid), method, started, {"Retry-After": "10"})
-        if method in RELAY_METHODS:
+        if method in LOOPBACK_METHODS:
             return self.relay_call(rid, method, params, started)
         body = json.dumps({"jsonrpc": "2.0", "id": rid, "method": method, "params": params}, separators=(",", ":")).encode()
         return self.forward(body, rid, method, started)
@@ -451,7 +460,7 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(method, str) or method not in self.server.allowed:
             label = method if isinstance(method, str) and method in DENIED else "other"
             return 403, rpc_error(-32601, "method not served here", rid), label
-        cap = cfg["SEND_MAX"] if method == "sendTransaction" else cfg["RELAY_MAX"] if method in RELAY_METHODS else cfg["READ_MAX"]
+        cap = cfg["SEND_MAX"] if method == "sendTransaction" else cfg["RELAY_MAX"] if method in LOOPBACK_METHODS else cfg["READ_MAX"]
         if length > cap:
             return 413, rpc_error(-32600, "request too large for " + method, rid), method
         if not isinstance(params, (list, dict)):
@@ -475,7 +484,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(400, rpc_error(-32600, "a batch holds at most %d calls" % cfg["MAX_BATCH"]), "batch", started)
         # The whole batch is one body: it must fit the cap of its largest kind of call.
         for req in reqs:
-            if isinstance(req, dict) and req.get("method") in RELAY_METHODS:
+            if isinstance(req, dict) and req.get("method") in LOOPBACK_METHODS:
                 return self.reply(400, rpc_error(-32600, "relay methods are not served in a batch"), "batch relay", started)
             refused = self.check_call(req, length)
             if refused is not None:
@@ -505,8 +514,21 @@ class Handler(BaseHTTPRequestHandler):
 
 
     def relay_call(self, rid, method, params, started):
-        """A relay method: checked here, answered by the claim relay on loopback."""
-        if method == "bridge_relayInfo":
+        """A relay or faucet method: checked here, answered by the claim relay or the faucet on loopback."""
+        target = self.server.faucet if method in FAUCET_METHODS else self.server.relay
+        if method == "bridge_faucetInfo":
+            path, payload = "/faucet/info", None
+        elif method == "bridge_faucet":
+            pk = params[0] if isinstance(params, list) and params else params.get("public_key") if isinstance(params, dict) else None
+            acct = (params[1] if isinstance(params, list) and len(params) > 1 else
+                    params.get("account") if isinstance(params, dict) else None)
+            n = len(params) if isinstance(params, (list, dict)) else 0
+            if not (isinstance(pk, str) and len(pk) <= 66 and all(c in "0123456789abcdefABCDEFx" for c in pk)
+                    and (acct is None or (isinstance(acct, str) and len(acct) <= 60)) and n <= 2):
+                return self.reply(400, rpc_error(-32602, "params: [public key hex] or [public key hex, account]", rid), method, started)
+            path = "/faucet"
+            payload = json.dumps({"public_key": pk} if acct is None else {"public_key": pk, "account": acct}).encode()
+        elif method == "bridge_relayInfo":
             path, payload = "/relay/info", None
         else:
             tx = params[0] if isinstance(params, list) and params else params.get("tx") if isinstance(params, dict) else None
@@ -518,10 +540,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(400, rpc_error(-32602, "params: [hex of a half-signed claim or burn] or [hex, check_only]", rid), method, started)
             path = "/relay/burn" if method == "bridge_relayBurn" else "/relay"
             payload = json.dumps({"tx": tx, "check_only": check}).encode()
-        if not self.server.limits.relay_inflight.acquire(blocking=False):
-            return self.reply(503, rpc_error(-32005, "relay busy; retry later", rid), method, started, {"Retry-After": "10"})
+        sem = self.server.limits.faucet_inflight if method in FAUCET_METHODS else self.server.limits.relay_inflight
+        what = "faucet" if method in FAUCET_METHODS else "relay"
+        if not sem.acquire(blocking=False):
+            return self.reply(503, rpc_error(-32005, what + " busy; retry later", rid), method, started, {"Retry-After": "10"})
         try:
-            host, port = self.server.relay
+            host, port = target
             conn = http.client.HTTPConnection(host, port, timeout=self.server.cfg["RELAY_TIMEOUT"])
             try:
                 headers = {"Content-Type": "application/json", "CF-Connecting-IP": self.client_ip()}
@@ -536,9 +560,9 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(result, dict):
                 raise ValueError("bad relay answer")
         except (OSError, ValueError, http.client.HTTPException):
-            return self.reply(502, rpc_error(-32603, "relay unavailable", rid), method, started)
+            return self.reply(502, rpc_error(-32603, what + " unavailable", rid), method, started)
         finally:
-            self.server.limits.relay_inflight.release()
+            sem.release()
         return self.reply(200, json.dumps({"jsonrpc": "2.0", "id": rid, "result": result}).encode(), method, started)
 
 
@@ -571,6 +595,8 @@ def main(argv=None):
     p.add_argument("--upstream", type=loopback_addr, default=("127.0.0.1", 3290))
     p.add_argument("--relay", type=loopback_addr, default=None,
                    help="the claim relay (public-demo/relayer/relayer.py): serve bridge_relayInfo and bridge_relayClaim from it")
+    p.add_argument("--faucet", type=loopback_addr, default=None,
+                   help="the test-LEZ faucet (public-demo/faucet/faucet.py): serve bridge_faucetInfo and bridge_faucet from it")
     p.add_argument("--relay-auth-file", default=None, metavar="FILE",
                    help="mode-600 file with the secret shared with the relay (sent as X-Relay-Auth), so the relay trusts "
                         "the client address this filter passes on; default: $LEZ_RPC_PROXY_RELAY_AUTH")
@@ -614,7 +640,7 @@ def main(argv=None):
         if origin != origin.rstrip("/") or origin.count("/") != 2 or not origin.startswith(("https://", "http://127.0.0.1", "http://localhost")):
             p.error("--cors-origin takes an exact origin such as https://nameswallet.app, got " + origin)
     srv = Server(args.listen, Handler, cfg, args.upstream, log, allowed, header, args.relay,
-                 relay_secret(args.relay_auth_file) if args.relay else None, args.cors_origin)
+                 relay_secret(args.relay_auth_file) if (args.relay or args.faucet) else None, args.cors_origin, args.faucet)
     print("lez-rpc-proxy on %s:%d -> %s:%d" % (args.listen + args.upstream), flush=True)
     try:
         srv.serve_forever()

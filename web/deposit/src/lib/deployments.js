@@ -118,7 +118,27 @@ const SEPOLIA_V4 = {
     demo: true,
     demoAccount: null,
     demoNote: 'How: RISC Zero’s verifier on Sepolia checks every update and release proof. Which bridge test network blocks count is the bridge operator’s word until a finality proof for that chain exists; the vault’s caps and a one-hour delay bound a wrong update. Test coins only.',
-    demoShort: 'Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.',
+    demoShort: 'An earlier test vault: withdrawals work, with a one-hour wait.',
+    tokens: SEPOLIA_DEMO_V2.tokens,
+};
+
+/**
+ * v5 (public-demo/V5-PLAN.md; vault/DEPLOYMENTS.md, v5): v4's design (RISC Zero's Groth16 verifier 3.1.0 behind
+ * an UpdateGatedVerifier; updates only from its submitter: LEZ finality is the operator's word until a finality
+ * proof exists) with no release delay. Written by public-demo/v5/apply-v5-entries.py.
+ */
+const SEPOLIA_V5 = {
+    id: 'sepolia-v5',
+    label: 'Sepolia vault v5',
+    chainId: 11155111,
+    vault: '0xafbdf192434e9888bb23dae6f2d15eea6246ed10',
+    deployBlock: 12143640,
+    cfgId: '0xc513c0f6a949cd81f7e834d0bcf771fd1e89f7430fa1b713c5aad71e1eb4f7d1',
+    desk: '0xbAf1F99145D4F09c731273fc78709785dD959880',
+    demo: true,
+    demoAccount: null,
+    demoNote: 'How: RISC Zero’s verifier on Sepolia checks every update and release proof. Which bridge test network blocks count is the bridge operator’s word until a finality proof for that chain exists; the vault’s caps bound a wrong update. Test coins only.',
+    demoShort: 'Withdrawals back to Ethereum are checked by proof on Ethereum.',
     tokens: SEPOLIA_DEMO_V2.tokens,
 };
 
@@ -127,9 +147,9 @@ const SEPOLIA_V4 = {
  * (src/app.js). v3 since 2026-11-14; both stay listed, so wallet requests for either vault are
  * recognised (a v2 deposit is claimed on the v2 bridge, self-paid since the relay moved to v3).
  */
-const LIVE_DEFAULT = 'sepolia-v4';
+const LIVE_DEFAULT = 'sepolia-v5';
 
-const ALL_DEPLOYMENTS = [SEPOLIA_V4, SEPOLIA_DEMO_V3, SEPOLIA_DEMO_V2];
+const ALL_DEPLOYMENTS = [SEPOLIA_V5, SEPOLIA_V4, SEPOLIA_DEMO_V3, SEPOLIA_DEMO_V2];
 export const DEPLOYMENTS = [...ALL_DEPLOYMENTS.filter((d) => d.id === LIVE_DEFAULT), ...ALL_DEPLOYMENTS.filter((d) => d.id !== LIVE_DEFAULT)];
 
 /**

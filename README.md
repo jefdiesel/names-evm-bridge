@@ -5,7 +5,7 @@
 - **RFP-022, private wrapped-ERC-20 and ETH bridge:**
   - the Ethereum vault (`vault/`), and a demo-network fee contract in front of it (`vault/src/desk/`);
   - the LEZ wrapped-token and bridge programs (`lez-bridge/token`, `lez-bridge/bridge`);
-  - the release proof (`lez-bridge/release`, `lez-bridge/methods/release_guest`) and the outbound state proof in progress (`lez-bridge/outbound`);
+  - the release proof (`lez-bridge/release`, `lez-bridge/methods/release_guest`), the outbound state proof with the LEZ tip trusted (G2-lite, `lez-bridge/outbound`) and the Groth16 wrap (`lez-bridge/outbound/wrap`, `.github/workflows/wrap-outbound.yml`, `wrap-private.yml`);
   - the CLI (`lez-bridge/cli`) and the recovery client (`lez-bridge/client`);
   - a Logos core module and mini-app (`modules/`) and a static deposit page for ordinary Ethereum wallets (`web/deposit/`).
 - **RFP-021, trustless Ethereum state attestation:**
@@ -15,20 +15,26 @@
 
 [`DESIGN.md`](DESIGN.md) is the design as built: refusals, gas, privacy, deviations, and requirement matrices with test names. Where it and the code disagree, the code wins.
 
-## Current status (2026-11-13)
+## Current status (2026-11-16)
 
 **Where things have run:**
-- **Ethereum:** demo vaults on the **public Sepolia testnet** (`vault/DEPLOYMENTS.md`). v1 and v2 take deposits only: their update image is a placeholder, so no exit can be released from them. v3 (2026-11-14, paired with the fixed LEZ programs) uses an operator-attested verifier instead, but as deployed it can take no state update (its stored G2 state is zero, which no update can follow), so nothing can be released from it either.
+- **Ethereum:** demo vaults on the **public Sepolia testnet** (`vault/DEPLOYMENTS.md`).
+  - **v4** (`0xC2c6A059eAB928966B24FA5549d441A3B17B54Ed`, 2026-11-15) and **v5** (`0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10`, the same design with no release delay, the deposit page's default): every update and release proof is checked by RISC Zero's `RiscZeroGroth16Verifier` 3.1.0 (`0x8c915b5071206C6E328BC18529586c513408aB3b`), behind `vault/src/UpdateGatedVerifier.sol`, which takes updates only from one submitter key and releases from anyone.
+  - **The first round trip with real proofs ran on v4 on 2026-11-15:** a team deposit (Sepolia block 12142034), a relayed claim and a burn on the public demo chain (LEZ blocks 10359, 10361), the outbound update proved on CPU and accepted (Sepolia block 12142209), the release proved and paid after the one-hour delay (block 12142503); a second update was accepted in block 12143000. Proofs and numbers: `public-demo/prove/receipts/v4-*/`. **What it trusts:** which LEZ blocks are final is the submitter's word (one key, ours); deposit roots come from the operator attester; private transactions and public execution are taken as the sequencer applied them. LEZ blocks carry no state commitment, so the proof walks every block (about 20,000 cycles each, `DESIGN.md` §4). Updates are proved and posted by hand, and each Groth16 wrap is started by hand on a GitHub-hosted runner. v5 has had no round trip yet.
+  - v1 and v2 take deposits only (placeholder update image). v3 (2026-11-14, the fixed LEZ programs, an operator-attested verifier) was deployed with its G2 state at zero, which no update can follow, so nothing can be released from it; the deploy scripts now refuse that.
+  - RISC Zero advisory GHSA-g6qg-9j8p-7j87 (2026-11-11): verifiers up to 3.0.0 accept forged claims. v1/v2 bound 3.0.0 (neither can release); the outbound and release provers here use risc0-zkvm 3.1.0. LEZ v0.4.0-rc3 itself pins 3.0.5 (LEZ's `dev` branch has 3.1.0); by our reading, private transactions on an rc3 chain rest on its operator until a LEZ release ships the fix.
+  - **Version alignment:** `VERSIONS.toml` and `scripts/check-versions.mjs` (in CI; `--onchain` before any deploy) check prover, verifier, image ids, LEZ versions and genesis state against each other.
 - **LEZ, local:** local LEZ 0.4 standalone sequencers. The trustless RFP-021 runs (a proved light-client update, attested claims of Sepolia deposits, public and private) ran there: on LEZ v0.4.0-rc3 on 2026-11-14 (Run 2, `DESIGN.md` §9.0a, logs in `public-demo/prove/run2-20261114/`), and earlier on LEZ v0.4.0-rc1.
-- **LEZ, public demo chain:** a LEZ v0.4.0-rc3 sequencer run by the maintainer at `https://lez.nameswallet.app/` (JSON-RPC, POST only). Its bridge takes vault roots from an **operator attester** (`public-demo/attester/root-attester.py`), not from the RFP-021 light client. It is a demo network, not a Logos network. LEZ testnet 0.4 is not live.
+- **LEZ, public demo chain:** a LEZ v0.4.0-rc3 sequencer run by the maintainer at `https://lez.nameswallet.app/` (JSON-RPC, POST only), with one bridge instance per vault (v2 to v5). Each takes vault roots from an **operator attester** (`public-demo/attester/root-attester.py`), not from the RFP-021 light client. A relay we run co-signs public claims and public burns and pays their LEZ fee (`public-demo/relayer/`); a test-LEZ faucet answers on the same endpoint. It is a demo network, not a Logos network. LEZ testnet 0.4 is not live.
+- **The open question:** a trustless outbound proof needs a LEZ state commitment and a way to show LEZ finality outside LEZ. We asked the LEZ team about their plans in logos-blockchain/logos-execution-zone issue #1129.
 
 States used below and in `DESIGN.md`: **(1)** run on a chain (which one is named), **(2)** tested in simulation or unit tests only, **(3)** designed only, **(4)** not started. **Mock-verified** means a local run where the vault used the test `MockVerifier` and the zkVM guests were executed, not proved.
 
 | Part | Where | State |
 |---|---|---|
-| Vault deposits (ERC-20 and ETH), registry, caps and relay-fee menu configuration | `vault/src/BridgeVault.sol`, `vault/DEPLOYMENTS.md` | 1, Sepolia demo vault v2 (9 deposits on 2026-11-14) and v3 (3 deposits on 2026-11-14, all claimed on the public demo chain) |
-| Vault `update`, `release`, caps, freeze, delay history, payee checks, `NoStateAdvance` | `vault/src/BridgeVault.sol` | 2; 1 on local anvil, mock-verified |
-| Deposit desk (demo-network bridge fee in front of each demo vault, v2 and v3: owner-set, hard cap 3%, 0.3% since 2026-11-14; not part of the trust model) | `vault/src/desk/`, `DESIGN.md` §3.6 | 1, deployed on Sepolia; 3 deposits through v2's desk and 3 through v3's |
+| Vault deposits (ERC-20 and ETH), registry, caps and relay-fee menu configuration | `vault/src/BridgeVault.sol`, `vault/DEPLOYMENTS.md` | 1, Sepolia demo vaults v2 (9 deposits), v3 (10) and v4 (6), read 2026-11-16 |
+| Vault `update`, `release`, caps, freeze, delay history, payee checks, `NoStateAdvance` | `vault/src/BridgeVault.sol`, `vault/src/UpdateGatedVerifier.sol` | 1 on Sepolia (v4: two updates, a release by proof; LEZ finality the submitter's word); 1 on local anvil, mock-verified; 2 |
+| Deposit desk (demo-network bridge fee in front of each demo vault: owner-set, hard cap 3%, 0.3% since 2026-11-14; not part of the trust model) | `vault/src/desk/`, `DESIGN.md` §3.6 | 1, deployed on Sepolia, one per vault |
 | Wrapped-token program (`MintBy`, `BurnWithNotice`) | `lez-bridge/token` | 1 |
 | Bridge program, RFP-021 root source: attested claims of Sepolia deposits, public and private (proved), with no trusted key | `lez-bridge/bridge`, `lez-bridge/cli` | 1 (Sepolia → local LEZ: rc3, and earlier rc1) |
 | Bridge program, operator-attested root source: public claims of Sepolia deposits, and one private claim (proved; LEZ block 3069) | `lez-bridge/bridge`, `public-demo/attester/` | 1 (Sepolia → public demo chain, rc3) |
@@ -36,24 +42,24 @@ States used below and in `DESIGN.md`: **(1)** run on a chain (which one is named
 | One-time recipient address and fee float for private claims | `lez-bridge/bridge`, `lez-bridge/cli` | 1 (local) |
 | RFP-021 attestation program, consumer library, reference consumer, CLI client: `Init` at a real Sepolia checkpoint, **a proved finality update**, statements | `lez-bridge/attest`, `lez-bridge/cli/src/attest.rs` | 1 (local LEZ: rc3, and earlier rc1) |
 | RFP-021 period update (committee handoff) | `lez-bridge/attest` | 2 (verified natively, dry run only) |
-| Burn on LEZ (exit commitment) | `lez-bridge/bridge` | 1 |
+| Burn on LEZ (exit commitment) | `lez-bridge/bridge` | 1 (public demo chain, self-paid and relayed; local) |
 | Recovery from the wallet: seed-derived deposit and exit secrets, scan of both chains, `recover` | `lez-bridge/client`, `lez-bridge/cli/src/recover.rs`, `lez-bridge/scripts/e2e-recovery*.sh` | 1 (local, public accounts); private path dry run only |
-| Release proof (G3) guest | `lez-bridge/release`, `lez-bridge/methods/release_guest` | 2 (executor only, never proved) |
-| Outbound state proof, G2-lite (LEZ block linkage, burn and claim extraction; the LEZ tip trusted) | `lez-bridge/outbound` | in progress; executor only |
-| First round trip deposit → claim → burn → update → release | `lez-bridge/scripts/e2e-roundtrip.sh` | 1 on local chains, **mock-verified, LEZ finality trusted** |
+| Release proof (G3) guest | `lez-bridge/release`, `lez-bridge/methods/release_guest` | 1: proved (20.9 s, CPU), wrapped and paid on Sepolia (v4) |
+| Outbound state proof, G2-lite (LEZ block linkage, burn and claim extraction; the LEZ tip trusted) | `lez-bridge/outbound` | 1: two updates proved on CPU and accepted on Sepolia (v4), LEZ finality the submitter's word |
+| Round trip deposit → claim → burn → update → release | `lez-bridge/scripts/e2e-roundtrip.sh`; `public-demo/prove/receipts/v4-*/` | 1 on Sepolia + the public demo chain with real proofs (once, v4, **LEZ finality trusted**); 1 on local chains, mock-verified |
 | Logos Blockchain finality for G2 (the trustless outbound proof) | | 4 |
-| Groth16 wrap of the release proof | | 4 |
+| Groth16 wrap of update and release proofs | `lez-bridge/outbound/wrap`, `.github/workflows/wrap-outbound.yml`, `wrap-private.yml` | 1, by hand on a GitHub-hosted runner (about 164 s per update, 243 s per release) |
 | Contest window for competing G2 chains | | 4 |
 | Failsafe (wind-down and reclaim) | `research/failsafe-design.md` | 3 |
-| Claim relay (co-signing LEZ fee payer) | `lez-bridge/cli/src/relay.rs`, `DESIGN.md` §3.6 | 1 on the public demo chain, one operator (the team's) |
+| Relay (co-signing LEZ fee payer for public claims and burns) | `lez-bridge/cli/src/relay.rs`, `public-demo/relayer/`, `DESIGN.md` §3.6 | 1 on the public demo chain, one operator (the team's) |
 | Open, fee-paid settlement roles (update rewards, open claim relays, G2 update rewards); release relayer daemon | `research/open-settlement.md` | 3 |
 | Logos core module and mini-app (Names Wallet mode by default) | `modules/` | 1 once: "Claim a deposit" from a team test Basecamp with an unreleased Names Wallet build, into a never-used account, the relay paying (public demo chain, LEZ block 4852, 2026-11-14); otherwise 2 (unit tests, offscreen renders); not released |
 | Deposit page for ordinary Ethereum wallets | `web/deposit/` | 2 (102 offline tests); live read-only checks on Sepolia |
-| SPEL IDL, catalog release, update daemon | | 4 |
+| SPEL IDL, catalog release, update daemon, wrap service | | 4 |
 | Deployment on LEZ testnet 0.4 | | 4 (not live) |
-| CI (`.github/workflows/ci.yml`) | | green on main: 182 forge tests; 184 LEZ-side Rust tests (no guest build) |
+| CI (`.github/workflows/ci.yml`) | | version alignment; 198 forge tests (1 fork test skipped); 214 LEZ-side Rust tests (no guest build) |
 
-No release has run with a real proof or on a public testnet. LEZ finality is trusted in every outbound run.
+Releases with real proofs have run on Sepolia (v4). LEZ finality is trusted in every outbound run: no outbound proof here is trustless.
 
 ## Layout
 
@@ -84,7 +90,7 @@ The first build fetches LEZ, Helios and the RISC Zero crypto forks from GitHub. 
 git submodule update --init      # forge-std and OpenZeppelin, pinned (see the end of this file)
 cd vault
 forge build --sizes              # fails if a contract exceeds EIP-170
-forge test                       # 182 tests: unit, fuzz, stateful invariants, gas, vectors, desk, demo verifier
+forge test                       # 198 tests (1 fork test skipped without SEPOLIA_FORK_RPC): unit, fuzz, stateful invariants, gas, vectors, desk, demo verifier
 FOUNDRY_PROFILE=ci forge test    # what CI runs
 ```
 

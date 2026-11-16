@@ -1,6 +1,6 @@
 # AGENTS.md: LEZ Bridge mini-app and core module
 
-For coding agents (and people in a hurry). Last checked: 2026-11-15 (branch `v4-live-2`: each receive is read on the deployment it was made on, `deployment` on `receives`/`receive_status`, plain words when the relay no longer serves a deposit's bridge; before that `v4-live`: v4 is the default deployment, a vault that releases by proof, with its own release words; before that `receive-request`: `receive_request(id)` shows a stored deposit's code again; `compare` on `receives` and `receive_status`; v3 reads as a vault that can't pay out; before that `compare-words`).
+For coding agents (and people in a hurry). Last checked: 2026-11-15 (branch `v5-live`: v5 is the default deployment, no release delay; v4 an earlier vault; before that branch `v4-live-2`: each receive is read on the deployment it was made on, `deployment` on `receives`/`receive_status`, plain words when the relay no longer serves a deposit's bridge; before that `v4-live`: v4 is the default deployment, a vault that releases by proof, with its own release words; before that `receive-request`: `receive_request(id)` shows a stored deposit's code again; `compare` on `receives` and `receive_status`; v3 reads as a vault that can't pay out; before that `compare-words`).
 Latest version: <!-- LATEST-URL: set when the repository is published -->
 
 Two Logos Basecamp packages for the private Ethereum ↔ LEZ bridge (RFP-022):
@@ -38,11 +38,12 @@ Deployments live in **one file**, `lez_bridge/rust-lib/deployments.json` (Sepoli
 
 | Deployment | Vault (Sepolia) | Deposit desk (0.3% fee) | Bridge program (LEZ) | Token program (LEZ) |
 |---|---|---|---|---|
-| `bridge-test-network-v4` (default) | `0xC2c6A059eAB928966B24FA5549d441A3B17B54Ed` | `0x25C1653888e7a4E2c35393A5656b7d1645487fd5` | `BKXe3q5JcKeiSrKv9FUBjZw3AowbvYgyHZ3SYPgDxJBf` | `5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7` |
+| `bridge-test-network-v5` (default) | `0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10` | `0xbAf1F99145D4F09c731273fc78709785dD959880` | `CuV1ctZ2qJG4wQcXP4TBudVGKzNmdoYT3DpP1veHnDMA` | `5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7` |
+| `bridge-test-network-v4` | `0xC2c6A059eAB928966B24FA5549d441A3B17B54Ed` | `0x25C1653888e7a4E2c35393A5656b7d1645487fd5` | `BKXe3q5JcKeiSrKv9FUBjZw3AowbvYgyHZ3SYPgDxJBf` | `5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7` |
 | `bridge-test-network-v3` | `0x26af59855b99a8af199361289A5Ed6088729E60E` | `0x6b7F38D05751b1ed432a0A0d377A63cFB8c4DBc5` | `4eaeK3yiqATXhpCEYEFMMtjUn1bS7HLxPwfrH31mXCvr` | `5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7` |
 | `bridge-test-network` (v2) | `0x8C8b2664De28e5287158db4DB65D448638871b74` | `0x77E37E1D6e886d8fb988496B9c2EfF3E78e27DF2` | `JECKBkvoc2e3dC18Wm6zZJEC2BGMwUwLsdZiQzYTnUx7` | `3gF78HRJNCfabkWFiszahVVacq181aU8SSGua8Cj9ZE4` |
 
-v4 is the default since 2026-11-15. Its vault checks update and release proofs on Ethereum with RISC
+v5 is the default since 2026-11-15 (evening): v4's design with no release delay; its note: "Withdrawals back to Ethereum are checked by proof on Ethereum." v4 stays listed as "An earlier test vault: withdrawals work, with a one-hour wait." Before v5, v4 was the default (2026-11-15). Its vault checks update and release proofs on Ethereum with RISC
 Zero's Groth16 verifier 3.1.0, behind an update gate; `release: "proof"`. Its note: "Withdrawals back
 to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn
 waits." `release` / `exits` / redeem `blocked` give that note and the order of a payout: a proved
@@ -171,7 +172,7 @@ from `tools/make-compare-words-vectors.py` (python3, independent of both).
 The Names app declares `lez_bridge` as an optional dependency, and Basecamp starts the module when
 Names opens. Names bundles only the module. The mini-app need not be installed for that.
 
-- The module needs no setup. With no settings file it uses v4.
+- The module needs no setup. With no settings file it uses v5.
 - It has **no timer**. A claim job moves only while someone calls `relayed_claim_status`, and
   `receive_status` reads only when called. The host's screen polls, one call at a time.
 - The wallet keys every request to the app `lez_bridge`, whoever calls the module. A grant or

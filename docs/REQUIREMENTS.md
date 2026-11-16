@@ -2,7 +2,7 @@
 
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
-Every numbered requirement of Logos RFP-022 (private wrapped ERC-20 and ETH bridge) and RFP-021 (Ethereum state attestation), in the RFP's own words (shortened), with the scope of this proposal, the milestone that delivers it, and its state on 2026-11-14. RFP texts: `logos-co/rfp`, `RFPs/RFP-022-wrapped-erc20.md` and `RFPs/RFP-021-ethereum-state-attestation.md` at commit `916fffc`. The test or run behind each state is named in `DESIGN.md` §12 under the same id; this table re-labels those states.
+Every numbered requirement of Logos RFP-022 (private wrapped ERC-20 and ETH bridge) and RFP-021 (Ethereum state attestation), in the RFP's own words (shortened), with the scope of this proposal, the milestone that delivers it, and its state on 2026-11-16 (states first counted 2026-11-14; F5, F6, F7, R2, R10, P6, U1 and U2 moved to PUB on 2026-11-16). RFP texts: `logos-co/rfp`, `RFPs/RFP-022-wrapped-erc20.md` and `RFPs/RFP-021-ethereum-state-attestation.md` at commit `916fffc`. The test or run behind each state is named in `DESIGN.md` §12 under the same id; this table re-labels those states.
 
 - **Scope:** In; In-dev (in scope, with a deviation stated in the proposal and in `DESIGN.md` §11); Cond (delivered only if the week-2 gate on a trustless outbound proof says go, milestones M2 and M6); Desc (descoped, reason given).
 - **Today:** PUB ran on a public network (the Sepolia testnet, or the team's operator-attested LEZ 0.4 demo chain; named); LOC ran on a local chain; TST unit or simulation tests only; DES designed; NS not started. [ext] marks a dependency on another party.
@@ -21,9 +21,9 @@ Every numbered requirement of Logos RFP-022 (private wrapped ERC-20 and ETH brid
 
 | Furthest state any part has reached today | Count |
 |---|---:|
-| PUB, a public network | 8 |
-| LOC, a local chain | 44 |
-| TST, tests only | 28 |
+| PUB, a public network | 16 |
+| LOC, a local chain | 38 |
+| TST, tests only | 26 |
 | DES, designed | 26 |
 | NS, not started | 21 |
 
@@ -37,9 +37,9 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | F2 | "A deposit must not … reveal its LEZ destination" | In | 1 | PUB Sepolia |
 | F3 | mint "on cryptographic verification … consume the attestation primitive" | In-dev (nullifier) | 1, 3 | LOC |
 | F4 | "both a private LEZ account and a public LEZ account" | In | 1 | LOC; PUB demo chain |
-| F5 | burn "must not … reveal its Ethereum destination" | In | 1 | LOC |
-| F6 | burn from "either a private or a public LEZ account" | In | 1 | LOC |
-| F7 | vault releases "on cryptographic verification of a valid LEZ burn" | Cond | 4, 6 | LOC mock-verified |
+| F5 | burn "must not … reveal its Ethereum destination" | In | 1 | PUB demo chain (public burns); LOC private |
+| F6 | burn from "either a private or a public LEZ account" | In | 1 | PUB demo chain (public, self-paid and relayed); LOC private |
+| F7 | vault releases "on cryptographic verification of a valid LEZ burn" | Cond | 4, 6 | PUB Sepolia + demo chain (vault v4: proved update and release, RISC Zero verifier 3.1.0; LEZ finality the submitter's word, roots operator-attested); trustless G2 Cond |
 | F8 | amounts "must not identify"; "effect on anonymity-set size" | In | 1, 7 | PUB denominations; set size NS |
 | F9 | "recover every one of their own unclaimed deposits and unreleased burns" | In | 1, 5 | LOC public accounts; web-page deposits not seed-derived |
 | F10 | admin "can register … and deregister a token"; delisting docs | In-dev (own admin) | 1, 7 | PUB register; TST deregister |
@@ -50,8 +50,8 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | F15 | each deployment "refers to a specific" deployment on the other chain | In | 1, 4 | Ethereum side PUB; LEZ side PUB demo chain (v3, deployed, first public claim block 4703) |
 | F16 | "multiple entities each operate under their own independent configuration" | In-dev (one config per program) | 1, 7 | TST |
 | F17 | ERC-20s whose transfer "do not return a boolean (USDT)" | In | 1 | TST |
-| U1 | "a Logos core module" for users and admin | In | 5 | TST |
-| U2 | "a Logos mini-app" incl. registry view and admin UI | In | 5 | TST |
+| U1 | "a Logos core module" for users and admin | In | 5 | PUB demo chain (unreleased builds in Basecamp); TST |
+| U2 | "a Logos mini-app" incl. registry view and admin UI | In | 5 | PUB demo chain ("Claim a deposit", unreleased); admin UI TST |
 | U3 | "Logos module accompanied by a Logos Core headless CLI/daemon" | In | 5 | NS |
 | U4 | "an IDL … using the SPEL framework" | In | 5 | NS [ext] |
 | U5 | mitigations "enabled by default"; leak indicator | In | 4, 5 | LOC one-time recipient; TST indicator; delay NS |
@@ -61,23 +61,23 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | U9 | "change the targeted Ethereum RPC … and … LEZ sequencer" | In | 5 | TST |
 | U10 | modules "in a module catalog of the team's own" | In | 5 | NS |
 | R1 | "Minting is atomic" | In | 1 | LOC |
-| R2 | "Redemption is atomic at each stage" | In | 1 | LOC burn; TST release |
+| R2 | "Redemption is atomic at each stage" | In | 1 | PUB burn and release (v4); failure paths TST |
 | R3 | "No deposit can be claimed twice and no burn redeemed twice" | In | 1, 4 | LOC one chain; across chains TST (v3) |
 | R4 | "A valid claim remains valid indefinitely" | In | 1 | TST |
 | R5 | "Position recovery is complete" | In | 1 | LOC public accounts |
 | R6 | RPC failure "able to resume without duplicating work" | In | 5 | NS |
 | R7 | "interrupted user-side operation does not consume … entitlement" | In | 4 | DES |
-| R8 | "mature, audited proof-system implementations" | In | 1 | TST (RISC Zero 3.0.5, Helios) |
+| R8 | "mature, audited proof-system implementations" | In | 1 | TST (RISC Zero: Ethereum-side provers and verifier 3.1.0, LEZ side 3.0.5 as LEZ rc3; Helios) |
 | R9 | third-party outage: "document the effect, and mitigate it" | In | 7 | DES |
-| R10 | "full deposit and redemption round trip … included in CI" | In; with real proofs Cond | 6, 7 | LOC mock-verified; not in CI |
+| R10 | "full deposit and redemption round trip … included in CI" | In; with real proofs Cond | 6, 7 | PUB once with real proofs (v4; LEZ finality the submitter's word); LOC mock-verified; not in CI |
 | R11 | "Every hard requirement has at least one corresponding test" | In | 7 | DES (NO TEST rows remain) |
 | R12–14 | docs: core module, CLI and operator, deployer journey | In | 5, 7 | NS |
 | P1 | claim and mint "within a single LEZ public transaction" | In | 1 | LOC 390,756 cycles |
 | P2 | extra LEZ-side verification and "amortised per-deposit cost" | In | 1, 7 | LOC measured; amortised DES |
-| P3 | "Ethereum-side gas cost of a deposit, of a release" | In | 1, 4 | PUB deposits; release TST |
+| P3 | "Ethereum-side gas cost of a deposit, of a release" | In | 1, 4 | PUB deposits and a release (v4, real seal) |
 | P4 | proving "on a mid-range laptop and on the lowest specification" | In | 4 | LOC one desktop |
 | P5 | latency "broken down by" finality, proving, delay, verification | In; outbound Cond | 7 | DES |
-| P6 | "compute resources … of any off-chain component" | In | 1, 7 | LOC updater |
+| P6 | "compute resources … of any off-chain component" | In | 1, 7 | PUB outbound updater and wrap (v4); LOC light-client updater |
 | P7 | state growth "projected at 1M and 10M operations" | In | 7 | TST partial |
 | Sup1 | "deployed and tested on a public Ethereum testnet and LEZ testnet 0.4" | In | 7 | PUB Sepolia; testnet 0.4 NS [ext] |
 | Sup2 | "modules work on both Linux and MacOS" | In | 5 | NS |

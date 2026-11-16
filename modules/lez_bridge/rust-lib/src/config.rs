@@ -390,7 +390,7 @@ mod tests {
         }
         // The default is v3, or v4 once public-demo/v4/apply-v4-entries.py --default made it so.
         let d = default_deployment();
-        assert!(matches!(d.name.as_str(), "bridge-test-network-v3" | "bridge-test-network-v4"), "{}", d.name);
+        assert!(matches!(d.name.as_str(), "bridge-test-network-v3" | "bridge-test-network-v4" | "bridge-test-network-v5"), "{}", d.name);
         let d = builtin("bridge-test-network-v3").unwrap();
         // v3 can't pay out (its outbound state was deployed at zero, vault/DEPLOYMENTS.md): it
         // says so in words without "never", and no built-in deployment claims operator releases.
@@ -418,7 +418,13 @@ mod tests {
         assert!(!DEPLOYMENTS.contains("<<V4:"), "deployments.json holds a v4 placeholder");
         let Some(d) = builtin("bridge-test-network-v4") else { return };
         assert_eq!(d.release, "proof");
-        assert_eq!(d.release_note, "Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits.");
+        // The default's words until v5 is the default (public-demo/v5/apply-v5-entries.py --default), then an earlier vault's.
+        let want = if default_deployment().name == "bridge-test-network-v4" {
+            "Withdrawals back to Ethereum are checked by proof on Ethereum. The first proofs are being set up; until then a burn waits."
+        } else {
+            "An earlier test vault: withdrawals work, with a one-hour wait."
+        };
+        assert_eq!(d.release_note, want);
         assert!(d.release_detail.contains("operator's word until a finality proof"));
         assert!(!d.release_note.to_lowercase().contains("never"));
         let v3 = builtin("bridge-test-network-v3").unwrap();
@@ -426,6 +432,22 @@ mod tests {
         assert_ne!(d.bridge_program, v3.bridge_program);
         assert_ne!(d.cfg_id, v3.cfg_id);
         assert_eq!(d.token_program, v3.token_program, "v4 reuses v3's token program");
+    }
+
+    /// v5 (public-demo/V5-PLAN.md step C1), only once the apply script wrote it: v4's design with no
+    /// release delay, its own vault, bridge and cfgId, the same token program.
+    #[test]
+    fn v5_when_listed_releases_by_proof_and_holds_no_placeholder() {
+        assert!(!DEPLOYMENTS.contains("<<V5:"), "deployments.json holds a v5 placeholder");
+        let Some(d) = builtin("bridge-test-network-v5") else { return };
+        assert_eq!(d.release, "proof");
+        assert_eq!(d.release_note, "Withdrawals back to Ethereum are checked by proof on Ethereum.");
+        assert!(d.release_detail.contains("operator's word until a finality proof") && !d.release_detail.contains("delay"));
+        let v4 = builtin("bridge-test-network-v4").unwrap();
+        assert_ne!(d.vault, v4.vault);
+        assert_ne!(d.bridge_program, v4.bridge_program);
+        assert_ne!(d.cfg_id, v4.cfg_id);
+        assert_eq!(d.token_program, v4.token_program, "v5 reuses the v3/v4 token program");
     }
 
     #[test]
