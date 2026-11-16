@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-// "Send back to Ethereum": the two codes between the Names Wallet and this page.
+// "Bridge to Ethereum": the two codes between the Names Wallet and this page.
 //
 // Withdraw-to code (this page makes it from the connected wallet; the wallet reads it):
 //   payload = version(1)=1 | chainId(8, big-endian) | vault(20) | recipient(20) | relayFeeChoice(1)

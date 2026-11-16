@@ -65,10 +65,10 @@ use util::{format_amount, hex0x, now_ms, units};
 /// `receive_deployment`: `receives`/`receive_status` read each deposit on the deployment it was made
 /// on and name it (`deployment: {id, label, current, network}`).
 /// `send_back`: the `send_back_*` calls (`modules/NAMES-SEND-BACK.md`).
-pub const FEATURES: [&str; 16] = [
+pub const FEATURES: [&str; 17] = [
     "relayed_claim", "relayed_claim_check_with", "relayed_claim_build", "relayed_claim_submit", "account_hint",
     "receive", "deposit_code", "public_receive", "receive_status", "receives", "relayed_claim_check_deposit", "account_add", "build_id",
-    "receive_request", "receive_deployment", "send_back",
+    "receive_request", "receive_deployment", "send_back", "send_back_settle",
 ];
 
 pub const MODULE_VERSION: &str = "0.1.0";
@@ -342,6 +342,11 @@ pub trait LezBridgeModule: Send + 'static {
 
     /// Attaches the Groth16 seal (hex) once Sepolia's verifier accepts it for this send-back (a read).
     fn send_back_seal(&mut self, id: String, seal: String) -> String;
+
+    /// Hands send-back `id` to the bridge's settlement service (`bridge_settle`): it proves (when
+    /// this computer has no receipt), wraps and releases; `send_back_status` follows it. Without a
+    /// local receipt the exit secret goes too, only with `{"consent": true}` (else `needs: "consent"`).
+    fn send_back_settle(&mut self, id: String, options_json: String) -> String;
 
     /// The `logosrel1…` release code and its link, once the seal is in.
     fn send_back_release_code(&mut self, id: String) -> String;
@@ -2267,6 +2272,10 @@ impl LezBridgeModule for Bridge {
 
     fn send_back_seal(&mut self, id: String, seal: String) -> String {
         reply(self.send_back_seal_now(id.trim(), &seal))
+    }
+
+    fn send_back_settle(&mut self, id: String, options_json: String) -> String {
+        reply(options(&options_json).and_then(|o| self.send_back_settle_now(id.trim(), &o)))
     }
 
     fn send_back_release_code(&mut self, id: String) -> String {

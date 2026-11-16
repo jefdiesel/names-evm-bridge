@@ -1390,7 +1390,7 @@ function sendBackOf(fragment) {
   return null;
 }
 
-const SB_WITHDRAW_STEPS = ['Connect the Ethereum wallet that should receive.', 'Copy the withdraw-to code.', 'Paste it in your Names Wallet: Send back to Ethereum.'];
+const SB_WITHDRAW_STEPS = ['Connect the Ethereum wallet that should receive.', 'Copy the withdraw-to code.', 'Paste it in your Names Wallet: Bridge to Ethereum.'];
 const SB_RELEASE_STEPS = ['Paste the release code from your Names Wallet.', 'Connect any Ethereum wallet: it pays the gas.', 'Release.'];
 
 function sbSteps(list, current) {
@@ -1408,7 +1408,7 @@ const fmtTime = (secs) => new Date(Number(secs) * 1000).toLocaleTimeString([], {
 
 function withdrawView(s, host) {
   const connected = !!s.account;
-  host.append(walletRow(s) || h('span'), h('div', { class: 'card-head' }, h('h1', { id: 'card-h', tabindex: '-1' }, 'Send back to Ethereum')), sbSteps(SB_WITHDRAW_STEPS, connected ? 1 : 0));
+  host.append(walletRow(s) || h('span'), h('div', { class: 'card-head' }, h('h1', { id: 'card-h', tabindex: '-1' }, 'Bridge to Ethereum')), sbSteps(SB_WITHDRAW_STEPS, connected ? 1 : 0));
   if (!connected) {
     host.append(h('div', { class: 'action' }, ...primary('Connect wallet', () => connectWallet())));
     return;
@@ -1551,7 +1551,7 @@ function renderSendBack(s) {
   }
   if (sb.kind === 'withdraw') withdrawView(s, host);
   else releaseView(s, host);
-  document.title = sb.kind === 'withdraw' ? 'Send back to Ethereum · Names Wallet (Sepolia testnet)' : `${sb.check?.wait ? `Releasable at ${fmtTime(sb.check.wait.until)}` : 'Release'} · Names Wallet (Sepolia testnet)`;
+  document.title = sb.kind === 'withdraw' ? 'Bridge to Ethereum · Names Wallet (Sepolia testnet)' : `${sb.check?.wait ? `Releasable at ${fmtTime(sb.check.wait.until)}` : 'Release'} · Names Wallet (Sepolia testnet)`;
 }
 
 // ------------------------------------------------------------------ render

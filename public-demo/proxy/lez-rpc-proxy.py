@@ -108,7 +108,9 @@ DENIED = {"getCrossZoneDeadLetters", "requeueCrossZoneDeadLetter"}
 RELAY_METHODS = {"bridge_relayInfo", "bridge_relayClaim", "bridge_relayBurn"}
 # Served by the test-LEZ faucet (--faucet, public-demo/faucet/faucet.py), never sent to the sequencer.
 FAUCET_METHODS = {"bridge_faucetInfo", "bridge_faucet"}
-LOOPBACK_METHODS = RELAY_METHODS | FAUCET_METHODS
+# Served by the settlement service (--settle, public-demo/settle/settle.py), never sent to the sequencer.
+SETTLE_METHODS = {"bridge_settleInfo", "bridge_settle", "bridge_settleStatus", "bridge_settleBundle"}
+LOOPBACK_METHODS = RELAY_METHODS | FAUCET_METHODS | SETTLE_METHODS
 
 DEFAULTS = dict(
     SEND_MAX=768 * 1024,  # a ~256 KB private transaction is ~342 KB as base64 JSON
@@ -128,6 +130,8 @@ DEFAULTS = dict(
     MAX_CLIENTS=20000,  # per-IP table size before it is pruned
     # the claim relay (--relay)
     IP_RELAY=(0.05, 5),  # 5 at once, then one per 20 s per client
+    IP_SETTLE=(0.05, 3),  # bridge_settle: 3 at once, then one per 20 s per client (the service caps jobs itself)
+    SETTLE_MAX=720 * 1024,  # a release receipt (~225 KB) as hex in JSON
     IP_FAUCET=(0.05, 3),  # bridge_faucet: 3 at once, then one per 20 s per client (the faucet caps grants itself)
     RELAY_MAX=20000,  # body cap of a relay call (the relay's own cap)
     RELAY_INFLIGHT=2,
@@ -163,6 +167,7 @@ class Limits:
         self.inflight = threading.BoundedSemaphore(cfg["MAX_INFLIGHT"])
         self.relay_inflight = threading.BoundedSemaphore(int(cfg["RELAY_INFLIGHT"]))
         self.faucet_inflight = threading.BoundedSemaphore(2)
+        self.settle_inflight = threading.BoundedSemaphore(4)
         self.counters = {}
 
     def new_entry(self):
@@ -173,6 +178,7 @@ class Limits:
             "range": Bucket(*cfg["IP_RANGE"]),
             "relay": Bucket(*cfg["IP_RELAY"]),
             "faucet": Bucket(*cfg["IP_FAUCET"]),
+            "settle": Bucket(*cfg["IP_SETTLE"]),
             "preflight": Bucket(*cfg["IP_PREFLIGHT"]),
         }
 
@@ -224,6 +230,8 @@ class Limits:
                 return "client"
             elif method == "getBlockRange" and not entry["range"].take():
                 return "client"
+            elif method == "bridge_settle" and not entry["settle"].take():
+                return "client"
             elif method == "bridge_faucet" and not entry["faucet"].take():
                 return "client"
             elif method in RELAY_METHODS and method != "bridge_relayInfo" and not entry["relay"].take():
@@ -255,14 +263,16 @@ class Server(ThreadingHTTPServer):
     allow_reuse_address = True
     request_queue_size = 64
 
-    def __init__(self, addr, handler, cfg, upstream, log, allowed=None, client_ip_header="CF-Connecting-IP", relay=None, relay_auth=None, cors_origins=(), faucet=None):
+    def __init__(self, addr, handler, cfg, upstream, log, allowed=None, client_ip_header="CF-Connecting-IP", relay=None, relay_auth=None, cors_origins=(), faucet=None, settle=None):
         super().__init__(addr, handler)
         self.cfg, self.upstream, self.log = cfg, upstream, log
         self.cors_origins = frozenset(cors_origins)  # exact origins only, never "*"
         self.relay = relay
         self.relay_auth = relay_auth  # shared secret for the relay (X-Relay-Auth); never logged
         self.faucet = faucet
-        self.allowed = set(ALLOWED if allowed is None else allowed) | (RELAY_METHODS if relay else set()) | (FAUCET_METHODS if faucet else set())
+        self.settle = settle
+        self.allowed = (set(ALLOWED if allowed is None else allowed) | (RELAY_METHODS if relay else set()) | (FAUCET_METHODS if faucet else set())
+                        | (SETTLE_METHODS if settle else set()))
         self.client_ip_header = client_ip_header
         self.limits = Limits(cfg)
         self.open_conns = 0
@@ -460,7 +470,8 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(method, str) or method not in self.server.allowed:
             label = method if isinstance(method, str) and method in DENIED else "other"
             return 403, rpc_error(-32601, "method not served here", rid), label
-        cap = cfg["SEND_MAX"] if method == "sendTransaction" else cfg["RELAY_MAX"] if method in LOOPBACK_METHODS else cfg["READ_MAX"]
+        cap = (cfg["SEND_MAX"] if method == "sendTransaction" else cfg["SETTLE_MAX"] if method == "bridge_settle"
+               else cfg["RELAY_MAX"] if method in LOOPBACK_METHODS else cfg["READ_MAX"])
         if length > cap:
             return 413, rpc_error(-32600, "request too large for " + method, rid), method
         if not isinstance(params, (list, dict)):
@@ -515,8 +526,25 @@ class Handler(BaseHTTPRequestHandler):
 
     def relay_call(self, rid, method, params, started):
         """A relay or faucet method: checked here, answered by the claim relay or the faucet on loopback."""
-        target = self.server.faucet if method in FAUCET_METHODS else self.server.relay
-        if method == "bridge_faucetInfo":
+        target = self.server.faucet if method in FAUCET_METHODS else self.server.settle if method in SETTLE_METHODS else self.server.relay
+        one = params[0] if isinstance(params, list) and len(params) == 1 else params if isinstance(params, dict) else None
+        if method == "bridge_settleInfo":
+            path, payload = "/settle/info", None
+        elif method == "bridge_settle":
+            ok = isinstance(one, dict) and isinstance(one.get("vault"), str) and len(one["vault"]) <= 42 and (
+                (isinstance(one.get("receipt_hex"), str) and isinstance(one.get("journal_hex"), str) and "exit" not in one)
+                or (isinstance(one.get("exit"), dict) and "receipt_hex" not in one))
+            if not ok:
+                return self.reply(400, rpc_error(-32602, "params: [{vault, receipt_hex, journal_hex}] or [{vault, exit}]", rid), method, started)
+            path, payload = "/settle", json.dumps(one).encode()
+        elif method in ("bridge_settleStatus", "bridge_settleBundle"):
+            key = "id" if method == "bridge_settleStatus" else "fetch_id"
+            v = one if isinstance(one, str) else one.get(key) if isinstance(one, dict) else None
+            if not (isinstance(v, str) and 2 <= len(v) <= 66 and all(c in "0123456789abcdefABCDEFx" for c in v)):
+                return self.reply(400, rpc_error(-32602, "params: [%s]" % key, rid), method, started)
+            path = "/settle/status" if method == "bridge_settleStatus" else "/settle/bundle"
+            payload = json.dumps({key: v}).encode()
+        elif method == "bridge_faucetInfo":
             path, payload = "/faucet/info", None
         elif method == "bridge_faucet":
             pk = params[0] if isinstance(params, list) and params else params.get("public_key") if isinstance(params, dict) else None
@@ -540,8 +568,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(400, rpc_error(-32602, "params: [hex of a half-signed claim or burn] or [hex, check_only]", rid), method, started)
             path = "/relay/burn" if method == "bridge_relayBurn" else "/relay"
             payload = json.dumps({"tx": tx, "check_only": check}).encode()
-        sem = self.server.limits.faucet_inflight if method in FAUCET_METHODS else self.server.limits.relay_inflight
-        what = "faucet" if method in FAUCET_METHODS else "relay"
+        sem = (self.server.limits.faucet_inflight if method in FAUCET_METHODS else self.server.limits.settle_inflight if method in SETTLE_METHODS
+               else self.server.limits.relay_inflight)
+        what = "faucet" if method in FAUCET_METHODS else "settlement" if method in SETTLE_METHODS else "relay"
+        cap = 1024 * 1024 if method == "bridge_settleBundle" else 64 * 1024
         if not sem.acquire(blocking=False):
             return self.reply(503, rpc_error(-32005, what + " busy; retry later", rid), method, started, {"Retry-After": "10"})
         try:
@@ -553,10 +583,10 @@ class Handler(BaseHTTPRequestHandler):
                     headers["X-Relay-Auth"] = self.server.relay_auth
                 conn.request("GET" if payload is None else "POST", path, body=payload, headers=headers)
                 resp = conn.getresponse()
-                data = resp.read(64 * 1024 + 1)
+                data = resp.read(cap + 1)
             finally:
                 conn.close()
-            result = json.loads(data) if len(data) <= 64 * 1024 else None
+            result = json.loads(data) if len(data) <= cap else None
             if not isinstance(result, dict):
                 raise ValueError("bad relay answer")
         except (OSError, ValueError, http.client.HTTPException):
@@ -595,6 +625,8 @@ def main(argv=None):
     p.add_argument("--upstream", type=loopback_addr, default=("127.0.0.1", 3290))
     p.add_argument("--relay", type=loopback_addr, default=None,
                    help="the claim relay (public-demo/relayer/relayer.py): serve bridge_relayInfo and bridge_relayClaim from it")
+    p.add_argument("--settle", type=loopback_addr, default=None,
+                   help="the settlement service (public-demo/settle/settle.py): serve bridge_settleInfo, bridge_settle, bridge_settleStatus, bridge_settleBundle")
     p.add_argument("--faucet", type=loopback_addr, default=None,
                    help="the test-LEZ faucet (public-demo/faucet/faucet.py): serve bridge_faucetInfo and bridge_faucet from it")
     p.add_argument("--relay-auth-file", default=None, metavar="FILE",
@@ -640,7 +672,7 @@ def main(argv=None):
         if origin != origin.rstrip("/") or origin.count("/") != 2 or not origin.startswith(("https://", "http://127.0.0.1", "http://localhost")):
             p.error("--cors-origin takes an exact origin such as https://nameswallet.app, got " + origin)
     srv = Server(args.listen, Handler, cfg, args.upstream, log, allowed, header, args.relay,
-                 relay_secret(args.relay_auth_file) if (args.relay or args.faucet) else None, args.cors_origin, args.faucet)
+                 relay_secret(args.relay_auth_file) if (args.relay or args.faucet or args.settle) else None, args.cors_origin, args.faucet, args.settle)
     print("lez-rpc-proxy on %s:%d -> %s:%d" % (args.listen + args.upstream), flush=True)
     try:
         srv.serve_forever()

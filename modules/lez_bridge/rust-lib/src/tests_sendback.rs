@@ -74,6 +74,10 @@ struct NetState {
     /// Methods answered "429, slow down" this many more times.
     throttle: HashMap<String, u32>,
     asked: Vec<String>,
+    /// The settlement service: whether it is available, what it was handed, the status it answers.
+    settle_on: bool,
+    settled: Vec<Value>,
+    settle_status: Value,
 }
 
 struct Net(Mutex<NetState>);
@@ -106,6 +110,18 @@ impl LezRpc for Net {
             }
             "getTransaction" => Ok(s.tx_blocks.get(params[0].as_str().unwrap()).map_or(Value::Null, |b| json!(["tx", b]))),
             "getChannelId" => Ok(json!(CHANNEL)),
+            "bridge_settleInfo" => Ok(json!({ "available": s.settle_on, "reason": if s.settle_on { Value::Null } else { json!("not set up") }, "fee": "0", "vaults": [] })),
+            "bridge_settle" => {
+                s.settled.push(params[0].clone());
+                Ok(json!({ "ok": true, "id": "0x".to_owned() + &"5a".repeat(32), "stage": "queued" }))
+            }
+            "bridge_settleStatus" => {
+                assert_eq!(params[0], "0x".to_owned() + &"5a".repeat(32));
+                if s.settle_status == "unserved" {
+                    return Err(Problem { code: "refused", message: "method not allowed".into(), retry_after: None });
+                }
+                Ok(s.settle_status.clone())
+            }
             _ => Err(Problem { code: "refused", message: format!("not served: {method}"), retry_after: None }),
         }
     }
@@ -543,4 +559,131 @@ fn the_relays_info_is_read_once_a_minute() {
     ok(&w.b.send_back_build(id.clone()));
     ok(&w.b.send_back_build(id.clone()));
     assert_eq!(w.net.0.lock().unwrap().asked.iter().filter(|m| *m == "bridge_relayInfo").count(), 1);
+}
+
+
+/// A send-back recorded on Ethereum (leaf 0), with no prover set.
+fn recorded(name: &str, settle_on: bool) -> (World, String) {
+    let mut w = world(name, "bridge-test-network-v4");
+    w.net.0.lock().unwrap().settle_on = settle_on;
+    let plan = ok(&w.b.send_back_plan("ETH".into(), "0".into(), format!("Public/{}", w.acct), w.code.clone()));
+    let id = plan["id"].as_str().unwrap().to_owned();
+    let e = util::hex32(plan["exit_commitment"].as_str().unwrap()).unwrap();
+    let cfg = util::hex32(&w.b.cfg.deployment.cfg_id).unwrap();
+    let leaf = exit_leaf(&cfg, &[0; 20], DENOM, &e);
+    {
+        let mut n = w.net.0.lock().unwrap();
+        n.tip = 101;
+        n.blocks.insert(101, e.to_vec());
+        let mut x = w.eth.lock().unwrap();
+        x.logs.push(update_log(0, &[leaf], &[leaf], BASE + 5));
+        x.leaves = vec![leaf];
+        x.releasable_at = util::now_ms() / 1000 + 3600;
+    }
+    assert_eq!(ok(&w.b.send_back_status(id.clone()))["stage"], "recorded");
+    (w, id)
+}
+
+#[test]
+fn without_a_helper_the_settlement_service_gets_the_exit_only_after_consent() {
+    let (mut w, id) = recorded("settle-exit", false);
+    // Not available: plain words, nothing handed over.
+    let r: Value = serde_json::from_str(&w.b.send_back_settle(id.clone(), "{\"consent\":true}".into())).unwrap();
+    assert_eq!(r["success"], false);
+    assert!(r["error"].as_str().unwrap().contains("not set up"), "{r}");
+    let (mut w, id) = recorded("settle-exit-2", true);
+    let plan = ok(&w.b.send_back_plan("ETH".into(), "0".into(), format!("Public/{}", w.acct), w.code.clone()));
+    assert_eq!((plan["settle_offer"]["available"].as_bool(), plan["settle_offer"]["consent_needed"].as_bool()), (Some(true), Some(true)), "{plan}");
+    assert_eq!(plan["settle_offer"]["consent_text"], crate::sendback::SETTLE_CONSENT);
+    assert_eq!(ok(&w.b.send_back_status(id.clone()))["settle_offer"]["available"], true);
+    let n = ok(&w.b.send_back_settle(id.clone(), "{}".into()));
+    assert_eq!(n["needs"], "consent", "{n}");
+    assert!(w.net.0.lock().unwrap().settled.is_empty(), "no consent, nothing sent");
+    w.net.0.lock().unwrap().settle_status = json!({ "ok": true, "stage": "queued", "text": "Waiting its turn on the bridge's machine." });
+    let s = ok(&w.b.send_back_settle(id.clone(), "{\"consent\":true}".into()));
+    assert_eq!(s["settle"]["stage"], "queued", "{s}");
+    let sent = w.net.0.lock().unwrap().settled[0].clone();
+    assert_eq!(sent["exit"]["secret"], hex0x(&value_at(0)));
+    assert_eq!((sent["exit"]["index"].as_u64(), sent["exit"]["leaves"].as_array().unwrap().len()), (Some(0), 1));
+    assert_eq!(sent["vault"], eth::addr_hex(&w.b.cfg.deployment.vault));
+    assert!(sent.get("receipt_hex").is_none());
+    fn all_files(d: &std::path::Path, out: &mut String) {
+        for e in std::fs::read_dir(d).into_iter().flatten().flatten() {
+            if e.path().is_dir() { all_files(&e.path(), out) } else { out.push_str(&String::from_utf8_lossy(&std::fs::read(e.path()).unwrap_or_default())) }
+        }
+    }
+    let mut stored = String::new();
+    all_files(&w.b.data, &mut stored);
+    assert!(stored.contains("settle_id"), "the record was read");
+    assert!(!stored.contains(&to_hex(&value_at(0))), "the exit secret is never stored");
+    // A second press hands nothing over again.
+    ok(&w.b.send_back_settle(id.clone(), "{\"consent\":true}".into()));
+    assert_eq!(w.net.0.lock().unwrap().settled.len(), 1);
+    // send_back_status follows the service, and its release ends the send-back.
+    w.net.0.lock().unwrap().settle_status = json!({ "ok": true, "stage": "wrapping", "text": "Wrapping the proof for Ethereum (about 4 min).", "run": 77 });
+    let s = ok(&w.b.send_back_status(id.clone()));
+    assert_eq!((s["settle"]["stage"].as_str(), s["settle_id"].as_str().map(|x| x.len())), (Some("wrapping"), Some(66)), "{s}");
+    let seal = hex0x(&[withdraw::SELECTOR.to_vec(), vec![9u8; 256]].concat());
+    w.net.0.lock().unwrap().settle_status = json!({ "ok": true, "stage": "released", "text": "Released on Ethereum.", "seal": seal, "tx": "0xabc", "block": 9 });
+    let s = ok(&w.b.send_back_status(id.clone()));
+    assert_eq!((s["stage"].as_str(), s["released_tx"].as_str(), s["seal"].as_bool()), (Some("released"), Some("0xabc"), Some(true)), "{s}");
+}
+
+#[test]
+fn with_a_local_receipt_only_the_receipt_goes_and_a_failure_leaves_the_fallbacks() {
+    let (mut w, id) = recorded("settle-receipt", true);
+    let dir = w.b.data.join("send-back").join(&id);
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("receipt.bin"), [7u8; 40]).unwrap();
+    std::fs::write(dir.join("journal.hex"), format!("0x{}\n", "cd".repeat(256))).unwrap();
+    w.net.0.lock().unwrap().settle_status = json!({ "ok": true, "stage": "queued" });
+    ok(&w.b.send_back_settle(id.clone(), "{}".into()));
+    let sent = w.net.0.lock().unwrap().settled[0].clone();
+    assert_eq!((sent["receipt_hex"].as_str(), sent["journal_hex"].as_str()), (Some("07".repeat(40).as_str()), Some("cd".repeat(256).as_str())));
+    assert!(sent.get("exit").is_none(), "no secret when a receipt is here");
+    assert!(stand_in::asked().iter().filter(|(m, _)| m == "app_secret").count() <= 2, "no exit secret asked for the settlement");
+    w.net.0.lock().unwrap().settle_status = json!({ "ok": true, "stage": "failed", "error": "The Ethereum wrapper failed (run 5)." });
+    let s = ok(&w.b.send_back_status(id.clone()));
+    assert_eq!((s["stage"].as_str(), s["settle"]["error"].as_str()), (Some("proved"), Some("The Ethereum wrapper failed (run 5).")), "{s}");
+    // After a failure it can be handed over again.
+    ok(&w.b.send_back_settle(id.clone(), "{}".into()));
+    assert_eq!(w.net.0.lock().unwrap().settled.len(), 2);
+}
+
+
+#[test]
+fn a_settlement_service_gone_or_reset_never_strands_a_send_back() {
+    let (mut w, id) = recorded("settle-gone", true);
+    w.net.0.lock().unwrap().settle_status = json!({ "ok": true, "stage": "wrapping" });
+    ok(&w.b.send_back_settle(id.clone(), "{\"consent\":true}".into()));
+    // Rolled back: the method is no longer served. The chain reads go on; Sepolia's release ends it.
+    w.net.0.lock().unwrap().settle_status = json!("unserved");
+    w.eth.lock().unwrap().spent = true;
+    let s = ok(&w.b.send_back_status(id.clone()));
+    assert_eq!(s["stage"], "released", "{s}");
+    assert!(s["settle_note"].as_str().unwrap().contains("can't be asked"), "{s}");
+
+    // Reset: the service answers "unknown"; it can be handed over again.
+    let (mut w, id) = recorded("settle-reset", true);
+    w.net.0.lock().unwrap().settle_status = json!({ "ok": true, "stage": "queued" });
+    ok(&w.b.send_back_settle(id.clone(), "{\"consent\":true}".into()));
+    w.net.0.lock().unwrap().settle_status = json!({ "ok": false, "code": "unknown", "reason": "no such settlement" });
+    let s = ok(&w.b.send_back_status(id.clone()));
+    assert_eq!(s["settle"]["stage"], "failed", "{s}");
+    assert_eq!(s["settle_offer"]["available"], true);
+    w.net.0.lock().unwrap().settle_status = json!({ "ok": true, "stage": "queued" });
+    ok(&w.b.send_back_settle(id.clone(), "{\"consent\":true}".into()));
+    assert_eq!(w.net.0.lock().unwrap().settled.len(), 2);
+}
+
+#[test]
+fn a_wallet_with_the_helper_never_sends_its_secret() {
+    let (mut w, id) = recorded("settle-helper", true);
+    ok(&w.b.set_release_prover(json!(["/bin/sh"]).to_string()));
+    let plan = ok(&w.b.send_back_plan("ETH".into(), "0".into(), format!("Public/{}", w.acct), w.code.clone()));
+    assert_eq!((plan["settle_offer"]["consent_needed"].as_bool(), plan["settle_offer"]["prove_first"].as_bool()), (Some(false), Some(true)));
+    let r: Value = serde_json::from_str(&w.b.send_back_settle(id.clone(), "{\"consent\":true}".into())).unwrap();
+    assert_eq!(r["success"], false);
+    assert!(r["error"].as_str().unwrap().contains("make the proof here first"), "{r}");
+    assert!(w.net.0.lock().unwrap().settled.is_empty());
 }

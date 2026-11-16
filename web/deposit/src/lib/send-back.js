@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-// "Send back to Ethereum" on this page: the withdraw-to code for the connected wallet, and the
+// "Bridge to Ethereum" on this page: the withdraw-to code for the connected wallet, and the
 // release a release code names (the checks, then the vault's `release` call). DOM-free, so the
 // tests run it against the mock chain (test/send-back.test.mjs). Codes: ./withdraw.js.
 

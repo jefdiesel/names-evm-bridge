@@ -79,7 +79,7 @@ impl LezRpc for Http {
 
     fn call(&self, method: &str, params: Value) -> Result<Value, Problem> {
         // The relay checks, co-signs and submits within one call (up to two minutes).
-        let timeout = if method == "bridge_relayClaim" { Duration::from_secs(150) } else { self.timeout };
+        let timeout = if matches!(method, "bridge_relayClaim" | "bridge_settle") { Duration::from_secs(150) } else { self.timeout };
         let agent = ureq::AgentBuilder::new().timeout(timeout).user_agent("logos-lez-bridge-module/0.1").build();
         let body = json!({ "jsonrpc": "2.0", "id": 1, "method": method, "params": params });
         let reply = match agent.post(&self.url).set("Content-Type", "application/json").send_json(body) {

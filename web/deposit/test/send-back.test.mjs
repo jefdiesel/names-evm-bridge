@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-// "Send back to Ethereum" on the page (src/lib/send-back.js) against the mock chain: the
+// "Bridge to Ethereum" on the page (src/lib/send-back.js) against the mock chain: the
 // withdraw-to code for a connected address, the release checks (recorded, delay, spent, the
 // simulation with the proof), the release call and its words.
 import test from 'node:test';

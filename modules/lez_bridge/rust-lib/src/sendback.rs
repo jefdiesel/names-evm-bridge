@@ -32,6 +32,8 @@ pub const EXIT_LEAF_TAG: [u8; 32] = [
     0xc1, 0x4f, 0x85, 0x6d, 0x76, 0xc5, 0x9c,
 ];
 pub const PAGE_LINK: &str = "https://nameswallet.app/bridge/#withdraw";
+/// What the wallet shows before an exit secret goes to the bridge's settlement service.
+pub const SETTLE_CONSENT: &str = "This wallet has no proof helper, so the bridge's service will make the proof: it learns which burn pays which Ethereum address.";
 pub const PRIVACY_LINE: &str = "A public burn publishes this account, the amount and an exit commitment; the Ethereum address stays hidden until the release.";
 /// Measured: the release proof, 36K cycles, 20.7 s on an M4 CPU, under 1 GB (RUNBOOK §14).
 pub const PROOF_S: u64 = 21;
@@ -364,7 +366,89 @@ impl Bridge {
         self.sb_put(&rec)?;
         let mut v = self.sb_view(&rec);
         v["burn"] = self.burn_signable();
+        v["settle_offer"] = self.settle_offer();
         Ok(v)
+    }
+
+    /// The settlement service as this send-back would use it: `{available, reason, consent_needed,
+    /// consent_text}` (consent is needed only without a local prover: the secret would leave).
+    fn settle_offer(&self) -> Value {
+        let info = self.settle_info_raw();
+        let local = !self.cfg.release_prover.is_empty();
+        match info {
+            Ok(v) => json!({ "available": v["available"] == true, "reason": v["reason"], "consent_needed": !local, "consent_text": if local { Value::Null } else { json!(SETTLE_CONSENT) },
+                             "prove_first": local }),
+            Err(e) => json!({ "available": false, "reason": e, "consent_needed": !local, "consent_text": if local { Value::Null } else { json!(SETTLE_CONSENT) } }),
+        }
+    }
+
+    /// `bridge_settleInfo`, read at most once a minute per module data folder.
+    fn settle_info_raw(&self) -> Result<Value, String> {
+        static CACHE: std::sync::Mutex<Option<std::collections::HashMap<String, (u64, Value)>>> = std::sync::Mutex::new(None);
+        let key = format!("{}|{}", self.data.display(), self.deployment().name);
+        let now = now_ms();
+        if let Some((at, v)) = CACHE.lock().ok().and_then(|g| g.as_ref().and_then(|m| m.get(&key).cloned())) {
+            if now.saturating_sub(at) < 60_000 {
+                return Ok(v);
+            }
+        }
+        let v = self.lez_rpc().map_err(|r| r.message)?.call("bridge_settleInfo", json!([])).map_err(|p| p.message)?;
+        if let Ok(mut g) = CACHE.lock() {
+            g.get_or_insert_with(Default::default).insert(key, (now, v.clone()));
+        }
+        Ok(v)
+    }
+
+    /// `send_back_settle(id, options)`: hands the send-back to the bridge's settlement service, which
+    /// proves (when needed), wraps and releases it; `send_back_status` then follows it. With a local
+    /// receipt only the receipt goes (no secret). Without one the exit secret goes, and only with
+    /// `{"consent": true}` after the person read [`SETTLE_CONSENT`] (else `needs: "consent"`).
+    pub(crate) fn send_back_settle_now(&mut self, id: &str, options: &Value) -> Result<Value, String> {
+        let mut r = self.sb_get(id)?;
+        if r["settle_id"].is_string() && r["settle_failed"] != true {
+            return self.send_back_status_now(id);
+        }
+        if r["root"].is_null() {
+            return Err("Ethereum hasn't recorded this burn yet: the bridge's update records it first.".into());
+        }
+        let info = self.settle_info_raw()?;
+        if info["available"] != true {
+            return Err(info["reason"].as_str().unwrap_or("The bridge's settlement service is not available now.").to_owned());
+        }
+        let d = self.deployment().clone();
+        let vault = eth::addr_hex(&d.vault);
+        let receipt = self.sb_receipt(&r);
+        let body = if let Some(p) = receipt["path"].as_str() {
+            let rb = std::fs::read(p).map_err(|e| format!("cannot read the receipt: {e}"))?;
+            let jh = std::fs::read_to_string(receipt["journal"].as_str().unwrap_or_default()).map_err(|e| format!("cannot read the journal: {e}"))?;
+            json!({ "vault": vault, "receipt_hex": to_hex(&rb), "journal_hex": jh.trim().trim_start_matches("0x") })
+        } else {
+            if !self.cfg.release_prover.is_empty() {
+                // A wallet with the helper sends only its receipt: the secret never leaves.
+                return Err("This computer has the proof helper: make the proof here first (\"Make the proof\"), then finish on Ethereum.".into());
+            }
+            if options["consent"] != true {
+                return Ok(json!({ "needs": "consent", "request": null, "message": SETTLE_CONSENT }));
+            }
+            let (k, inputs, leaves) = match self.sb_witness(&r)? {
+                Ok(x) => x,
+                Err(needs) => return Ok(needs),
+            };
+            json!({ "vault": vault, "exit": {
+                "secret": hex0x(&k), "eth_dest": inputs["eth_dest"], "token": inputs["token"], "denom": inputs["denom"],
+                "max_relay_fee": inputs["max_relay_fee"], "cfg_id": inputs["cfg_id"], "index": inputs["index"],
+                "leaves": leaves.iter().map(|l| hex0x(l)).collect::<Vec<_>>() } })
+        };
+        let v = self.lez_rpc().map_err(|e| e.message)?.call("bridge_settle", json!([body])).map_err(|p| p.message)?;
+        if v["ok"] != true {
+            return Err(format!("{} Nothing was handed over.", v["reason"].as_str().unwrap_or("The settlement service refused it.")));
+        }
+        r["settle_id"] = v["id"].clone();
+        r["settle_failed"] = Value::Null;
+        r["settle"] = json!({ "stage": v["stage"], "text": null });
+        r["settle_mode"] = json!(if receipt.is_null() { "exit" } else { "receipt" });
+        self.sb_put(&r)?;
+        self.send_back_status_now(id)
     }
 
     /// Whether a burn can be signed and paid for now: the Names Wallet lists `relayed_bridge_burn`
@@ -419,6 +503,7 @@ impl Bridge {
             "root": r["root"], "releasable_at": r["releasable_at"], "seal": r["seal"].is_string(), "released_tx": r["released_tx"],
             "fee_payer": "The bridge's relay pays the LEZ fee: your account needs no LEZ.", "privacy": PRIVACY_LINE, "created": r["created"],
             "prover_set": !self.cfg.release_prover.is_empty(), "prove_error": r["prove_error"], "receipt": self.sb_receipt(r),
+            "settle_id": r["settle_id"], "settle": r["settle"], "settle_note": r["settle_note"],
         })
     }
 
@@ -572,6 +657,10 @@ impl Bridge {
         let mut v = self.sb_view(&r);
         v["reads"] = reads;
         v["wait"] = self.sb_wait(&r);
+        // The settlement service's offer, once the burn is recorded and no settlement runs.
+        if matches!(r["stage"].as_str(), Some("recorded" | "proved" | "wrapped" | "releasable")) && (r["settle_id"].is_null() || r["settle_failed"] == true) {
+            v["settle_offer"] = self.settle_offer();
+        }
         if let Err(e) = res {
             // A busy endpoint or a failed read is a wait, never the end of the send-back: the next
             // poll goes on from where this one stopped.
@@ -613,6 +702,46 @@ impl Bridge {
                     r["stage"] = json!("planned");
                 }
                 _ => return Ok(()),
+            }
+        }
+        // The settlement service, when it has this send-back: its stage, its seal, its release.
+        if let Some(sid) = r["settle_id"].as_str().map(str::to_owned) {
+            if r["stage"] != "released" && r["settle_failed"] != true {
+                bump(reads, "lez", 1);
+                // Never fatal: a stopped or rolled-back service must not stop the chain reads below
+                // (the release seen on Sepolia, the manual fallbacks).
+                let v = self.lez_rpc().map_err(|e| e.message).and_then(|rpc| rpc.call("bridge_settleStatus", json!([sid])).map_err(|p| p.message));
+                let v = match v {
+                    Ok(v) => v,
+                    Err(e) => {
+                        r["settle_note"] = json!(format!("The settlement service can't be asked now ({e})."));
+                        json!({ "ok": null })
+                    }
+                };
+                if v["ok"] == false && v["code"] == "unknown" {
+                    // The service lost it (a reset): it can be handed over again.
+                    r["settle_failed"] = json!(true);
+                    r["settle"] = json!({ "stage": "failed", "error": "The settlement service no longer has this send-back; finish it again." });
+                }
+                if v["ok"] == true {
+                    r["settle_note"] = Value::Null;
+                    r["settle"] = json!({ "stage": v["stage"], "text": v["text"], "releasable_at": v["releasable_at"], "run": v["run"] });
+                    if let Some(seal) = v["seal"].as_str() {
+                        r["seal"] = json!(seal);
+                    }
+                    match v["stage"].as_str() {
+                        Some("released") => {
+                            r["released_tx"] = v["tx"].clone();
+                            r["stage"] = json!("released");
+                            return Ok(());
+                        }
+                        Some("failed") => {
+                            r["settle_failed"] = json!(true);
+                            r["settle"]["error"] = v["error"].clone();
+                        }
+                        _ => {}
+                    }
+                }
             }
         }
         let d = self.deployment().clone();
