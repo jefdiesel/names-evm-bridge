@@ -18,10 +18,22 @@ ethereum_ssz = "0.9"
 tree_hash = "0.10"
 alloy-primitives = { version = "1.7.3", default-features = false }
 
+# The public update path (feature `public-update`): blst, exactly 0.3.16. In the zkVM guest
+# (methods/attest_guest_public) it is patched to RISC Zero's accelerated fork, tag
+# v0.3.16-risczero.0, which needs RISC Zero's C toolchain; a plain "0.3.16" there resolved to
+# crates.io 0.3.17 (unaccelerated, about 153M cycles: research/lc-cycles-2026-11-14.md).
+blst = { version = "=0.3.16", optional = true }
+
 [features]
 # Spike only (branch lc-cycles): record `env::cycle_count()` at phase boundaries of
 # `lc::verify_update` for the attest/lcbench harness. Off in every program build.
 cycle-marks = []
+# Branch public-update: `Instruction::UpdatePublic`, a finality update verified inside a public
+# transaction (blst, key witnesses, Helios's checks through the vendored hook
+# `verify_generic_update_with`). Every workspace that enables it must patch Helios to
+# attest/vendor/helios-consensus-core (lez-bridge/Cargo.toml, methods/attest_guest_public,
+# attest/cycles do). Off in methods/attest_guest, so that guest needs no C toolchain.
+public-update = ["dep:blst"]
 
 [dev-dependencies]
 lee_core = { workspace = true, features = ["host"] }

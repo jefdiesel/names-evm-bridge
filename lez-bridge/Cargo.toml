@@ -41,6 +41,12 @@ borsh = "1.5.7"
 [patch.crates-io]
 keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
 
+# Helios 0.12.0 (2af9b41) with one function added, `verify_generic_update_with` (the signature
+# check as a hook; attest/vendor/helios-consensus-core/SPIKE-PATCH.diff), which the attestation
+# program's `public-update` feature uses. Every other function is Helios's, unchanged.
+[patch."https://github.com/a16z/helios"]
+helios-consensus-core = { path = "attest/vendor/helios-consensus-core" }
+
 # Helios's BLS12-381 verification is slow unoptimised; the attest tests run real Sepolia and
 # mainnet updates natively, so optimise the curve and hashing crates even in the test profile.
 [profile.dev.package.bls12_381]

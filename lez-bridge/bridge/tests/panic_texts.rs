@@ -655,9 +655,10 @@ fn no_program_panic_can_print_a_value() {
     let attest = scan("attest/program/src/lib.rs", include_str!("../../attest/program/src/lib.rs"));
     assert!(bridge.is_empty() && probe.is_empty(), "{bridge:#?}\n{probe:#?}");
     // The only exceptions: the light-client update and bootstrap verifiers' errors (Helios),
-    // about public beacon-chain data, never on a claim, burn or root path; their texts are pinned
-    // by attest/program/tests/instance.rs.
-    assert_eq!(attest.len(), 2, "{attest:#?}");
+    // about public beacon-chain data, never on a claim, burn or root path (three: bootstrap,
+    // update, public update); their texts are pinned by attest/program/tests/instance.rs and
+    // attest/program/tests/public_update.rs.
+    assert_eq!(attest.len(), 3, "{attest:#?}");
     assert!(attest.iter().all(|p| p.contains("interpolates {e}")), "{attest:#?}");
     // The scanner does find what it looks for.
     let planted = "fn f(r: Result<u8, ()>, x: u8) {\n    let a = r.expect(\"decodes\");\n    assert_eq!(a, x, \"same\");\n    assert!(a == x, \"{x} differs\");\n    panic!(\"{}\", x);\n}\n";

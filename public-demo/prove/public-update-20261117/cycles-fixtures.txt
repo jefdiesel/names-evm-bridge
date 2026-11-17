@@ -1,0 +1,32 @@
+# public update path (UpdatePublic), recorded fixtures, guest attest_guest_public
+  guest image id 36873168360c8f4348eea122ce43eddb570a43e79fdd3914ab93869017eecc7d (998300 bytes ELF)
+  Sepolia finality update, same period (509/512): 509/512 signers, 4 key witnesses (aggregate + 3 non-signers)
+  message 26953 bytes (borsh)
+  Sepolia finality update, same period (509/512): submitter's actor (UpdatePublic): user=9194729 total=9961472 segments=10 (0.92x the 10M cap)
+  Sepolia finality update, same period (509/512): store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  Sepolia finality update, same period (509/512): anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+
+### Sepolia finality update, same period (509/512)
+| program call | user cycles |
+|---|---:|
+| submitter's actor: verify the update, send Advance | 9194729 |
+| store: Advance (+ sends RecordAnchor) | 39510 |
+| anchor PDA: RecordAnchor | 18130 |
+| **whole transaction** | **9252369** (92.52% of the 10M cap; margin 747631) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+  mainnet finality update, same period (507/512): 507/512 signers, 6 key witnesses (aggregate + 5 non-signers)
+  message 27817 bytes (borsh)
+  mainnet finality update, same period (507/512): submitter's actor (UpdatePublic): user=9447607 total=10485760 segments=10 (0.94x the 10M cap)
+  mainnet finality update, same period (507/512): store applies Advance: user=46809 total=131072 segments=1 (0.00x the 10M cap)
+  mainnet finality update, same period (507/512): anchor PDA records an anchor: user=18236 total=65536 segments=1 (0.00x the 10M cap)
+  mainnet finality update, same period (507/512): anchor PDA records an anchor: user=18234 total=65536 segments=1 (0.00x the 10M cap)
+
+### mainnet finality update, same period (507/512)
+| program call | user cycles |
+|---|---:|
+| submitter's actor: verify the update, send Advance | 9447607 |
+| store: Advance (+ sends RecordAnchor) | 46809 |
+| anchor PDA: RecordAnchor | 18236 |
+| anchor PDA: RecordAnchor | 18234 |
+| **whole transaction** | **9530886** (95.31% of the 10M cap; margin 469114) |
+  new store: finalized slot 15639264, block hash 0xfba5c8b519815f5906ce94ca7c6996e5eeb7a2bce27e4f40374462cbbcbf8c58, updates 1

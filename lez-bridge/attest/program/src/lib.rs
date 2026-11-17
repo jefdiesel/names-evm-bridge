@@ -186,6 +186,27 @@ pub fn instruct(input: &ReceiveInput, instruction: Instruction) -> Response {
                 .send(effect(seed, &program, Effect::Advance { prev, next: v.next }))
                 .timestamp_window(v.not_before_ms..)
         }
+        // The public path (branch public-update, DESIGN.md §9.3a): the same Advance as Update,
+        // built only right after `lc::verify_finality_public` succeeded for exactly this
+        // `(config, prev)`, so the store's checks (points 4 and 5 above) are unchanged. Run in a
+        // public transaction, the sequencer executes the verification itself.
+        #[cfg(feature = "public-update")]
+        Instruction::UpdatePublic {
+            config,
+            prev,
+            current_committee,
+            keys,
+            update,
+        } => {
+            let v = lc::verify_finality_public(&program, &config, &prev, &current_committee, &keys, &update)
+                .unwrap_or_else(|e| panic!("{e}"));
+            let seed = store_seed(&prev.instance_id);
+            Response::keep_state()
+                .send(effect(seed, &program, Effect::Advance { prev, next: v.next }))
+                .timestamp_window(v.not_before_ms..)
+        }
+        #[cfg(not(feature = "public-update"))]
+        Instruction::UpdatePublic { .. } => panic!("this build of the program has no public update path"),
     }
 }
 

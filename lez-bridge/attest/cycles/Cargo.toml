@@ -11,7 +11,7 @@ license = "MIT OR Apache-2.0"
 [workspace]
 
 [dependencies]
-eth_attest = { path = "../program" }
+eth_attest = { path = "../program", features = ["public-update"] }
 eth_attest_core = { path = "../core", features = ["testkit"] }
 eth_attest_probe = { path = "../probe" }
 bridge_core = { path = "../../bridge" }
@@ -23,12 +23,19 @@ borsh = "1.5.7"
 serde_json = "1"
 hex = "0.4"
 anyhow = "1"
+# Synthetic committees for the participation sweep (src/sweep.rs; native signing, host only).
+blst = "=0.3.16"
+alloy-primitives = { version = "1.7.3", default-features = false }
 
 [build-dependencies]
 risc0-build = "=3.0.5"
 
 [package.metadata.risc0]
-methods = ["../../methods/attest_guest", "../../methods/attest_probe_guest", "../../methods/bridge_guest"]
+methods = ["../../methods/attest_guest", "../../methods/attest_probe_guest", "../../methods/bridge_guest", "../../methods/attest_guest_public"]
+
+# The program's public update path (branch public-update) uses the vendored Helios's hook.
+[patch."https://github.com/a16z/helios"]
+helios-consensus-core = { path = "../vendor/helios-consensus-core" }
 
 [patch.crates-io]
 keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }

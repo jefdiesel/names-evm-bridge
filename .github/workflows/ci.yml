@@ -86,7 +86,8 @@ jobs:
             lez-bridge/release
       - name: Token, bridge and attestation programs (native, LEZ simulator)
         working-directory: lez-bridge
-        run: cargo test --locked -j 4 -p bridge_token_core -p bridge_core -p eth_attest_core -p eth_attest -p eth_attest_probe --no-fail-fast
+        # eth_attest/public-update: the public update path (UpdatePublic; blst built natively, Helios patched to the vendored copy).
+        run: cargo test --locked -j 4 -p bridge_token_core -p bridge_core -p eth_attest_core -p eth_attest -p eth_attest_probe --features eth_attest/public-update --no-fail-fast
       # Seed-derived secrets (v1 and the Names Wallet app scheme), deposit requests, the recovery scan.
       - name: Bridge client (KDF vectors, recovery scan)
         working-directory: lez-bridge

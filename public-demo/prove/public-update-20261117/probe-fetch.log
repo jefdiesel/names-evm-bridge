@@ -1,0 +1,6 @@
+anchor block hash 0x5a4de05ed218280cc9ba46096efbf5cef37f980fc88ada68e2136a15c84a7239 (instance's latest: false)
+header RLP rebuilt from eth_getBlockByHash (684 bytes), hashes to the anchor
+eth_getProof at block 12155607 from https://ethereum-sepolia-rpc.publicnode.com
+saved the header and proof in run/slot-N
+statement verified natively: contract 0x8c8b2664de28e5287158db4db65d448638871b74 slot 0x2f1d8d91b7c9c5846e901bd243a284810df5b5b43305d6549bab96136f68161a value 0x0000000000000000000000000000000000000000000000000000000000000001 (9 account + 4 storage nodes)
+STATEMENT_ID=0x31c4149bbe9139a40fa50eda8ecada63013fd29f6c9df942ef587f99f13eccf7

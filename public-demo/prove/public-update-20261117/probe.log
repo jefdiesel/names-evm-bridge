@@ -1,0 +1,2 @@
+anchor block hash 0x06cdaa0b58d66154062791858b8565128dd1163ae3c8d44d828f63497fe3af1f (instance's latest: false)
+Error: eth_getBlockByHash at https://sepolia.drpc.org: {"code":35,"message":"chain is not available on free plan, please upgrade to paid plan"}

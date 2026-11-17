@@ -238,6 +238,245 @@ pub fn verify_update(
     })
 }
 
+/// The public update path (`Instruction::UpdatePublic`, feature `public-update`): one finality
+/// update, verified cheaply enough for a public transaction (`DESIGN.md` §9.3a).
+///
+/// Every Helios check runs, unchanged, through the vendored Helios's
+/// `verify_generic_update_with` (`attest/vendor/helios-consensus-core`, `SPIKE-PATCH.diff`); only
+/// the sync-committee signature check is ours ([`fast::verify`]):
+/// - the signers' key is the committee's aggregate key minus the non-signers' keys, all given
+///   uncompressed in `keys`; each must be on the curve, not infinity, and compress to the
+///   committed bytes at its position in `current_committee`, which must hash to the store's
+///   commitment. No key is decompressed; no per-key G1 subgroup check (committee keys passed a
+///   proof-of-possession check at deposit; `DESIGN.md` §9.3a, to be confirmed against the
+///   specs);
+/// - the signature is decompressed and subgroup-checked once (Helios's extra `sig * r` check is
+///   not repeated), hashed to G2, and the pairing checked with RISC Zero's blst fork in the guest.
+///
+/// Helios's store is rebuilt with an empty committee (the keys reach the check only through the
+/// hook), so the committee SSZ is hashed but never decoded. Refused: a store that knows its next
+/// committee, an update signed outside the store's period (Helios: invalid period), an update
+/// finalized in the next period (does not advance), and any rotation.
+///
+/// # Errors
+/// Any check fails.
+#[cfg(feature = "public-update")]
+pub fn verify_finality_public(
+    program: &AccountId,
+    config: &InstanceConfig,
+    prev: &LcSummary,
+    current_committee: &[u8],
+    keys: &eth_attest_core::KeyWitnesses,
+    update: &[u8],
+) -> Result<Verified, String> {
+    use helios_consensus_core::{apply_generic_update, verify_generic_update_with};
+    if instance_id(program, config) != prev.instance_id {
+        return Err("the config is not this store's instance".into());
+    }
+    if prev.next_committee.is_some() {
+        return Err("the public path takes only a store whose next committee is unknown".into());
+    }
+    if current_committee.len() != eth_attest_core::COMMITTEE_SSZ_LEN || committee_hash(current_committee) != prev.current_committee {
+        return Err("committee witness does not match the store (current)".into());
+    }
+    let header = LightClientHeader::Bellatrix(LightClientHeaderBellatrix {
+        beacon: to_helios(&prev.finalized.beacon),
+    });
+    let mut store = LightClientStore::<S> {
+        finalized_header: header.clone(),
+        current_sync_committee: SyncCommittee::<S>::default(),
+        next_sync_committee: None,
+        optimistic_header: header,
+        previous_max_active_participants: 0,
+        current_max_active_participants: 0,
+        best_valid_update: None,
+    };
+    let u = FinalityUpdate::<S>::from_ssz_bytes(update).map_err(|e| format!("finality update does not decode: {e:?}"))?;
+    let g = GenericUpdate::from(&u);
+    check_participation(config, &g)?;
+    let signature_slot = g.signature_slot;
+    let current = &store.current_sync_committee;
+    verify_generic_update_with::<S, _>(&g, signature_slot, &store, B256::from(config.genesis_validators_root), &forks(config), |committee, bits, signing_root, sig| {
+        // With no next committee, Helios picks the current one; anything else is refused.
+        if !core::ptr::eq(committee, current) {
+            return Ok(false);
+        }
+        let bits: Vec<bool> = bits.iter().collect();
+        let Ok(sig) = <[u8; 96]>::try_from(sig.as_ssz_bytes()) else { return Ok(false) };
+        Ok(fast::verify(current_committee, keys, &bits, &signing_root.0, &sig))
+    })
+    .map_err(|e| format!("finality update rejected: {e}"))?;
+    apply_generic_update(&mut store, &g);
+    if store.next_sync_committee.is_some() {
+        return Err("the public path does not learn a committee".into());
+    }
+    let finalized = if store.finalized_header.beacon().slot == prev.finalized.beacon.slot {
+        prev.finalized
+    } else {
+        finalized_of(&store.finalized_header)?
+    };
+    let next_summary = LcSummary {
+        instance_id: prev.instance_id,
+        evm_chain_id: prev.evm_chain_id,
+        finalized,
+        current_committee: prev.current_committee,
+        next_committee: None,
+        updates: prev.updates.checked_add(1).ok_or("update count overflow")?,
+    };
+    if !prev.is_advanced_by(&next_summary) {
+        return Err("update verified but does not advance the store (not newer, or no 2/3 supermajority)".into());
+    }
+    let start = config
+        .genesis_time
+        .checked_add(signature_slot.checked_mul(config.seconds_per_slot).ok_or("slot overflow")?)
+        .ok_or("time overflow")?;
+    Ok(Verified {
+        next: next_summary,
+        not_before_ms: start.checked_mul(1000).ok_or("time overflow")?,
+    })
+}
+
+/// The key witnesses [`verify_finality_public`] needs for `bits` against this committee SSZ:
+/// the aggregate key and each non-signer, uncompressed. Off-chain helper (the submitter builds
+/// them); the program checks them, it never trusts them.
+///
+/// # Errors
+/// The committee SSZ has the wrong length or a key does not decompress.
+#[cfg(feature = "public-update")]
+pub fn key_witnesses(committee_ssz: &[u8], bits: &[bool]) -> Result<eth_attest_core::KeyWitnesses, String> {
+    if committee_ssz.len() != eth_attest_core::COMMITTEE_SSZ_LEN || bits.len() != 512 {
+        return Err("committee SSZ or bits have the wrong length".into());
+    }
+    let unc = |i: usize| fast::uncompress(&committee_ssz[i * 48..i * 48 + 48]).ok_or_else(|| format!("committee key {i} does not decompress"));
+    let mut absent = Vec::new();
+    for (i, b) in bits.iter().enumerate() {
+        if !b {
+            absent.push((u16::try_from(i).map_err(|_| "index")?, unc(i)?));
+        }
+    }
+    Ok(eth_attest_core::KeyWitnesses { aggregate: unc(512)?, absent })
+}
+
+/// The participation bits of a finality update (SSZ), for [`key_witnesses`].
+///
+/// # Errors
+/// The update does not decode.
+#[cfg(feature = "public-update")]
+pub fn finality_bits(update: &[u8]) -> Result<Vec<bool>, String> {
+    let u = FinalityUpdate::<S>::from_ssz_bytes(update).map_err(|e| format!("finality update does not decode: {e:?}"))?;
+    Ok(GenericUpdate::from(&u).sync_aggregate.sync_committee_bits.iter().collect())
+}
+
+/// The signature check of the public path, with blst (RISC Zero's accelerated fork in the guest).
+/// From the lcbench spike's `lc_bench_fast` guest (`bl::verify`), keys read from the committee SSZ.
+#[cfg(feature = "public-update")]
+pub mod fast {
+    use blst::{
+        BLST_ERROR, blst_final_exp, blst_fp12, blst_fp12_is_one, blst_hash_to_g2, blst_miller_loop_n, blst_p1,
+        blst_p1_add_or_double, blst_p1_add_or_double_affine, blst_p1_affine, blst_p1_affine_compress,
+        blst_p1_affine_generator, blst_p1_affine_is_inf, blst_p1_affine_serialize, blst_p1_cneg, blst_p1_deserialize,
+        blst_p1_from_affine, blst_p1_to_affine, blst_p1_uncompress, blst_p2, blst_p2_affine, blst_p2_affine_in_g2,
+        blst_p2_affine_is_inf, blst_p2_to_affine, blst_p2_uncompress,
+    };
+    use eth_attest_core::KeyWitnesses;
+
+    /// The Ethereum BLS signature ciphersuite (proof of possession).
+    pub const DST: &[u8] = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
+
+    /// Off-chain only: a compressed key, uncompressed (on the curve and in G1).
+    #[must_use]
+    pub fn uncompress(compressed: &[u8]) -> Option<[u8; 96]> {
+        if compressed.len() != 48 {
+            return None;
+        }
+        let mut p = blst_p1_affine::default();
+        // SAFETY: 48 readable bytes, as checked above; blst writes only `p`.
+        if unsafe { blst_p1_uncompress(&mut p, compressed.as_ptr()) } != BLST_ERROR::BLST_SUCCESS {
+            return None;
+        }
+        let mut out = [0u8; 96];
+        // SAFETY: `out` has the 96 bytes an uncompressed G1 point takes.
+        unsafe { blst_p1_affine_serialize(out.as_mut_ptr(), &p) };
+        Some(out)
+    }
+
+    /// An uncompressed key that is on the curve, not infinity, and compresses to `committed`.
+    fn g1(unc: &[u8; 96], committed: &[u8]) -> Option<blst_p1_affine> {
+        let mut p = blst_p1_affine::default();
+        // SAFETY: `unc` is 96 readable bytes; blst writes only `p`.
+        if unsafe { blst_p1_deserialize(&mut p, unc.as_ptr()) } != BLST_ERROR::BLST_SUCCESS {
+            return None;
+        }
+        let mut c = [0u8; 48];
+        // SAFETY: `c` has the 48 bytes a compressed G1 point takes.
+        unsafe { blst_p1_affine_compress(c.as_mut_ptr(), &p) };
+        // SAFETY: reads `p` only.
+        (!unsafe { blst_p1_affine_is_inf(&p) } && c[..] == *committed).then_some(p)
+    }
+
+    /// Whether `sig` is the committee's signature of `msg` by exactly the signers in `bits`:
+    /// e(-g1, sig) · e(aggregate − Σ non-signers, H(msg)) = 1.
+    #[must_use]
+    pub fn verify(committee: &[u8], keys: &KeyWitnesses, bits: &[bool], msg: &[u8; 32], sig: &[u8; 96]) -> bool {
+        if committee.len() != 513 * 48 || bits.len() != 512 {
+            return false;
+        }
+        let committed = |i: usize| &committee[i * 48..i * 48 + 48];
+        let Some(agg) = g1(&keys.aggregate, committed(512)) else { return false };
+        let mut absent = keys.absent.iter();
+        let mut neg = blst_p1::default();
+        for (i, b) in bits.iter().enumerate() {
+            if !b {
+                let Some((index, key)) = absent.next() else { return false };
+                if usize::from(*index) != i {
+                    return false;
+                }
+                let Some(p) = g1(key, committed(i)) else { return false };
+                let a = neg;
+                // SAFETY: valid points; blst writes only `neg`.
+                unsafe { blst_p1_add_or_double_affine(&mut neg, &a, &p) };
+            }
+        }
+        if absent.next().is_some() {
+            return false;
+        }
+        let mut acc = blst_p1::default();
+        let mut pk = blst_p1_affine::default();
+        let mut ng = blst_p1::default();
+        let mut ng_a = blst_p1_affine::default();
+        let mut s = blst_p2_affine::default();
+        let mut hp = blst_p2::default();
+        let mut hm = blst_p2_affine::default();
+        let mut f = blst_fp12::default();
+        let mut e = blst_fp12::default();
+        // SAFETY: every pointer is to a live local of the type blst expects; `sig` is 96 bytes,
+        // `msg` 32, `DST` its own length; the two arrays passed to the Miller loop hold 2 each.
+        unsafe {
+            blst_p1_cneg(&mut neg, true);
+            blst_p1_from_affine(&mut acc, &agg);
+            let a = acc;
+            blst_p1_add_or_double(&mut acc, &a, &neg);
+            blst_p1_to_affine(&mut pk, &acc);
+            if blst_p1_affine_is_inf(&pk) {
+                return false;
+            }
+            if blst_p2_uncompress(&mut s, sig.as_ptr()) != BLST_ERROR::BLST_SUCCESS || !blst_p2_affine_in_g2(&s) || blst_p2_affine_is_inf(&s) {
+                return false;
+            }
+            blst_hash_to_g2(&mut hp, msg.as_ptr(), msg.len(), DST.as_ptr(), DST.len(), core::ptr::null(), 0);
+            blst_p2_to_affine(&mut hm, &hp);
+            blst_p1_from_affine(&mut ng, blst_p1_affine_generator());
+            blst_p1_cneg(&mut ng, true);
+            blst_p1_to_affine(&mut ng_a, &ng);
+            let qs: [*const blst_p2_affine; 2] = [&hm, &s];
+            let ps: [*const blst_p1_affine; 2] = [&pk, &ng_a];
+            blst_miller_loop_n(&mut f, qs.as_ptr(), ps.as_ptr(), 2);
+            blst_final_exp(&mut e, &f);
+            blst_fp12_is_one(&e)
+        }
+    }
+}
+
 fn helios_verify_finality(
     u: &FinalityUpdate<S>,
     expected_current_slot: u64,

@@ -430,6 +430,10 @@ path = "lez-bridge/methods/attest_guest"
 roles = ["lez_guests"]
 
 [[workspace]]
+path = "lez-bridge/methods/attest_guest_public"
+roles = ["lez_guests"]
+
+[[workspace]]
 path = "lez-bridge/methods/attest_probe_guest"
 roles = ["lez_guests"]
 

@@ -549,7 +549,7 @@ Values in code are read from the code; everything marked **proposal** does not e
 - A finality update proved in **7,074.7 s** at 9,483 MB (rc1, §9.0) and in **7,283.0 s** at 9,457 MB (rc3, §9.0a) on an Apple M4 (16 GB).
 - So a desktop CPU makes at most one update every ~2 h, and a faster submitter invalidates the work (the store refuses a stale `prev`).
 - Practical updaters need faster hardware or GPU proving, as long as updates are proved privately.
-- M3's public update (§9.3a) would remove the proof: a submitter then pays only gas. Measured in the executor only; not built.
+- A public update removes the proof: a submitter then pays only gas. For an in-period finality update it is built and ran on a local rc3 chain (one public transaction, 9.29M cycles, §9.3b, branch `public-update`); period updates and low participation still need M3's two steps (§9.3a) or the proof.
 - Nobody is paid for an update today. A reward paid per accepted update, without making the role exclusive (RFP-021 Soft #5), is designed in `research/open-settlement.md` (3), not built.
 
 ## 8. Privacy analysis
@@ -722,11 +722,11 @@ From `attest-spike/README.md` (bare RISC Zero harness):
   - **Precompile delta (RFP-021 P8):** a BLS precompile would leave about 0.09M, but it is reachable only from public transactions.
 - **Storage-slot statement:** 261K with the keccak accelerator, 1.01M with software keccak. The v1 private attested claim (block 2326) was the first real proof that ran the keccak coprocessor patch inside a private execution, and it went through.
 - **Low participation is a cycle-griefing vector** in unmodified Helios: about 208.6M at 342/512 signers (arithmetic from measured parts). With the witness-based signers' key of §9.3a it is not: about 1.6M for the key at the floor with blst (measured).
-- **The blst backend** is measured (executor only) in §9.3a; it is not in the program.
+- **The blst backend** is measured (executor only) in §9.3a; since 2026-11-17 it is in the program behind the `public-update` feature (§9.3b), not in the deployed program image.
 
-### 9.3a A cheaper verifier, measured in the executor (spike, 2026-11-14; not in the program)
+### 9.3a A cheaper verifier, measured in the executor (spike, 2026-11-14; in the program since 2026-11-17 behind the `public-update` feature, §9.3b)
 
-Source: `research/lc-cycles-2026-11-14.md` (not exported), raw output `lez-bridge/attest/lcbench/results/run-*.txt`. **Executor only** (RISC Zero 3.0.5, user cycles, no proof), in a **benchmark harness**: guests `lez-bridge/methods/lc_bench_{zk,blst,fast}` over a vendored Helios 0.12.0 at `2af9b41` with one hook added (`lez-bridge/attest/vendor/helios-consensus-core/`, `SPIKE-PATCH.diff`). **Not the deployed program, never run through a sequencer or `lee::V03State`.** The program, its message format and its image id are unchanged. Labels: M measured as one executor delta, C composed from measured parts, E estimate.
+Source: `research/lc-cycles-2026-11-14.md` (not exported), raw output `lez-bridge/attest/lcbench/results/run-*.txt`. **Executor only** (RISC Zero 3.0.5, user cycles, no proof), in a **benchmark harness**: guests `lez-bridge/methods/lc_bench_{zk,blst,fast}` over a vendored Helios 0.12.0 at `2af9b41` with one hook added (`lez-bridge/attest/vendor/helios-consensus-core/`, `SPIKE-PATCH.diff`). **Not the deployed program, never run through a sequencer or `lee::V03State`.** The spike left the program, its message format and its image id unchanged; the path it measured was later built into the program behind a feature and run on a local chain (§9.3b). Labels: M measured as one executor delta, C composed from measured parts, E estimate.
 
 | Finality update, one complete verification | Sepolia 509/512 | mainnet 507/512 | Label |
 |---|---:|---:|---|
@@ -737,10 +737,19 @@ Source: `research/lc-cycles-2026-11-14.md` (not exported), raw output `lez-bridg
 
 - **One public transaction is marginal:** a 1–9% margin under the 10M cap at 507–509/512, under 1% for the flat binding on mainnet, and it fills a block (the block cap is also 10M). It holds down to about 469–500/512 signers depending on chain and binding (E).
 - **Do not fit:** period updates (about 18.5M composed with blst; about 11.7M estimated with a second Helios patch that roots the next committee by direct SHA-256), and finality updates near the 342/512 floor (about 10.8–12.5M, C).
-- **So M3 commits to two public steps**, split at the pairing seam: Begin (every Helios check, the key witnesses, signature decode, hash to G2, the shared Miller loop; about 5.7M at 509/512 and about 7.3M at the floor, E) writes a job; Finish (final exponentiation 3.58M and the store write, only if the store still equals the job's `prev`; about 3.7M, E). The job id is a digest of the store and the whole update, signature and participation bits included, so nobody can squat an honest update's job with other data; anyone can finish a valid job; a path to close a failed or stale job is required (storage). Period updates need the second patch and three steps (about 4M, 3.3M, 4M, E). The private path stays as the fallback. None of this is built.
+- **So M3 commits to two public steps**, split at the pairing seam: Begin (every Helios check, the key witnesses, signature decode, hash to G2, the shared Miller loop; about 5.7M at 509/512 and about 7.3M at the floor, E) writes a job; Finish (final exponentiation 3.58M and the store write, only if the store still equals the job's `prev`; about 3.7M, E). The job id is a digest of the store and the whole update, signature and participation bits included, so nobody can squat an honest update's job with other data; anyone can finish a valid job; a path to close a failed or stale job is required (storage). Period updates need the second patch and three steps (about 4M, 3.3M, 4M, E). The private path stays as the fallback. The two-step split, the job PDA and the close path are not built; the one-transaction path is, since 2026-11-17 (§9.3b).
 - **Soundness notes** (the report's §"Soundness notes"): the dropped `sig * r` check is redundant because signature decompression already subgroup-checks (kept: exactly one subgroup check and the infinity check on the signature). Key witnesses are equivalent to decompression (canonical, on-curve, matching the committed bytes). **No per-key G1 subgroup check:** it rests on every committee key having passed a proof-of-possession check at deposit, which includes a subgroup check per the consensus specs as the report recalls them; the report did not re-read the specs, so **M3 confirms this against the specs** before relying on it.
 - **Audit surface (RFP-021 R6):** "no change to Helios" stops being literally true. The hook, the witness check, the blst FFI wrapper and RISC Zero's bigint2 glue in the blst fork become ours to audit; Helios's update logic (slots, periods, branches, apply) stays its own code.
 - **The proved runs (§9.0, §9.0a, about 2 h each) remain the evidence for what runs today.**
+
+### 9.3b The public update path, built and run on a local rc3 chain (branch `public-update`, 2026-11-17)
+
+Source: `public-demo/prove/public-update-20261117/README.md` (commands, logs, ids). (1) on a **local** LEZ v0.4.0-rc3 sequencer, not the public demo chain.
+
+- **What is built:** `Instruction::UpdatePublic` in `eth_attest` behind the feature `public-update` (guest `lez-bridge/methods/attest_guest_public`). Every Helios check runs through the vendored hook; the signature is checked with RISC Zero's blst fork as the committee aggregate minus the non-signers, from uncompressed key witnesses that must compress to the committed bytes of the 24,624-byte committee witness (still bound by today's flat hash, so the store format is unchanged); Helios's store gets an empty committee, so the witness is hashed but never decoded. The result is the same `Effect::Advance`, checked by the store exactly as for `Update` (§9.2 points 4 and 5). It refuses a store that knows its next committee, an update signed outside the store's period, and any rotation: those stay on the private `Update`.
+- **Executor** (`attest_cycles public`, user cycles, whole transaction = submitter's actor + store `Advance` + `RecordAnchor`): Sepolia fixture 509/512 **9,252,369** (submitter 9,194,729); mainnet fixture 507/512 **9,530,886** (two anchors). Pinned within 1% and under the cap by `lez-bridge/attest/cycles/tests/public_cycles.rs` (build host).
+- **On the chain:** a real Sepolia finality update (signature slot 11600001, finalized slot 11599936, **506/512** signers) ran as **one public transaction**: block 46, executor sum **9,285,563** user cycles (92.9% of the 10M cap), fee 74,506,688 at base fees 8/8, which with the 27,773 wire bytes read back from the sequencer is exactly that gas; the store moved from slot 11599904 (the `Init` checkpoint, block 35) to 11599936, `updates 1`, the new anchor recorded. A second real update (506/512, 9,285,383) followed in block 71 (slot 11599968, `updates 2`); its fee is again exactly the executor's sum at 27,773 wire bytes, so the sequencer meters the executor's user cycles. A consumer statement under that anchor (the v2 vault's `isDepositRoot[root]` = 1, reference probe) ran publicly in block 72. No proof was made anywhere.
+- **Limits:** about 7% margin at 506/512; low participation (each non-signer adds a key check; the 342/512 floor is about 10.8–12.5M, §9.3a, C) and period updates still need the two-step path or the private one. The no-per-key-subgroup-check assumption of §9.3a rests on the specs validating every sync-committee key when the aggregate is formed (`eth_aggregate_pubkeys` asserts `KeyValidate`, `specs/altair/bls.md`), as cited by a one-pass AI review of the branch (not an audit).
 
 ### 9.4 Tests (44, `attest/*/tests/*.rs`)
 
@@ -759,7 +768,7 @@ Source: `research/lc-cycles-2026-11-14.md` (not exported), raw output `lez-bridg
 ### 9.5 Not built on RFP-021
 
 - weak-subjectivity rule;
-- the public update path (§9.3a: two steps, job PDA, close path), the signature hook in the program, and the period-update patch;
+- the two-step public update path (§9.3a: Begin/Finish, job PDA, close path) and the period-update patch (the one-transaction public path for in-period finality updates is built and ran on a local chain, §9.3b; it is not in the deployed program image);
 - checkpoint-verification API (needs the Logos Ethereum core module);
 - typed error codes and an off-chain verify returning them;
 - update daemon (check before submit, varied deferral, restart);
@@ -991,9 +1000,9 @@ State: (1) run on a chain (LEZ the local `seq2` unless a row names the public de
 | R8 | Duplicate update rejected cleanly | 2 | `replayed_older_and_stale_updates_are_refused`; §9.2 point 4 |
 | R11 | Statements independent | 2 | `two_consumers_asserting_one_anchor_are_independent_of_order` |
 | R12 | CI green | 1 unit suites | Green on main; no e2e in CI |
-| P1 | Attestation + predicate in one transaction | 1 statements / 2 executor for a public update (§9.3a) | 263,347 cycles (block 1223); updates: private today, two public steps in M3 |
+| P1 | Attestation + predicate in one transaction | 1 statements / 2 executor for a public update (§9.3a) | 263,347 cycles (block 1223); updates: an in-period finality update in one public transaction on a local chain (9,285,563 cycles, block 46; §9.3b, branch `public-update`), period updates private today, two public steps in M3 |
 | P2 | Cycles, gas, proof time and size per action | 1 cycles, gas, update proof time and memory / 4 proof size | §9.0, §9.3 |
-| P3 | Amortised tracking cost | 3 | Today ~2 h of desktop proving per update; with M3's public path, gas for two steps (§9.3a); M7 |
+| P3 | Amortised tracking cost | 3 | Proved: ~2 h of desktop proving per update; public (§9.3b, local chain): one transaction of 9.29M gas per in-period finality update; period updates two or three public steps in M3 (§9.3a); M7 |
 | P4 | User-device proving, incl. a private attestation | 1 one machine | Private attested claim 666.2 s (rc1), 676.0 s (rc3); minimum spec NO TEST |
 | P5–P7 | Latency, off-chain resources, storage growth | 1 updater resources / 3 rest | M7 |
 | P8 | Precompile delta | 2 | `attest-spike/README.md` |

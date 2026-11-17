@@ -4,8 +4,14 @@
 //! Every guest result is checked against the same handler run natively. Nothing here proves.
 //!
 //!   attest_cycles            run every scenario
+//!   attest_cycles public     the public update path only (src/public.rs; exit 1 at or over the cap)
+//!   attest_cycles public-real ...   a real saved update (src/public.rs)
+//!   attest_cycles sweep      participation sweep, synthetic committee (src/sweep.rs)
 
 include!(concat!(env!("OUT_DIR"), "/methods.rs"));
+
+mod public;
+mod sweep;
 
 use std::path::{Path, PathBuf};
 
@@ -166,6 +172,13 @@ fn next_of(t: &Transition) -> Result<LcSummary> {
 }
 
 fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    match args.first().map(String::as_str) {
+        Some("public") => std::process::exit(if public::fixtures_run()? { 0 } else { 1 }),
+        Some("public-real") => std::process::exit(if public::real_run(&args[1..])? { 0 } else { 1 }),
+        Some("sweep") => std::process::exit(if sweep::run()? { 0 } else { 1 }),
+        _ => {}
+    }
     let mut rows = Vec::new();
     let r = &mut rows;
     let attest = eth_attest::handle;

@@ -317,6 +317,37 @@ pub enum Instruction {
         next_committee: Option<Vec<u8>>,
         update: LcUpdate,
     },
+    /// Advance an instance by one finality update in a PUBLIC transaction (branch
+    /// `public-update`, `DESIGN.md` §9.3a): the same Helios checks as [`Instruction::Update`],
+    /// with the signature checked as the committee's aggregate key minus the non-signers' keys,
+    /// given uncompressed in `keys` and bound to the committee witness byte for byte. Only a
+    /// finality update signed in the store's own period while the next committee is unknown;
+    /// anything else is refused (use [`Instruction::Update`]). Its result is the same
+    /// [`Effect::Advance`], checked by the store exactly as for `Update`. Programs built without
+    /// the `public-update` feature refuse it.
+    UpdatePublic {
+        config: InstanceConfig,
+        prev: LcSummary,
+        /// The current committee's SSZ (24,624 bytes), checked against `prev.current_committee`.
+        current_committee: Vec<u8>,
+        keys: KeyWitnesses,
+        /// `/eth/v1/beacon/light_client/finality_update` SSZ.
+        update: Vec<u8>,
+    },
+}
+
+/// An uncompressed BLS12-381 G1 point: x ‖ y, 48 bytes each, big endian, flag bits clear.
+pub type G1Uncompressed = [u8; 96];
+
+/// The keys [`Instruction::UpdatePublic`] needs, so the program never decompresses a key:
+/// the committee's aggregate key and each non-signer's key, uncompressed. Each must compress to
+/// the committed bytes at its position in the committee witness.
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct KeyWitnesses {
+    /// `SyncCommittee.aggregate_pubkey`, uncompressed.
+    pub aggregate: G1Uncompressed,
+    /// Every non-signer, in increasing index order: (index 0..512, key uncompressed).
+    pub absent: Vec<(u16, G1Uncompressed)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
