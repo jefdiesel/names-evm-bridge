@@ -131,11 +131,7 @@ saved update and sent with the hidden test command `raw-call` of a later rc3 CLI
   aggregate and a wrong committee witness are refused and change nothing; a store a period behind
   or with a known next committee is refused; only the submitter's own signed actor runs it.
   The existing 18 + 18 attestation tests and the panic-text test pass with the feature on.
-- **CI on this branch did not run:** GitHub refused to start the jobs (account billing / spending
-  limit, run 44130280728). Stand-in: CI's cargo command, verbatim with `--locked` and the feature,
-  passed on the build host (0 failed; at the head `acc9673` also without the feature, plus `bridge_client` and `release_core`). The shell-script check
-  (`lez-bridge/scripts/test-pipe-readers.sh`) fails locally on `public-demo/demo.sh` line 163,
-  which this branch does not touch (the same on main).
+- **CI:** the public repository's CI runs on this branch and passes (the first attempts, in the working repository, were refused by GitHub over account billing; CI's cargo command had passed on the build host as a stand-in).
 - `lez-bridge/attest/cycles/tests/public_cycles.rs` (**build host only**, not in CI: the guest
   needs RISC Zero's C toolchain): runs `attest_cycles public` and fails if either fixture's whole
   transaction reaches 10M or moves more than 1% from 9,252,369 (Sepolia) / 9,530,886 (mainnet).
@@ -215,12 +211,7 @@ lez-bridge/attest/cycles/build-public.sh run sweep    # attest_cycles sweep (src
 
 ## Not done, and limits
 
-- **Period updates** (committee handoff): not on this path (about 18.5M composed, §9.3a); the
-  private `Update` stays. The two-step Begin/Finish split, its job PDA and close path are not built.
-- **Low participation:** each non-signer adds a key witness check; 506–509/512 leaves about 5–7%
-  margin. Near the 342/512 floor a finality update is estimated at 10.8–12.5M (§9.3a, C): over
-  the cap, so such an update would be refused by gas and must go the private way. The lowest
-  participation that still fits was not measured.
+- **Period updates** (committee handoff) and **low participation** were built after this record, the same day: see `../public-handoff-20261117/README.md` (the two-step period update and the handoff), `../finality-split-20261117/README.md` (two steps down to 342 of 512 signers, synthetic committee) and `../catchup-20261117/README.md`. One transaction fits down to about 442 signers (estimate).
 - **The transaction fills a block:** the block cap is also 10M, so nothing else fits beside it.
 - **No per-key G1 subgroup check** on the witnesses: see Review, point 2.
 - **Audit surface:** the hook, the witness check and the blst FFI wrapper are ours; Helios's
