@@ -995,6 +995,54 @@ pub struct ExitSecretArgs {
     pub out: PathBuf,
 }
 
+/// `deposit-secret`: one seed-derived deposit, named as `deposit-request` made it.
+#[derive(clap::Args, Debug)]
+pub struct DepositSecretArgs {
+    #[arg(long)]
+    pub bridge: AccountId,
+    /// The account the deposit was requested for (its key derives the deposit).
+    #[arg(long)]
+    pub from: AccountId,
+    #[arg(long)]
+    pub eth_token: String,
+    #[arg(long)]
+    pub denom: u128,
+    /// The deposit's index (`deposit-request` printed it as KEY_INDEX; `recover` lists it).
+    #[arg(long)]
+    pub key_index: u64,
+    /// File to write the deposit MASTER secret `s` to (created with mode 600; must not exist;
+    /// never printed).
+    #[arg(long)]
+    pub out: PathBuf,
+}
+
+/// The MASTER secret `s` of a seed-derived deposit, the failsafe reclaim proof's witness
+/// (`reclaim_host reclaim --master-file`), written to a new mode-600 file. `s` appears in no
+/// transaction (a claim publishes only `k = SHA256("RFP022/ck" | s)`). Prints only public values:
+/// the commitment `C` (compare it with the vault's Deposit event) and the reclaim nullifier.
+pub async fn deposit_secret(wallet: &WalletCore<SequencerClient>, a: DepositSecretArgs) -> Result<()> {
+    let config = bridge_config(wallet, a.bridge).await?;
+    let token = eth(&a.eth_token)?;
+    let root = root_or_bail(wallet, a.from)?;
+    let c = scan::deposit_candidate(&root, &config.cfg_id, &a.from, &token, a.denom, a.key_index);
+    write_secret_file(&a.out, &c.master)?;
+    let nf = kdf::reclaim_nullifier(&c.master);
+    println!(
+        "deposit index {}: C 0x{}, reclaim nullifier 0x{}; master secret written to {}",
+        a.key_index,
+        hex(&c.commitment),
+        hex(&nf),
+        a.out.display()
+    );
+    out::doc(&json!({
+        "key_index": a.key_index,
+        "commitment": format!("0x{}", hex(&c.commitment)),
+        "reclaim_nullifier": format!("0x{}", hex(&nf)),
+        "secret_file": a.out.display().to_string(),
+    }));
+    Ok(())
+}
+
 /// The exit secret `k` of a seed-derived exit, the G3 release proof's witness
 /// (`prove-release-rc3.sh --secret-file`), written to a new mode-600 file. Prints only public
 /// values: the exit commitment `E` (compare it with the burn's), the release address, the fee cap.

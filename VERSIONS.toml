@@ -447,12 +447,23 @@ path = "lez-bridge/methods/release_guest"
 roles = ["eth_guests"]
 image = "release_image"
 
+# The failsafe reclaim guest (G4, branch failsafe, 2026-11-17): a NEW guest beside the pinned ones, used only by the
+# local failsafe demo (BridgeVaultFailsafe, mock verifier); no deployment pins its image.
+[[workspace]]
+path = "lez-bridge/methods/reclaim_guest"
+roles = ["eth_guests"]
+
 [[workspace]]
 path = "lez-bridge/outbound"
 roles = ["eth_provers"]
 
 [[workspace]]
 path = "lez-bridge/release"
+roles = ["eth_provers"]
+
+# The failsafe reclaim host (G4, executor only; branch failsafe).
+[[workspace]]
+path = "lez-bridge/reclaim"
 roles = ["eth_provers"]
 
 # The Groth16 wrap (outbound_wrap): compresses eth_provers' succinct receipts for the 3.1.0 verifier.

@@ -1,0 +1,24 @@
+[package]
+name = "reclaim_guest"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# G4, the failsafe reclaim proof the failsafe vault's `reclaim` verifies (statement:
+# reclaim/core). A NEW guest beside the pinned ones: no existing guest, lock or image changes.
+# Its own workspace like release_guest; built only by reclaim/host (executor only, never proves).
+# risc0-zkvm 3.1.0 as the G2-lite guests (eth_guests role): receipts for the 3.1.0 verifier.
+[workspace]
+
+[dependencies]
+reclaim_core = { path = "../../reclaim/core" }
+borsh = "1.5.7"
+risc0-zkvm = { version = "=3.1.0", default-features = false, features = ["std"] }
+
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
