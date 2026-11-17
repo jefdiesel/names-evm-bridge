@@ -12,6 +12,8 @@ It runs beside relayer.py and faucet.py, behind the public endpoint's RPC filter
                                -> {"ok": true, "id": <release nullifier>, "stage"} | {"ok": false, "code", "reason", "retry"}
   POST /settle/status          {"id"} -> {"stage", "text", "seal"?, "tx"?, "block"?, "releasable_at"?, "error"?}
   POST /settle/bundle          {"fetch_id"} -> {"bundle": base64} (the wrap runner only; ciphertext; while wrapping)
+                               also the outbound updater's bundles: UPDATER_BUNDLES/<fetch_id>.bin while younger
+                               than BUNDLE_TTL (public-demo/updater/updater.py writes them; same WRAP_KEY)
 
 Stages: queued -> proving (exit jobs) -> wrapping -> releasable_at -> releasing -> released | failed.
 
@@ -68,6 +70,7 @@ PER_CLIENT_DAY = int(E("PER_CLIENT_DAY", "5"))
 DAILY_MAX = int(E("DAILY_MAX", "50"))
 WRAP_TIMEOUT = int(E("WRAP_TIMEOUT", str(90 * 60)))
 BUNDLE_TTL = int(E("BUNDLE_TTL", str(2 * 3600)))
+UPDATER_BUNDLES = E("UPDATER_BUNDLES", P + "/updater/bundles")   # the outbound updater's encrypted update receipts
 TICK = float(E("TICK", "10"))
 DRY = E("DRY_RUN", "0") == "1"
 MAX_BODY = 700 * 1024
@@ -519,6 +522,13 @@ def bundle(body, s, now=None):
             if os.path.exists(p):
                 with open(p, "rb") as f:
                     return {"ok": True, "bundle": base64.b64encode(f.read()).decode()}
+    p = os.path.join(UPDATER_BUNDLES, fid + ".bin")      # fid is 32 hex characters (checked above): no path tricks
+    try:
+        if now - os.stat(p).st_mtime < BUNDLE_TTL:
+            with open(p, "rb") as f:
+                return {"ok": True, "bundle": base64.b64encode(f.read()).decode()}
+    except OSError:
+        pass
     return refuse("unknown", "no such bundle (or no longer served)")
 
 

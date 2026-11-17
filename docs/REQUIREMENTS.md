@@ -37,8 +37,8 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | F2 | "A deposit must not … reveal its LEZ destination" | In | 1 | PUB Sepolia |
 | F3 | mint "on cryptographic verification … consume the attestation primitive" | In-dev (nullifier) | 1, 3 | LOC |
 | F4 | "both a private LEZ account and a public LEZ account" | In | 1 | LOC; PUB demo chain |
-| F5 | burn "must not … reveal its Ethereum destination" | In | 1 | PUB demo chain (public burns); LOC private |
-| F6 | burn from "either a private or a public LEZ account" | In | 1 | PUB demo chain (public, self-paid and relayed); LOC private |
+| F5 | burn "must not … reveal its Ethereum destination" | In | 1 | PUB demo chain (public burns; a private burn on v5, LEZ block 15395) |
+| F6 | burn from "either a private or a public LEZ account" | In | 1 | PUB demo chain (public, self-paid and relayed; private on v5, LEZ block 15395) |
 | F7 | vault releases "on cryptographic verification of a valid LEZ burn" | Cond | 4, 6 | PUB Sepolia + demo chain (vault v4: proved update and release, RISC Zero verifier 3.1.0; LEZ finality the submitter's word, roots operator-attested); trustless G2 Cond |
 | F8 | amounts "must not identify"; "effect on anonymity-set size" | In | 1, 7 | PUB denominations; set size NS |
 | F9 | "recover every one of their own unclaimed deposits and unreleased burns" | In | 1, 5 | LOC public accounts; web-page deposits not seed-derived |
@@ -142,7 +142,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | R10 | "defers submission by an interval it varies per instance" | In | 3 | NS |
 | R11 | "Statement submissions are independent of one another" | In | 1 | TST |
 | R12 | "CI must be green on the default branch" | In | 1 | TST suites green in CI |
-| P1 | attestation and predicate "within a single LEZ transaction" | In | 1, 3 | LOC 263K cycles; updates: private today, two public steps in M3 (`DESIGN.md` §9.3a) |
+| P1 | attestation and predicate "within a single LEZ transaction" | In | 1, 3 | LOC 263K cycles; updates: private on the deployed program; a finality update ran as one public transaction on a local chain on 2026-11-17 (branch `public-update`); the split for low participation and handoffs in M3 (`DESIGN.md` §9.3a) |
 | P2 | "cycle count, gas cost, proof time, and proof size for each" | In | 1, 3 | LOC; proof size NS |
 | P3 | "amortised per-attestation cost of sync-committee tracking" | In | 7 | DES |
 | P4 | proving "on a mid-range laptop", "including … a private transaction" | In | 4 | LOC one desktop |

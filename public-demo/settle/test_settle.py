@@ -269,6 +269,20 @@ class Settle(unittest.TestCase):
         st.step(self.s)
         self.assertEqual(j["stage"], "failed")
 
+    def test_an_updater_bundle_is_served_while_fresh_and_only_by_its_fetch_id(self):
+        os.makedirs(st.UPDATER_BUNDLES, exist_ok=True)
+        fid = "ab" * 16
+        path = os.path.join(st.UPDATER_BUNDLES, fid + ".bin")
+        with open(path, "wb") as f:
+            f.write(b"ciphertext")
+        mtime = os.stat(path).st_mtime
+        got = st.bundle(json.dumps({"fetch_id": fid}), self.s, now=mtime + 60)
+        self.assertEqual(base64.b64decode(got["bundle"]), b"ciphertext")
+        self.assertEqual(st.bundle(json.dumps({"fetch_id": fid}), self.s, now=mtime + st.BUNDLE_TTL + 1)["code"], "unknown")
+        self.assertEqual(st.bundle(json.dumps({"fetch_id": "cd" * 16}), self.s, now=mtime + 60)["code"], "unknown")
+        self.assertEqual(st.bundle(json.dumps({"fetch_id": "../" + fid}), self.s, now=mtime + 60)["code"], "bad_request")
+        os.remove(path)
+
     def test_the_tree_and_the_journal(self):
         self.assertEqual(st.tree_root([]), st.zero_hashes()[32])
         a, b, c = (bytes([i]) * 32 for i in (1, 2, 3))
