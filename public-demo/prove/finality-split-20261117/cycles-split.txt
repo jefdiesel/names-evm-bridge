@@ -1,0 +1,164 @@
+# finality update split at the pairing seam (FinalityBegin / FinalityFinish), SYNTHETIC committee
+
+| signers N/512 | one transaction | Begin | Finish |
+|---:|---:|---:|---:|
+  one tx N=512: 512/512 signers, 1 key witnesses (aggregate + 0 non-signers)
+  message 26659 bytes (borsh)
+  one tx N=512: submitter's actor (UpdatePublic): user=9161926 total=9961472 segments=10 (0.92x the 10M cap)
+  one tx N=512: store applies Advance: user=42225 total=131072 segments=1 (0.00x the 10M cap)
+  one tx N=512: anchor PDA records an anchor: user=20520 total=65536 segments=1 (0.00x the 10M cap)
+  split N=512: Begin, submitter's actor: user=5542701 total=6291456 segments=6 (0.55x the 10M cap)
+  split N=512: Begin, store is current: user=28407 total=131072 segments=1 (0.00x the 10M cap)
+  split N=512: Begin, job PDA opens: user=43955 total=131072 segments=1 (0.00x the 10M cap)
+  split N=512: Finish, submitter's actor: user=14229 total=65536 segments=1 (0.00x the 10M cap)
+  split N=512: Finish, job PDA: user=3703415 total=4194304 segments=4 (0.37x the 10M cap)
+  split N=512: store applies Advance: user=42225 total=131072 segments=1 (0.00x the 10M cap)
+  split N=512: anchor PDA records an anchor: user=20520 total=65536 segments=1 (0.00x the 10M cap)
+  one tx N=441: 441/512 signers, 72 key witnesses (aggregate + 71 non-signers)
+  message 33617 bytes (borsh)
+  one tx N=441: submitter's actor (UpdatePublic): user=9937682 total=10747904 segments=11 (0.99x the 10M cap)
+  one tx N=441: store applies Advance: user=42225 total=131072 segments=1 (0.00x the 10M cap)
+  one tx N=441: anchor PDA records an anchor: user=20520 total=65536 segments=1 (0.00x the 10M cap)
+  split N=441: Begin, submitter's actor: user=6318844 total=7340032 segments=7 (0.63x the 10M cap)
+  split N=441: Begin, store is current: user=28407 total=131072 segments=1 (0.00x the 10M cap)
+  split N=441: Begin, job PDA opens: user=43955 total=131072 segments=1 (0.00x the 10M cap)
+  split N=441: Finish, submitter's actor: user=14229 total=65536 segments=1 (0.00x the 10M cap)
+  split N=441: Finish, job PDA: user=3703415 total=4194304 segments=4 (0.37x the 10M cap)
+  split N=441: store applies Advance: user=42225 total=131072 segments=1 (0.00x the 10M cap)
+  split N=441: anchor PDA records an anchor: user=20520 total=65536 segments=1 (0.00x the 10M cap)
+  one tx N=427: 427/512 signers, 86 key witnesses (aggregate + 85 non-signers)
+  message 34989 bytes (borsh)
+  one tx N=427: submitter's actor (UpdatePublic): user=10095922 total=11010048 segments=11 (1.01x the 10M cap)
+  one tx N=427: store applies Advance: user=42225 total=131072 segments=1 (0.00x the 10M cap)
+  one tx N=427: anchor PDA records an anchor: user=20520 total=65536 segments=1 (0.00x the 10M cap)
+  split N=427: Begin, submitter's actor: user=6477199 total=7340032 segments=7 (0.65x the 10M cap)
+  split N=427: Begin, store is current: user=28407 total=131072 segments=1 (0.00x the 10M cap)
+  split N=427: Begin, job PDA opens: user=43955 total=131072 segments=1 (0.00x the 10M cap)
+  split N=427: Finish, submitter's actor: user=14229 total=65536 segments=1 (0.00x the 10M cap)
+  split N=427: Finish, job PDA: user=3703415 total=4194304 segments=4 (0.37x the 10M cap)
+  split N=427: store applies Advance: user=42225 total=131072 segments=1 (0.00x the 10M cap)
+  split N=427: anchor PDA records an anchor: user=20520 total=65536 segments=1 (0.00x the 10M cap)
+  one tx N=400: 400/512 signers, 113 key witnesses (aggregate + 112 non-signers)
+  message 37635 bytes (borsh)
+  one tx N=400: submitter's actor (UpdatePublic): user=10389914 total=11534336 segments=11 (1.04x the 10M cap)
+  one tx N=400: store applies Advance: user=42225 total=131072 segments=1 (0.00x the 10M cap)
+  one tx N=400: anchor PDA records an anchor: user=20520 total=65536 segments=1 (0.00x the 10M cap)
+  split N=400: Begin, submitter's actor: user=6770740 total=7405568 segments=8 (0.68x the 10M cap)
+  split N=400: Begin, store is current: user=28407 total=131072 segments=1 (0.00x the 10M cap)
+  split N=400: Begin, job PDA opens: user=43955 total=131072 segments=1 (0.00x the 10M cap)
+  split N=400: Finish, submitter's actor: user=14229 total=65536 segments=1 (0.00x the 10M cap)
+  split N=400: Finish, job PDA: user=3703415 total=4194304 segments=4 (0.37x the 10M cap)
+  split N=400: store applies Advance: user=42225 total=131072 segments=1 (0.00x the 10M cap)
+  split N=400: anchor PDA records an anchor: user=20520 total=65536 segments=1 (0.00x the 10M cap)
+  one tx N=342: 342/512 signers, 171 key witnesses (aggregate + 170 non-signers)
+  message 43319 bytes (borsh)
+  one tx N=342: submitter's actor (UpdatePublic): user=11032741 total=12058624 segments=12 (1.10x the 10M cap)
+  one tx N=342: store applies Advance: user=42225 total=131072 segments=1 (0.00x the 10M cap)
+  one tx N=342: anchor PDA records an anchor: user=20520 total=65536 segments=1 (0.00x the 10M cap)
+  split N=342: Begin, submitter's actor: user=7413562 total=8388608 segments=8 (0.74x the 10M cap)
+  split N=342: Begin, store is current: user=28407 total=131072 segments=1 (0.00x the 10M cap)
+  split N=342: Begin, job PDA opens: user=43955 total=131072 segments=1 (0.00x the 10M cap)
+  split N=342: Finish, submitter's actor: user=14229 total=65536 segments=1 (0.00x the 10M cap)
+  split N=342: Finish, job PDA: user=3703415 total=4194304 segments=4 (0.37x the 10M cap)
+  split N=342: store applies Advance: user=42225 total=131072 segments=1 (0.00x the 10M cap)
+  split N=342: anchor PDA records an anchor: user=20520 total=65536 segments=1 (0.00x the 10M cap)
+| 512 | 9224671 | 5615063 | 3780389 |
+| 441 | 10000427 | 6391206 | 3780389 |
+| 427 | 10158667 | 6549561 | 3780389 |
+| 400 | 10452659 | 6843102 | 3780389 |
+| 342 | 11095486 | 7485924 | 3780389 |
+
+### split N=512, Begin
+| program call | user cycles |
+|---|---:|
+| Begin: submitter's actor (every check, the Miller loop) | 5542701 |
+| Begin: store asserts it is the job's prev | 28407 |
+| Begin: job PDA opens (holds the Miller value) | 43955 |
+| **whole transaction** | **5615063** (56.15% of the 10M cap; margin 4384937) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+
+### split N=512, Finish
+| program call | user cycles |
+|---|---:|
+| Finish: submitter's actor | 14229 |
+| Finish: job PDA (final exponentiation; done; sends Advance) | 3703415 |
+| store: Advance (+ sends RecordAnchor) | 42225 |
+| anchor PDA: RecordAnchor | 20520 |
+| **whole transaction** | **3780389** (37.80% of the 10M cap; margin 6219611) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+
+### split N=441, Begin
+| program call | user cycles |
+|---|---:|
+| Begin: submitter's actor (every check, the Miller loop) | 6318844 |
+| Begin: store asserts it is the job's prev | 28407 |
+| Begin: job PDA opens (holds the Miller value) | 43955 |
+| **whole transaction** | **6391206** (63.91% of the 10M cap; margin 3608794) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+
+### split N=441, Finish
+| program call | user cycles |
+|---|---:|
+| Finish: submitter's actor | 14229 |
+| Finish: job PDA (final exponentiation; done; sends Advance) | 3703415 |
+| store: Advance (+ sends RecordAnchor) | 42225 |
+| anchor PDA: RecordAnchor | 20520 |
+| **whole transaction** | **3780389** (37.80% of the 10M cap; margin 6219611) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+
+### split N=427, Begin
+| program call | user cycles |
+|---|---:|
+| Begin: submitter's actor (every check, the Miller loop) | 6477199 |
+| Begin: store asserts it is the job's prev | 28407 |
+| Begin: job PDA opens (holds the Miller value) | 43955 |
+| **whole transaction** | **6549561** (65.50% of the 10M cap; margin 3450439) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+
+### split N=427, Finish
+| program call | user cycles |
+|---|---:|
+| Finish: submitter's actor | 14229 |
+| Finish: job PDA (final exponentiation; done; sends Advance) | 3703415 |
+| store: Advance (+ sends RecordAnchor) | 42225 |
+| anchor PDA: RecordAnchor | 20520 |
+| **whole transaction** | **3780389** (37.80% of the 10M cap; margin 6219611) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+
+### split N=400, Begin
+| program call | user cycles |
+|---|---:|
+| Begin: submitter's actor (every check, the Miller loop) | 6770740 |
+| Begin: store asserts it is the job's prev | 28407 |
+| Begin: job PDA opens (holds the Miller value) | 43955 |
+| **whole transaction** | **6843102** (68.43% of the 10M cap; margin 3156898) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+
+### split N=400, Finish
+| program call | user cycles |
+|---|---:|
+| Finish: submitter's actor | 14229 |
+| Finish: job PDA (final exponentiation; done; sends Advance) | 3703415 |
+| store: Advance (+ sends RecordAnchor) | 42225 |
+| anchor PDA: RecordAnchor | 20520 |
+| **whole transaction** | **3780389** (37.80% of the 10M cap; margin 6219611) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+
+### split N=342, Begin
+| program call | user cycles |
+|---|---:|
+| Begin: submitter's actor (every check, the Miller loop) | 7413562 |
+| Begin: store asserts it is the job's prev | 28407 |
+| Begin: job PDA opens (holds the Miller value) | 43955 |
+| **whole transaction** | **7485924** (74.86% of the 10M cap; margin 2514076) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+
+### split N=342, Finish
+| program call | user cycles |
+|---|---:|
+| Finish: submitter's actor | 14229 |
+| Finish: job PDA (final exponentiation; done; sends Advance) | 3703415 |
+| store: Advance (+ sends RecordAnchor) | 42225 |
+| anchor PDA: RecordAnchor | 20520 |
+| **whole transaction** | **3780389** (37.80% of the 10M cap; margin 6219611) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1

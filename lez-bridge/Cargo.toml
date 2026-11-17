@@ -18,7 +18,7 @@ members = [
 ]
 # The attestation guests and the cycle-count host are separate workspaces with their own
 # [patch] sections (RISC Zero BLS/SHA forks), so nothing here is rebuilt against those patches.
-exclude = ["methods/attest_guest", "methods/attest_guest_public", "methods/eth_consumer_guest", "methods/attest_probe_guest", "attest/cycles", "methods/release_guest", "release", "attest/lcbench", "methods/lc_bench_zk", "methods/lc_bench_blst", "methods/lc_bench_fast", "attest/vendor/helios-consensus-core"]
+exclude = ["methods/attest_guest", "methods/attest_guest_public", "methods/eth_consumer_guest", "methods/attest_guest_synthetic", "methods/attest_probe_guest", "attest/cycles", "methods/release_guest", "release", "attest/lcbench", "methods/lc_bench_zk", "methods/lc_bench_blst", "methods/lc_bench_fast", "attest/vendor/helios-consensus-core"]
 
 [workspace.package]
 version = "0.1.0"

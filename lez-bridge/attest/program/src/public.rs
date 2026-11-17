@@ -206,7 +206,54 @@ pub fn verify_period_begin(program: &AccountId, config: &InstanceConfig, prev: &
         committee: s.committee,
         not_before_ms: v.not_before_ms,
         deadline_ms: v.deadline_ms,
+        miller: None,
     })
+}
+
+/// Step 1 of a finality update split at the pairing seam: every check of
+/// [`verify_finality_public`] up to and including the Miller loop; the job carries the Miller value.
+///
+/// # Errors
+/// Any check fails (a refused witness or signature is `invalid sync committee signature`).
+pub fn verify_finality_begin(
+    program: &AccountId,
+    config: &InstanceConfig,
+    prev: &LcSummary,
+    committee: &[u8],
+    keys: &KeyWitnesses,
+    update: &[u8],
+) -> Result<PeriodJob, String> {
+    let u = FinalityUpdate::<S>::from_ssz_bytes(update).map_err(|e| format!("finality update does not decode: {e:?}"))?;
+    let g = GenericUpdate::from(&u);
+    let mut f = None;
+    let (v, s) = run_helios(program, config, prev, &g, |s| {
+        if committee.len() == eth_attest_core::COMMITTEE_SSZ_LEN && committee_hash(committee) == s.committee {
+            f = fast::miller(committee, keys, &expand_bits(&s.bits), &s.signing_root, &s.signature);
+        }
+        f.is_some()
+    })?;
+    Ok(PeriodJob {
+        prev: prev.clone(),
+        next: v.next,
+        update_digest: eth_attest_core::sha256(&[update]),
+        signing_root: s.signing_root,
+        signature: s.signature,
+        bits: s.bits,
+        committee: s.committee,
+        not_before_ms: v.not_before_ms,
+        deadline_ms: v.deadline_ms,
+        miller: f.map(|m| m.to_vec()),
+    })
+}
+
+/// Step 2 of the split: the final exponentiation of the job's Miller value.
+///
+/// # Errors
+/// No Miller value in the job, or the pairing product is not one.
+pub fn verify_finality_finish(job: &PeriodJob) -> Result<(), String> {
+    let Some(m) = &job.miller else { return Err("not a finality job (no Miller value): finish it with PeriodFinish".into()) };
+    let Ok(m) = <[u8; 576]>::try_from(m.as_slice()) else { return Err("the job's Miller value has the wrong length".into()) };
+    if fast::final_is_one(&m) { Ok(()) } else { Err("update rejected: invalid sync committee signature (final exponentiation)".into()) }
 }
 
 /// Step 2: the job's signature, by the committee whose SSZ is `committee`.
@@ -283,6 +330,22 @@ pub fn apply_job(input: &ReceiveInput, e: Effect) -> Response {
             let seed = store_seed(&job.prev.instance_id);
             Response::set_state(crate::state(&JobState::Done))
                 .send(crate::effect(seed, &program, Effect::Advance { prev: job.prev, next: job.next }))
+        }
+        Effect::JobFinalize { job_id: id } => {
+            assert!(here == job_address(&program, &id), "RFP021-E12 not permitted: job goes to its PDA");
+            let Ok(JobState::Open(job)) = borsh::from_slice::<JobState>(&input.pre_state) else {
+                panic!("RFP021-E09 stale or replayed: no open job here")
+            };
+            verify_finality_finish(&job).unwrap_or_else(|e| {
+                let e = eth_attest_core::codes::coded(&e);
+                panic!("{e}")
+            });
+            let seed = store_seed(&job.prev.instance_id);
+            let (from, until) = (job.not_before_ms, job.deadline_ms);
+            Response::set_state(crate::state(&JobState::Done))
+                .send(crate::effect(seed, &program, Effect::Advance { prev: job.prev, next: job.next }))
+                .try_timestamp_window(from..until)
+                .unwrap_or_else(|_| panic!("RFP021-E04 checkpoint stale or invalid: weak-subjectivity bound passed"))
         }
         Effect::JobClose { job_id: id } => {
             assert!(here == job_address(&program, &id), "RFP021-E12 not permitted: job goes to its PDA");
@@ -362,6 +425,23 @@ pub fn instruct(program: &AccountId, i: eth_attest_core::Instruction) -> Respons
                 .try_timestamp_window(from..until)
                 .unwrap_or_else(|_| panic!("RFP021-E04 checkpoint stale or invalid: weak-subjectivity bound passed"))
         }
+        I::FinalityBegin { config, prev, committee, keys, update } => {
+            let job = verify_finality_begin(program, &config, &prev, &committee, &keys, &update).unwrap_or_else(|e| {
+                let e = eth_attest_core::codes::coded(&e);
+                panic!("{e}")
+            });
+            let seed = job_seed(&job_id(&job.prev, &job.update_digest));
+            Response::keep_state()
+                .send(crate::effect(store_seed(&prev.instance_id), program, Effect::AssertCurrent { prev }))
+                .send(crate::effect(seed, program, Effect::JobOpen(job)))
+        }
+        I::FinalityFinish { job_id } => Response::keep_state().send(crate::effect(job_seed(&job_id), program, Effect::JobFinalize { job_id })),
+        #[cfg(feature = "synthetic-init")]
+        I::InitSynthetic { config, genesis } => {
+            // TEST ONLY (feature `synthetic-init`, a separate test image): no bootstrap.
+            let seed = eth_attest_core::config_seed(&genesis.instance_id);
+            Response::keep_state().send(crate::effect(seed, program, Effect::Create { config, genesis }))
+        }
         I::CloseJob { job_id } => Response::keep_state().send(crate::effect(job_seed(&job_id), program, Effect::JobClose { job_id })),
         _ => panic!("RFP021-E12 not permitted: not a public-path instruction"),
     }
@@ -376,7 +456,7 @@ pub use helios_consensus_core::sync_committee_root;
 /// From the lcbench spike's `lc_bench_fast` guest (`bl::verify`), keys read from the committee SSZ.
 pub mod fast {
     use blst::{
-        BLST_ERROR, blst_final_exp, blst_fp12, blst_fp12_is_one, blst_hash_to_g2, blst_miller_loop_n, blst_p1,
+        BLST_ERROR, blst_bendian_from_fp, blst_final_exp, blst_fp_from_bendian, blst_fp12, blst_fp12_is_one, blst_hash_to_g2, blst_miller_loop_n, blst_p1,
         blst_p1_add_or_double, blst_p1_add_or_double_affine, blst_p1_affine, blst_p1_affine_compress,
         blst_p1_affine_generator, blst_p1_affine_is_inf, blst_p1_affine_serialize, blst_p1_cneg, blst_p1_deserialize,
         blst_p1_from_affine, blst_p1_to_affine, blst_p1_uncompress, blst_p2, blst_p2_affine, blst_p2_affine_in_g2,
@@ -427,27 +507,92 @@ pub mod fast {
     /// e(-g1, sig) · e(aggregate − Σ non-signers, H(msg)) = 1.
     #[must_use]
     pub fn verify(committee: &[u8], keys: &KeyWitnesses, bits: &[bool], msg: &[u8; 32], sig: &[u8; 96]) -> bool {
+        miller_raw(committee, keys, bits, msg, sig).is_some_and(|f| {
+            let mut e = blst_fp12::default();
+            // SAFETY: live locals of the types blst expects.
+            unsafe {
+                blst_final_exp(&mut e, &f);
+                blst_fp12_is_one(&e)
+            }
+        })
+    }
+
+    /// The canonical bytes of an Fp12 element: its 12 Fp coefficients, each 48 bytes big endian
+    /// (`blst_bendian_from_fp`), in blst's field order. The same on every target, so a value the
+    /// guest wrote is read back the same way.
+    fn fp12_bytes(f: &blst_fp12) -> [u8; 576] {
+        let mut out = [0u8; 576];
+        let mut k = 0;
+        for f6 in &f.fp6 {
+            for f2 in &f6.fp2 {
+                for fp in &f2.fp {
+                    // SAFETY: 48 writable bytes at `out[k..]`.
+                    unsafe { blst_bendian_from_fp(out[k..k + 48].as_mut_ptr(), fp) };
+                    k += 48;
+                }
+            }
+        }
+        out
+    }
+
+    fn fp12_from(bytes: &[u8; 576]) -> blst_fp12 {
+        let mut f = blst_fp12::default();
+        let mut k = 0;
+        for f6 in &mut f.fp6 {
+            for f2 in &mut f6.fp2 {
+                for fp in &mut f2.fp {
+                    // SAFETY: 48 readable bytes at `bytes[k..]`; blst writes only `fp`.
+                    unsafe { blst_fp_from_bendian(fp, bytes[k..k + 48].as_ptr()) };
+                    k += 48;
+                }
+            }
+        }
+        f
+    }
+
+    /// The pairing-seam split's second half: the final exponentiation of a Miller-loop value and
+    /// the identity check (blst's `final_exp` + `fp12_is_one`).
+    #[must_use]
+    pub fn final_is_one(f: &[u8; 576]) -> bool {
+        let f = fp12_from(f);
+        let mut e = blst_fp12::default();
+        // SAFETY: live locals of the types blst expects.
+        unsafe {
+            blst_final_exp(&mut e, &f);
+            blst_fp12_is_one(&e)
+        }
+    }
+
+    /// The pairing-seam split's first half: every check of [`verify`] up to and including the
+    /// shared Miller loop of e(pk, H(msg)) · e(-g1, sig); `None` if a witness, the signature or
+    /// the signers' key is refused before the loop.
+    #[must_use]
+    pub fn miller(committee: &[u8], keys: &KeyWitnesses, bits: &[bool], msg: &[u8; 32], sig: &[u8; 96]) -> Option<[u8; 576]> {
+        miller_raw(committee, keys, bits, msg, sig).map(|f| fp12_bytes(&f))
+    }
+
+    fn miller_raw(committee: &[u8], keys: &KeyWitnesses, bits: &[bool], msg: &[u8; 32], sig: &[u8; 96]) -> Option<blst_fp12> {
         if committee.len() != 513 * 48 || bits.len() != 512 {
-            return false;
+            return None;
         }
         let committed = |i: usize| &committee[i * 48..i * 48 + 48];
-        let Some(agg) = g1(&keys.aggregate, committed(512)) else { return false };
+        let Some(agg) = g1(&keys.aggregate, committed(512)) else { return None };
         let mut absent = keys.absent.iter();
         let mut neg = blst_p1::default();
         for (i, b) in bits.iter().enumerate() {
             if !b {
-                let Some((index, key)) = absent.next() else { return false };
+                let Some((index, key)) = absent.next() else { return None };
                 if usize::from(*index) != i {
-                    return false;
+                    return None;
                 }
-                let Some(p) = g1(key, committed(i)) else { return false };
+                let Some(p) = g1(key, committed(i)) else { return None };
                 let a = neg;
                 // SAFETY: valid points; blst writes only `neg`.
                 unsafe { blst_p1_add_or_double_affine(&mut neg, &a, &p) };
             }
         }
         if absent.next().is_some() {
-            return false;
+            return None;
         }
         let mut acc = blst_p1::default();
         let mut pk = blst_p1_affine::default();
@@ -457,7 +602,6 @@ pub mod fast {
         let mut hp = blst_p2::default();
         let mut hm = blst_p2_affine::default();
         let mut f = blst_fp12::default();
-        let mut e = blst_fp12::default();
         // SAFETY: every pointer is to a live local of the type blst expects; `sig` is 96 bytes,
         // `msg` 32, `DST` its own length; the two arrays passed to the Miller loop hold 2 each.
         unsafe {
@@ -467,10 +611,10 @@ pub mod fast {
             blst_p1_add_or_double(&mut acc, &a, &neg);
             blst_p1_to_affine(&mut pk, &acc);
             if blst_p1_affine_is_inf(&pk) {
-                return false;
+                return None;
             }
             if blst_p2_uncompress(&mut s, sig.as_ptr()) != BLST_ERROR::BLST_SUCCESS || !blst_p2_affine_in_g2(&s) || blst_p2_affine_is_inf(&s) {
-                return false;
+                return None;
             }
             blst_hash_to_g2(&mut hp, msg.as_ptr(), msg.len(), DST.as_ptr(), DST.len(), core::ptr::null(), 0);
             blst_p2_to_affine(&mut hm, &hp);
@@ -480,8 +624,7 @@ pub mod fast {
             let qs: [*const blst_p2_affine; 2] = [&hm, &s];
             let ps: [*const blst_p1_affine; 2] = [&pk, &ng_a];
             blst_miller_loop_n(&mut f, qs.as_ptr(), ps.as_ptr(), 2);
-            blst_final_exp(&mut e, &f);
-            blst_fp12_is_one(&e)
         }
+        Some(f)
     }
 }

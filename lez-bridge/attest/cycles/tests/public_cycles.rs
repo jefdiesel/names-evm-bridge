@@ -38,3 +38,35 @@ fn every_public_transaction_fits_and_matches_the_pinned_count() {
         assert!(sum.abs_diff(*measured) * 100 <= *measured, "{net}: {sum} user cycles, more than 1% from the pinned {measured}");
     }
 }
+
+/// The finality update split at the pairing seam (`attest_cycles split`, synthetic committee over
+/// the recorded Sepolia update), measured 2026-11-17 (image 4b253ca9…): (signers, one
+/// transaction, Begin, Finish).
+const SPLIT: [(u64, u64, u64, u64); 5] = [
+    (512, 9_224_671, 5_615_063, 3_780_389),
+    (441, 10_000_427, 6_391_206, 3_780_389),
+    (427, 10_158_667, 6_549_561, 3_780_389),
+    (400, 10_452_659, 6_843_102, 3_780_389),
+    (342, 11_095_486, 7_485_924, 3_780_389),
+];
+
+#[test]
+fn the_split_fits_every_participation_down_to_the_floor() {
+    let out = Command::new(env!("CARGO_BIN_EXE_attest_cycles")).arg("split").output().expect("runs attest_cycles split");
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "attest_cycles split failed:\n{text}");
+    let rows: Vec<Vec<u64>> = text
+        .lines()
+        .filter(|l| l.starts_with("| ") && !l.starts_with("| signers") && !l.starts_with("| **") && !l.starts_with("| program"))
+        .map(|l| l.split('|').filter_map(|c| c.trim().parse().ok()).collect::<Vec<u64>>())
+        .filter(|r| r.len() == 4)
+        .collect();
+    assert_eq!(rows.len(), SPLIT.len(), "{text}");
+    for (r, (n, one, begin, finish)) in rows.iter().zip(SPLIT) {
+        assert_eq!(r[0], n);
+        assert!(r[2] < CAP && r[3] < CAP, "{n}/512: a step at or over the cap");
+        for (got, pinned) in [(r[1], one), (r[2], begin), (r[3], finish)] {
+            assert!(got.abs_diff(pinned) * 100 <= pinned, "{n}/512: {got} more than 1% from the pinned {pinned}");
+        }
+    }
+}

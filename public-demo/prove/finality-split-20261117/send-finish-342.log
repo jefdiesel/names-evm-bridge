@@ -1,0 +1,5 @@
+== finish-342 2026-11-17T19:59:43Z accounts 79P5zQpjW4rZdjSgvXKGj6hdzaEeWgqT5mJ3mLvgwRih@HWjcstPenwtuNnmJtytFYDtJyfioXJX1tSvjKB6tvamM,4Xk5Mmakj7KJiCAmgqHSR6zReFFhy34ed5UMXev1AWDK@HWjcstPenwtuNnmJtytFYDtJyfioXJX1tSvjKB6tvamM,BFv6jtYGxLhpcEWcg6V9SM7LsCShFyFqLEtK2qAaT8Du@HWjcstPenwtuNnmJtytFYDtJyfioXJX1tSvjKB6tvamM
+before: balance {"jsonrpc":"2.0","id":1,"result":99998335119852} fee state {"jsonrpc":"2.0","id":1,"result":{"height":350,"base_fee_exec":9,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":10,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}}
+tx 95355072ec0fcfe18dec045f1a7ccc1e0af4017344b9fbc9beb14703773ab383
+applied in block 351
+after: balance {"jsonrpc":"2.0","id":1,"result":99998301091332}

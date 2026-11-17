@@ -659,10 +659,11 @@ fn no_program_panic_can_print_a_value() {
     // by attest/program/tests/instance.rs.
     assert_eq!(attest.len(), 2, "{attest:#?}");
     assert!(attest.iter().all(|p| p.contains("interpolates {e}")), "{attest:#?}");
-    // The public path (branch public-update): the same kind of exception, three verifiers
-    // (finality, period Begin, period Finish); texts pinned by attest/program/tests/public_update.rs.
+    // The public path (branch public-update): the same kind of exception, five verifiers
+    // (finality, period Begin and Finish, finality Begin and Finish at the pairing seam); texts
+    // pinned by attest/program/tests/public_update.rs and finality_split.rs.
     let public = scan("attest/program/src/public.rs", include_str!("../../attest/program/src/public.rs"));
-    assert_eq!(public.len(), 3, "{public:#?}");
+    assert_eq!(public.len(), 5, "{public:#?}");
     assert!(public.iter().all(|p| p.contains("interpolates {e}")), "{public:#?}");
     // The scanner does find what it looks for.
     let planted = "fn f(r: Result<u8, ()>, x: u8) {\n    let a = r.expect(\"decodes\");\n    assert_eq!(a, x, \"same\");\n    assert!(a == x, \"{x} differs\");\n    panic!(\"{}\", x);\n}\n";

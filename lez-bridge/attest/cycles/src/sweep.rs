@@ -131,3 +131,112 @@ pub fn run() -> Result<bool> {
     println!("(Begin = submitter's actor - {FINAL_EXP} final exponentiation; Finish = {FINAL_EXP} + Advance + RecordAnchor; job account write/read not included)");
     Ok(true)
 }
+
+/// The synthetic committee, its store and the update signed by `n` of its members (evenly spread
+/// non-signers), over the recorded Sepolia finality update. Program `program` (instance ids depend
+/// on it), config salt `salt`.
+pub struct Synthetic {
+    pub cfg: InstanceConfig,
+    pub prev: LcSummary,
+    pub committee: Vec<u8>,
+    sks: Vec<SecretKey>,
+    msg: [u8; 32],
+    fin: Vec<u8>,
+}
+
+impl Synthetic {
+    pub fn new(program: AccountId, salt: [u8; 32]) -> Result<Self> {
+        let cfg = InstanceConfig { salt, ..config("sepolia", "bootstrap_same_period") };
+        let boot = fx("sepolia", "bootstrap_same_period.ssz");
+        let genesis = eth_attest::lc::verify_bootstrap(&program, &cfg, &boot).map_err(|e| anyhow!(e))?;
+        let fin = fx("sepolia", "finality_update.ssz");
+        let sks: Vec<SecretKey> = (0..512).map(secret).collect();
+        let pks: Vec<_> = sks.iter().map(SecretKey::sk_to_pk).collect();
+        let refs: Vec<_> = pks.iter().collect();
+        let agg = AggregatePublicKey::aggregate(&refs, false).map_err(|e| anyhow!("{e:?}"))?.to_public_key();
+        let mut committee: Vec<u8> = pks.iter().flat_map(|p| p.compress()).collect();
+        committee.extend_from_slice(&agg.compress());
+        let prev = LcSummary { current_committee: committee_hash(&committee), ..genesis };
+        let msg = signing_root(&cfg, &prev, &fin)?;
+        Ok(Self { cfg, prev, committee, sks, msg, fin })
+    }
+
+    pub fn update(&self, n: usize) -> Result<Vec<u8>> {
+        let absent = 512 - n;
+        let off: Vec<usize> = (0..absent).map(|k| k * 512 / absent.max(1)).collect();
+        let mut bits = [0xFFu8; 64];
+        for &i in &off {
+            bits[i / 8] &= !(1 << (i % 8));
+        }
+        let sigs: Vec<_> = (0..512).filter(|i| !off.contains(i)).map(|i| self.sks[i].sign(&self.msg, DST, &[])).collect();
+        let srefs: Vec<_> = sigs.iter().collect();
+        let sig = AggregateSignature::aggregate(&srefs, false).map_err(|e| anyhow!("{e:?}"))?.to_signature().compress();
+        let mut upd = self.fin.clone();
+        upd[BITS_AT..SIG_AT].copy_from_slice(&bits);
+        upd[SIG_AT..SIG_AT + 96].copy_from_slice(&sig);
+        Ok(upd)
+    }
+}
+
+/// `attest_cycles split`: the finality update split at the pairing seam, measured on the
+/// synthetic committee (executor), against the one-transaction path at the same participation.
+pub fn split() -> Result<bool> {
+    println!("# finality update split at the pairing seam (FinalityBegin / FinalityFinish), SYNTHETIC committee");
+    let s = Synthetic::new(ATTEST, [0; 32])?;
+    let mut ok = true;
+    println!("\n| signers N/512 | one transaction | Begin | Finish |\n|---:|---:|---:|---:|");
+    let mut rows = Vec::new();
+    for n in [512usize, 441, 427, 400, 342] {
+        let upd = s.update(n)?;
+        let (one, _) = public::run_tx(&format!("one tx N={n}"), ATTEST, BOB, &s.cfg, &s.prev, &s.committee, &upd)?;
+        let (b, f, _, _) = public::run_split(&format!("split N={n}"), ATTEST_GUEST_PUBLIC_ELF, ATTEST, BOB, &s.cfg, &s.prev, &s.committee, &upd)?;
+        ok &= b.user() < CAP as u64 && f.user() < CAP as u64;
+        rows.push((n, one.user(), b, f));
+    }
+    for (n, one, b, f) in &rows {
+        println!("| {n} | {one} | {} | {} |", b.user(), f.user());
+    }
+    for (n, _, b, f) in &rows {
+        public::report(&format!("split N={n}, Begin"), b);
+        public::report(&format!("split N={n}, Finish"), f);
+    }
+    Ok(ok)
+}
+
+/// `attest_cycles synth-chain PROGRAM SIGNER OUT`: the messages for a run on a chain with the
+/// SYNTHETIC test image (`attest_guest_synthetic`, `InitSynthetic`): per N in 427 and 342, an
+/// instance (salt = N) created with the synthetic committee, the split's Begin and Finish; and a
+/// Begin at 341 signers (refused). Prints the accounts each transaction touches.
+pub fn synth_chain(args: &[String]) -> Result<bool> {
+    let [program, signer, out] = args else { return Err(anyhow!("synth-chain PROGRAM SIGNER OUT")) };
+    let program: AccountId = program.parse().map_err(|_| anyhow!("program"))?;
+    let signer: AccountId = signer.parse().map_err(|_| anyhow!("signer"))?;
+    let out = Path::new(out);
+    std::fs::create_dir_all(out)?;
+    for n in [427usize, 342] {
+        let s = Synthetic::new(program, [u8::try_from(n % 256)?; 32])?;
+        let id = s.prev.instance_id;
+        let init = msg(&Message::Instruction(Instruction::InitSynthetic { config: s.cfg.clone(), genesis: s.prev.clone() }));
+        std::fs::write(out.join(format!("n{n}-init.hex")), hex::encode(&init))?;
+        let anchors: Vec<String> = s.prev.finalized.anchors().iter().map(|a| anchor_address(&program, &id, a).to_string()).collect();
+        println!("N={n}: instance 0x{} config {} store {} genesis anchor {}", hex::encode(id), eth_attest_core::config_address(&program, &id), store_address(&program, &id), anchors.join(","));
+        let upd = s.update(n)?;
+        let (b, f, mb, mf) = public::run_split(&format!("chain N={n}"), ATTEST_GUEST_SYNTHETIC_ELF, program, signer, &s.cfg, &s.prev, &s.committee, &upd)?;
+        std::fs::write(out.join(format!("n{n}-begin.hex")), hex::encode(&mb))?;
+        std::fs::write(out.join(format!("n{n}-finish.hex")), hex::encode(&mf))?;
+        let job = eth_attest::public::verify_finality_begin(&program, &s.cfg, &s.prev, &s.committee, &eth_attest::public::key_witnesses(&s.committee, &eth_attest::public::finality_bits(&upd).map_err(|e| anyhow!(e))?).map_err(|e| anyhow!(e))?, &upd).map_err(|e| anyhow!(e))?;
+        let jid = eth_attest_core::job_id(&job.prev, &job.update_digest);
+        let new_anchors: Vec<String> = job.next.finalized.anchors().iter().map(|a| anchor_address(&program, &id, a).to_string()).collect();
+        println!("N={n}: Begin {} cycles, Finish {} cycles; job 0x{} PDA {}; new anchor {}", b.user(), f.user(), hex::encode(jid), eth_attest_core::job_address(&program, &jid), new_anchors.join(","));
+        if n == 342 {
+            let low = s.update(341)?;
+            let bits = eth_attest::public::finality_bits(&low).map_err(|e| anyhow!(e))?;
+            let keys = eth_attest::public::key_witnesses(&s.committee, &bits).map_err(|e| anyhow!(e))?;
+            let m = msg(&Message::Instruction(Instruction::FinalityBegin { config: s.cfg.clone(), prev: s.prev.clone(), committee: s.committee.clone(), keys, update: low }));
+            std::fs::write(out.join("n341-begin.hex"), hex::encode(&m))?;
+            let low_job = eth_attest_core::job_id(&s.prev, &eth_attest_core::sha256(&[&s.update(341)?]));
+            println!("N=341: Begin message written (its job PDA would be {})", eth_attest_core::job_address(&program, &low_job));
+        }
+    }
+    Ok(true)
+}

@@ -181,6 +181,55 @@ pub fn run_period(
     Ok((begin, finish, m_begin, m_finish, job))
 }
 
+/// A finality update split at the pairing seam: Begin (submitter's actor + store `AssertCurrent` +
+/// job PDA opens) and Finish (submitter's actor + job PDA's final exponentiation + store `Advance`
+/// + `RecordAnchor`s). Returns both and the two messages.
+pub fn run_split(
+    label: &str,
+    elf: &[u8],
+    program: AccountId,
+    signer: AccountId,
+    cfg: &InstanceConfig,
+    prev: &LcSummary,
+    committee: &[u8],
+    update: &[u8],
+) -> Result<(Tx, Tx, Vec<u8>, Vec<u8>)> {
+    let bits = eth_attest::public::finality_bits(update).map_err(|e| anyhow!(e))?;
+    let keys = eth_attest::public::key_witnesses(committee, &bits).map_err(|e| anyhow!(e))?;
+    let job = eth_attest::public::verify_finality_begin(&program, cfg, prev, committee, &keys, update).map_err(|e| anyhow!("Begin: {e}"))?;
+    eth_attest::public::verify_finality_finish(&job).map_err(|e| anyhow!("Finish: {e}"))?;
+    let id = job_id(&job.prev, &job.update_digest);
+    let job_pda = Actor::new(job_address(&program, &id), program);
+    let store_pda = Actor::new(store_address(&program, &prev.instance_id), program);
+    let m_begin = msg(&Message::Instruction(Instruction::FinalityBegin { config: cfg.clone(), prev: prev.clone(), committee: committee.to_vec(), keys, update: update.to_vec() }));
+    let mut calls = Vec::new();
+    let (c, _) = exec_user(&format!("{label}: Begin, submitter's actor"), elf, &root_input(signer, program, m_begin.clone()))?;
+    calls.push(("Begin: submitter's actor (every check, the Miller loop)".to_owned(), c));
+    let (c, _) = exec_user(&format!("{label}: Begin, store is current"), elf, &ReceiveInput {
+        receiver: store_pda, from: Some(Actor::new(signer, program)), is_authorized: false,
+        pre_state: ActorState::from(msg(prev)), message: msg(&Message::Effect(Effect::AssertCurrent { prev: prev.clone() })),
+    })?;
+    calls.push(("Begin: store asserts it is the job's prev".to_owned(), c));
+    let (c, _) = exec_user(&format!("{label}: Begin, job PDA opens"), elf, &ReceiveInput {
+        receiver: job_pda, from: Some(Actor::new(signer, program)), is_authorized: false,
+        pre_state: ActorState::empty(), message: msg(&Message::Effect(Effect::JobOpen(job.clone()))),
+    })?;
+    calls.push(("Begin: job PDA opens (holds the Miller value)".to_owned(), c));
+    let begin = Tx { calls, next: job.next.clone() };
+    let m_finish = msg(&Message::Instruction(Instruction::FinalityFinish { job_id: id }));
+    let mut calls = Vec::new();
+    let (c, _) = exec_user(&format!("{label}: Finish, submitter's actor"), elf, &root_input(signer, program, m_finish.clone()))?;
+    calls.push(("Finish: submitter's actor".to_owned(), c));
+    let (c, _) = exec_user(&format!("{label}: Finish, job PDA"), elf, &ReceiveInput {
+        receiver: job_pda, from: Some(Actor::new(signer, program)), is_authorized: false,
+        pre_state: ActorState::from(msg(&JobState::Open(job.clone()))), message: msg(&Message::Effect(Effect::JobFinalize { job_id: id })),
+    })?;
+    calls.push(("Finish: job PDA (final exponentiation; done; sends Advance)".to_owned(), c));
+    store_side(label, program, job_pda, cfg, prev, &job.next, &mut calls)?;
+    let finish = Tx { calls, next: job.next };
+    Ok((begin, finish, m_begin, m_finish))
+}
+
 pub fn report(label: &str, tx: &Tx) -> bool {
     let sum = tx.user();
     println!("\n### {label}\n| program call | user cycles |\n|---|---:|");

@@ -34,6 +34,9 @@ cycle-marks = []
 # attest/vendor/helios-consensus-core (lez-bridge/Cargo.toml, methods/attest_guest_public,
 # attest/cycles do). Off in methods/attest_guest, so that guest needs no C toolchain.
 public-update = ["dep:blst"]
+# TEST ONLY: `Instruction::InitSynthetic` (an instance on a synthetic sync committee, no
+# bootstrap). Only in methods/attest_guest_synthetic, a separate, clearly labelled test image.
+synthetic-init = ["public-update"]
 
 [dev-dependencies]
 lee_core = { workspace = true, features = ["host"] }
@@ -41,6 +44,7 @@ eth_attest_core = { workspace = true, features = ["testkit"] }
 eth_attest_probe = { path = "../probe" }
 eth_consumer = { path = "../consumer" }
 sha2 = "0.10"
+blst = "=0.3.16"
 alloy-trie = { version = "0.9.9", features = ["ethereum", "std"] }
 alloy-primitives = { version = "1.7.3", features = ["rlp"] }
 alloy-rlp = "0.3.17"

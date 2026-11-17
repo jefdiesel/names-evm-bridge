@@ -1,0 +1,9 @@
+== begin-341-forced 2026-11-17T20:00:08Z accounts 4Xk5Mmakj7KJiCAmgqHSR6zReFFhy34ed5UMXev1AWDK@HWjcstPenwtuNnmJtytFYDtJyfioXJX1tSvjKB6tvamM
+before: balance {"jsonrpc":"2.0","id":1,"result":99998301091332} fee state {"jsonrpc":"2.0","id":1,"result":{"height":351,"base_fee_exec":9,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":10,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}}
+
+thread 'main' (1) panicked at $W/src/lez-bridge/attest/program/src/public.rs:431:17:
+RFP021-E11 participation below policy: participation 341 is below the instance's policy of 342
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+tx a3f50c583bc28ef3349b898379adb77b19d6a7565e080849455334753699d8e8
+Error: a3f50c583bc28ef3349b898379adb77b19d6a7565e080849455334753699d8e8 was included in block 352 but reverted
+after: balance {"jsonrpc":"2.0","id":1,"result":99998210740300}

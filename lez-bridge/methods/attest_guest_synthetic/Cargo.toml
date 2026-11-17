@@ -1,0 +1,33 @@
+[package]
+name = "attest_guest_synthetic"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# TEST ONLY (branch public-update): the public-path guest plus eth_attest's `synthetic-init`
+# feature (`Instruction::InitSynthetic`: an instance on a SYNTHETIC sync committee, no bootstrap).
+# A separate, clearly labelled test image, deployed only on throwaway local chains for the
+# low-participation runs; never a deployment's program. Built by attest/cycles like the public guest.
+[workspace]
+
+[dependencies]
+eth_attest = { path = "../../attest/program", features = ["synthetic-init"] }
+lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+
+[patch."https://github.com/a16z/helios"]
+helios-consensus-core = { path = "../../attest/vendor/helios-consensus-core" }
+
+[patch.crates-io]
+# As methods/attest_guest: RISC Zero accelerated BLS12-381 and SHA-256, Helios's ethereum_hashing.
+bls12_381 = { git = "https://github.com/risc0/zkcrypto-bls12_381", tag = "bls12_381/v0.8.0-risczero.1" }
+sha2-v0-9-9 = { git = "https://github.com/risc0/RustCrypto-hashes", package = "sha2", tag = "sha2-v0.9.9-risczero.0" }
+sha2-v0-10-9 = { git = "https://github.com/risc0/RustCrypto-hashes", package = "sha2", tag = "sha2-v0.10.9-risczero.0" }
+ethereum_hashing = { git = "https://github.com/ncitron/ethereum_hashing", rev = "7ee70944ed4fabe301551da8c447e4f4ae5e6c35" }
+# RISC Zero's blst fork (bigint2-accelerated field arithmetic), exactly the version the program pins.
+blst = { git = "https://github.com/risc0/blst", tag = "v0.3.16-risczero.0" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

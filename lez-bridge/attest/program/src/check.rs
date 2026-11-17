@@ -77,6 +77,31 @@ pub fn period_begin(program: &AccountId, config: &InstanceConfig, prev: &LcSumma
     crate::public::verify_period_begin(program, config, prev, update).map_err(|e| code_of(&e))
 }
 
+/// `FinalityBegin`'s verification (the pairing-seam split, up to the Miller loop).
+///
+/// # Errors
+/// The code the program would refuse with.
+#[cfg(feature = "public-update")]
+pub fn finality_begin(
+    program: &AccountId,
+    config: &InstanceConfig,
+    prev: &LcSummary,
+    committee: &[u8],
+    keys: &eth_attest_core::KeyWitnesses,
+    update: &[u8],
+) -> Result<eth_attest_core::PeriodJob, Code> {
+    crate::public::verify_finality_begin(program, config, prev, committee, keys, update).map_err(|e| code_of(&e))
+}
+
+/// `FinalityFinish`'s final exponentiation.
+///
+/// # Errors
+/// The code the program would refuse with.
+#[cfg(feature = "public-update")]
+pub fn finality_finish(job: &eth_attest_core::PeriodJob) -> Result<(), Code> {
+    crate::public::verify_finality_finish(job).map_err(|e| code_of(&e))
+}
+
 /// `PeriodFinish`'s signature check.
 ///
 /// # Errors

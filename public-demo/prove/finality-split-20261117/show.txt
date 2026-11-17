@@ -1,0 +1,6 @@
+  instance 0x081b1ecf28cdc34db28493a71db782a69d98bf640bd11ca442c8bb6378c363fb  chain 11155111  updates 1
+  finalized beacon slot 11563424 (period 1411, epoch 361357)  root 0x74c22adba9b5f1d8e6b014fb41c808a9b6a0995173c87171ed9939eaf13e84f8
+latest anchor: block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1 at GnB2Q2neK9NNjhWCsgSvL3vYeyccBTh4WLpguTLowJ3M (recorded)
+  instance 0x5c4eae87be73dc3e05ce962fe986f89ad88e0e315770bb91bb773a278aaa6be3  chain 11155111  updates 1
+  finalized beacon slot 11563424 (period 1411, epoch 361357)  root 0x74c22adba9b5f1d8e6b014fb41c808a9b6a0995173c87171ed9939eaf13e84f8
+latest anchor: block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1 at BFv6jtYGxLhpcEWcg6V9SM7LsCShFyFqLEtK2qAaT8Du (recorded)

@@ -179,6 +179,8 @@ fn main() -> Result<()> {
         Some("public") => std::process::exit(if public::fixtures_run()? { 0 } else { 1 }),
         Some("public-real") => std::process::exit(if public::real_run(&args[1..])? { 0 } else { 1 }),
         Some("sweep") => std::process::exit(if sweep::run()? { 0 } else { 1 }),
+        Some("split") => std::process::exit(if sweep::split()? { 0 } else { 1 }),
+        Some("synth-chain") => std::process::exit(if sweep::synth_chain(&args[1..])? { 0 } else { 1 }),
         Some("stmt-log" | "stmt-account" | "consumer") => std::process::exit(if stmt::run(&args)? { 0 } else { 1 }),
         _ => {}
     }

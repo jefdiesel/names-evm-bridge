@@ -23,7 +23,7 @@ case "${1:-public}" in
     export CARGO_TARGET_DIR=$W/target RISC0_SKIP_BUILD=1
     cd "$W/src/lez-bridge"
     $LOCK nice -n 19 cargo test -j 4 -p eth_attest -p bridge_core --features eth_attest/public-update \
-      --test public_update --test consumer --test error_codes --test instance --test audit --test panic_texts > "$W/logs/workspace-$T.log" 2>&1
+      --test public_update --test consumer --test error_codes --test finality_split --test instance --test audit --test panic_texts > "$W/logs/workspace-$T.log" 2>&1
     rc=$?; tail -40 "$W/logs/workspace-$T.log"; echo "workspace rc=$rc ($W/logs/workspace-$T.log)"; echo "disk free $(free_gb) GB"; exit $rc ;;
   run) shift; exec nice -n 10 "$W/target-cycles/release/attest_cycles" "$@" ;;
   cli)

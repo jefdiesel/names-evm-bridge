@@ -289,11 +289,11 @@ fn apply(input: &ReceiveInput, e: Effect) -> Response {
             }
         }
         #[cfg(feature = "public-update")]
-        e @ (Effect::JobOpen(_) | Effect::JobFinish { .. } | Effect::JobClose { .. } | Effect::AssertStale { .. } | Effect::AssertCurrent { .. }) => {
+        e @ (Effect::JobOpen(_) | Effect::JobFinish { .. } | Effect::JobFinalize { .. } | Effect::JobClose { .. } | Effect::AssertStale { .. } | Effect::AssertCurrent { .. }) => {
             public::apply_job(input, e)
         }
         #[cfg(not(feature = "public-update"))]
-        Effect::JobOpen(_) | Effect::JobFinish { .. } | Effect::JobClose { .. } | Effect::AssertStale { .. } | Effect::AssertCurrent { .. } => {
+        Effect::JobOpen(_) | Effect::JobFinish { .. } | Effect::JobFinalize { .. } | Effect::JobClose { .. } | Effect::AssertStale { .. } | Effect::AssertCurrent { .. } => {
             panic!("RFP021-E12 not permitted: this build of the program has no public update path")
         }
     }

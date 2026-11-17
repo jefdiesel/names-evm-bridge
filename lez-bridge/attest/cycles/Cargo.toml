@@ -33,7 +33,7 @@ alloy-primitives = { version = "1.7.3", default-features = false }
 risc0-build = "=3.0.5"
 
 [package.metadata.risc0]
-methods = ["../../methods/attest_guest", "../../methods/attest_probe_guest", "../../methods/bridge_guest", "../../methods/attest_guest_public", "../../methods/eth_consumer_guest"]
+methods = ["../../methods/attest_guest", "../../methods/attest_probe_guest", "../../methods/bridge_guest", "../../methods/attest_guest_public", "../../methods/eth_consumer_guest", "../../methods/attest_guest_synthetic"]
 
 # The program's public update path (branch public-update) uses the vendored Helios's hook.
 [patch."https://github.com/a16z/helios"]

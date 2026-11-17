@@ -370,6 +370,23 @@ pub enum Instruction {
     /// Close a job whose `prev` is no longer the store's state (finished, failed or stale).
     /// Anyone may close; a job on the current store cannot be closed.
     CloseJob { job_id: [u8; 32] },
+    /// Step 1 of a FINALITY update split at the pairing seam (low participation): every check of
+    /// `UpdatePublic` up to and including the Miller loop; opens a job holding the Miller value.
+    FinalityBegin {
+        config: InstanceConfig,
+        prev: LcSummary,
+        committee: Vec<u8>,
+        keys: KeyWitnesses,
+        update: Vec<u8>,
+    },
+    /// Step 2: the final exponentiation of the job's Miller value; if it is one, the job sends the
+    /// store its `Advance`, applied only if the store still equals the job's `prev`. Anyone may
+    /// finish.
+    FinalityFinish { job_id: [u8; 32] },
+    /// TEST ONLY, accepted only by a program built with the `synthetic-init` feature (a separate,
+    /// clearly labelled test image): create an instance with the given first store, without a
+    /// bootstrap. For runs on a SYNTHETIC sync committee.
+    InitSynthetic { config: InstanceConfig, genesis: LcSummary },
 }
 
 /// What step 1 of a public period update verified, kept in the job PDA until step 2.
@@ -391,6 +408,9 @@ pub struct PeriodJob {
     pub not_before_ms: u64,
     /// ... and until which (exclusive): the weak-subjectivity deadline of `prev` ([`ws_deadline_ms`]).
     pub deadline_ms: u64,
+    /// A finality job split at the pairing seam: the Miller-loop value (an Fp12 element, 576
+    /// canonical bytes) whose final exponentiation `FinalityFinish` checks. `None` for a period job.
+    pub miller: Option<Vec<u8>>,
 }
 
 /// A job PDA's state.
@@ -454,6 +474,8 @@ pub enum Effect {
     /// To the store PDA, from a job PDA: panics unless the store's state differs from `prev` (an
     /// empty store counts as moved).
     AssertStale { prev: LcSummary },
+    /// To a job PDA (`FinalityFinish`): the final exponentiation of the job's Miller value.
+    JobFinalize { job_id: [u8; 32] },
     /// To the store PDA (`PeriodBegin`, `PeriodFinish`): panics unless the store's state is `prev`,
     /// so a job opens only on a real instance's current state and a stale Finish stops before the
     /// signature check.
