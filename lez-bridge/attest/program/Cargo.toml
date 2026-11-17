@@ -50,3 +50,6 @@ alloy-primitives = { version = "1.7.3", features = ["rlp"] }
 alloy-rlp = "0.3.17"
 serde_json = "1"
 hex = "0.4"
+# The consensus-specs light-client vectors (tests/spec_vectors.rs): snappy-framed SSZ and YAML.
+snap = "1.1"
+serde_yaml = "0.9"

@@ -1,0 +1,20 @@
+program 9iqSp3swsQvYc8xJJCZWXg9SugGzUC8uPbSR2Aybv2LU
+config JDJqQ6YD5gm61PKmtJcW45wHKLjxLW1hENHpkUTP9P67 (write-once)
+  chain 11155111 (sepolia)  genesis validators root 0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078
+  genesis time 1655733600  seconds per slot 12
+  fork genesis   0x90000069 at epoch 0
+  fork altair    0x90000070 at epoch 50
+  fork bellatrix 0x90000071 at epoch 100
+  fork capella   0x90000072 at epoch 56832
+  fork deneb     0x90000073 at epoch 132608
+  fork electra   0x90000074 at epoch 222464
+  fork fulu      0x90000075 at epoch 272640
+  fork gloas     0x90000076 at epoch 353024
+  checkpoint 0x2ca5e6854a13cd4d0907d4f9fd8a5c894f66c979d41f85fc76fddb054b192532  min participants 342  salt 0x0000000000000000000000000000000000000000000000000000000000000000
+store 7oQ6PcQB8PruYUdSG1T4vpWgxjrZcW1wiWTNZDpo6ZXG
+  instance 0x0c63f6f727a5dfc4adc5b911f4fee66de7e8ceae23f98e629dd396f5f8db44d3  chain 11155111  updates 2
+  finalized beacon slot 11583488 (period 1414, epoch 361984)  root 0xac43b432b640de6d2f4c0bda74b4e459dcb12be53e802882adecc42238f3d70f
+    proposer 669  parent 0x3f408d2ec2c8a78ac7389830a0bc7c625bf0d0cc35211f89a18429172a7ca0e0  state 0xc9ab1408b0e8dadb972ce44b21f64804d1163dae580ae9863f172469cdf1938a  body 0x062a580bda946b9b35cee700b224d9f01e889dfdf6eae6b441e755b58a6ea616
+  execution block hash 0xcd8721b0b5a1ba42c2c932fdee55d935f3096146bad75ee687615f3cadd8fa24  state root - (Gloas header: block hash only)  number -
+  current committee 0xbd0f6fec8119907973c0e0721a4a90a5a929676c16cd7813c81a2d3929eaa122  next committee 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced
+latest anchor: block hash 0xcd8721b0b5a1ba42c2c932fdee55d935f3096146bad75ee687615f3cadd8fa24 at H8yRK95QvpX7CtMuMkD9m6732cBJzpHCAHAYDFgaLxzB (recorded)

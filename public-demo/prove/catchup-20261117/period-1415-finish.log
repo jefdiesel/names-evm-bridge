@@ -1,0 +1,22 @@
+store now:
+  instance 0x0c63f6f727a5dfc4adc5b911f4fee66de7e8ceae23f98e629dd396f5f8db44d3  chain 11155111  updates 2
+  finalized beacon slot 11583488 (period 1414, epoch 361984)  root 0xac43b432b640de6d2f4c0bda74b4e459dcb12be53e802882adecc42238f3d70f
+    proposer 669  parent 0x3f408d2ec2c8a78ac7389830a0bc7c625bf0d0cc35211f89a18429172a7ca0e0  state 0xc9ab1408b0e8dadb972ce44b21f64804d1163dae580ae9863f172469cdf1938a  body 0x062a580bda946b9b35cee700b224d9f01e889dfdf6eae6b441e755b58a6ea616
+  execution block hash 0xcd8721b0b5a1ba42c2c932fdee55d935f3096146bad75ee687615f3cadd8fa24  state root - (Gloas header: block hash only)  number -
+  current committee 0xbd0f6fec8119907973c0e0721a4a90a5a929676c16cd7813c81a2d3929eaa122  next committee 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced
+period update: signature slot 11591745 (period 1415), attested slot 11591744, finalized slot 11591680, participation 509/512, carries the next committee
+signed by the store's NEXT committee 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced
+509/512 signers, 4 key witnesses
+verified natively (both steps); JOB_ID=0x8c1079377242d387262309f359022b7d0d698741b6592ffa0f0d7fc94ed97b95 JOB_PDA=Exv9dFBVN37vGWzyYQGT2yGZiBMmzuwpyDhD4KnW9pig
+Finish: message 25879 bytes; public transaction from HH6Mk2iz8VkqNj5kJRsw5fXmCiUaP53WKKA2HV293yZo
+submitted in 392.2ms
+tx 546d1f3b34d744138c2fb9680fa655091b10de77faa77091832c134f943d86e2
+applied in block 1094
+charged: fee 94292842 (payer balance 99997857804707 -> 99997763511865); wire bytes 26469; base fees exec 10 / stor 8 at height 1093 (after: 11 / 8 at 1094); so execution gas = (fee - bytes x stor) / exec = 9408109 in block 1094
+  (a block charges at its opening fee state, the quote before; the head moved after it. If another block came in between, the figure is approximate; the dry run's metered cycles are exact)
+store on chain now:
+  instance 0x0c63f6f727a5dfc4adc5b911f4fee66de7e8ceae23f98e629dd396f5f8db44d3  chain 11155111  updates 3
+  finalized beacon slot 11591680 (period 1415, epoch 362240)  root 0x67d09a1f506d701c300e70bad92510f6528702e49978322d7b2df8a62677ba51
+    proposer 1776  parent 0xcdd81936d99cc010f76cd1702787dffc91871449db5847638a4c41b02875d9f1  state 0x402b561f9a30ab38dfc7ee9f822542b9b487d5fb772e8ca50f2ee2a7d8ce8565  body 0x1b60c94b85644bf1407423c971502405b6177504c74cedb6ccdb722f1dced05d
+  execution block hash 0x0fa33c5ddba1b61ab20f86025958d27e28fc0b760aa0e557666493a18c95c438  state root - (Gloas header: block hash only)  number -
+  current committee 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced  next committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891

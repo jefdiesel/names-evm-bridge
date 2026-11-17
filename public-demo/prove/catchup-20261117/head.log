@@ -1,0 +1,28 @@
+store now:
+  instance 0x0c63f6f727a5dfc4adc5b911f4fee66de7e8ceae23f98e629dd396f5f8db44d3  chain 11155111  updates 3
+  finalized beacon slot 11591680 (period 1415, epoch 362240)  root 0x67d09a1f506d701c300e70bad92510f6528702e49978322d7b2df8a62677ba51
+    proposer 1776  parent 0xcdd81936d99cc010f76cd1702787dffc91871449db5847638a4c41b02875d9f1  state 0x402b561f9a30ab38dfc7ee9f822542b9b487d5fb772e8ca50f2ee2a7d8ce8565  body 0x1b60c94b85644bf1407423c971502405b6177504c74cedb6ccdb722f1dced05d
+  execution block hash 0x0fa33c5ddba1b61ab20f86025958d27e28fc0b760aa0e557666493a18c95c438  state root - (Gloas header: block hash only)  number -
+  current committee 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced  next committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891
+finality update from https://lodestar-sepolia.chainsafe.io (gloas): signature period 1416, finalized slot 11601856; store period 1415
+finality update: signature slot 11601921 (period 1416), attested slot 11601920, finalized slot 11601856, participation 492/512
+signed by the store's NEXT committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891
+492/512 signers, 21 key witnesses
+verified natively (the program's own code); the store advances to:
+  instance 0x0c63f6f727a5dfc4adc5b911f4fee66de7e8ceae23f98e629dd396f5f8db44d3  chain 11155111  updates 4
+  finalized beacon slot 11601856 (period 1416, epoch 362558)  root 0xd17198d540236e7d70a712f6eef28d11d84ca155c0ae4e86a6c2a083c024701c
+    proposer 1954  parent 0xd91aa75cbd122c9fc5794d13473289e0a4232e5e642ce870438760d2a4e1c5b9  state 0x606b45a21f56c0031e75d6476cb8376a99afb97b0b7f5867768b008daebb5266  body 0xa634db1f92218ea56fde3aea3e482484e1fc2ccc24bf2d917f729d17b2fff7d3
+  execution block hash 0xf65166cda9f7943d36b3445d93318e01cbdd07654f80644693725ce77cf39abc  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+update message 28651 bytes; public transaction from HH6Mk2iz8VkqNj5kJRsw5fXmCiUaP53WKKA2HV293yZo
+submitted in 380.9ms
+tx 2079e9517ad487a1a79b32f889d861ce575b7e7ad1127d79d09ff0b3ddc62ccf
+applied in block 1095
+charged: fee 104751467 (payer balance 99997763511865 -> 99997658760398); wire bytes 29177; base fees exec 11 / stor 8 at height 1094 (after: 12 / 8 at 1095); so execution gas = (fee - bytes x stor) / exec = 9501641 in block 1095
+  (a block charges at its opening fee state, the quote before; the head moved after it. If another block came in between, the figure is approximate; the dry run's metered cycles are exact)
+store on chain now:
+  instance 0x0c63f6f727a5dfc4adc5b911f4fee66de7e8ceae23f98e629dd396f5f8db44d3  chain 11155111  updates 4
+  finalized beacon slot 11601856 (period 1416, epoch 362558)  root 0xd17198d540236e7d70a712f6eef28d11d84ca155c0ae4e86a6c2a083c024701c
+    proposer 1954  parent 0xd91aa75cbd122c9fc5794d13473289e0a4232e5e642ce870438760d2a4e1c5b9  state 0x606b45a21f56c0031e75d6476cb8376a99afb97b0b7f5867768b008daebb5266  body 0xa634db1f92218ea56fde3aea3e482484e1fc2ccc24bf2d917f729d17b2fff7d3
+  execution block hash 0xf65166cda9f7943d36b3445d93318e01cbdd07654f80644693725ce77cf39abc  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown

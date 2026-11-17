@@ -271,7 +271,10 @@ pub fn verify_period_finish(job: &PeriodJob, committee: &[u8], keys: &KeyWitness
 /// # Errors
 /// The committee SSZ has the wrong length or a key does not decompress.
 pub fn key_witnesses(committee_ssz: &[u8], bits: &[bool]) -> Result<KeyWitnesses, String> {
-    if committee_ssz.len() != eth_attest_core::COMMITTEE_SSZ_LEN || bits.len() != 512 {
+    // Any committee size (512 on every real network; the consensus-spec vectors' minimal preset
+    // has 32): `bits.len()` keys, then the aggregate.
+    let size = bits.len();
+    if size == 0 || committee_ssz.len() != (size + 1) * 48 {
         return Err("committee SSZ or bits have the wrong length".into());
     }
     let unc = |i: usize| fast::uncompress(&committee_ssz[i * 48..i * 48 + 48]).ok_or_else(|| format!("committee key {i} does not decompress"));
@@ -281,7 +284,7 @@ pub fn key_witnesses(committee_ssz: &[u8], bits: &[bool]) -> Result<KeyWitnesses
             absent.push((u16::try_from(i).map_err(|_| "index")?, unc(i)?));
         }
     }
-    Ok(KeyWitnesses { aggregate: unc(512)?, absent })
+    Ok(KeyWitnesses { aggregate: unc(size)?, absent })
 }
 
 /// The participation bits of a finality or period update (SSZ).
@@ -572,11 +575,14 @@ pub mod fast {
     }
 
     fn miller_raw(committee: &[u8], keys: &KeyWitnesses, bits: &[bool], msg: &[u8; 32], sig: &[u8; 96]) -> Option<blst_fp12> {
-        if committee.len() != 513 * 48 || bits.len() != 512 {
+        // `bits.len()` keys then the aggregate (512 on every real network; the program's callers
+        // pass a 512-bit vector, the consensus-spec minimal vectors 32).
+        let size = bits.len();
+        if size == 0 || committee.len() != (size + 1) * 48 {
             return None;
         }
         let committed = |i: usize| &committee[i * 48..i * 48 + 48];
-        let Some(agg) = g1(&keys.aggregate, committed(512)) else { return None };
+        let Some(agg) = g1(&keys.aggregate, committed(size)) else { return None };
         let mut absent = keys.absent.iter();
         let mut neg = blst_p1::default();
         for (i, b) in bits.iter().enumerate() {

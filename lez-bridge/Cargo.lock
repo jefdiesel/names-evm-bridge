@@ -3218,7 +3218,9 @@ dependencies = [
  "lee_core",
  "risc0-zkvm",
  "serde_json",
+ "serde_yaml",
  "sha2 0.10.9",
+ "snap",
  "tree_hash 0.10.0",
 ]
 

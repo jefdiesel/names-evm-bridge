@@ -1,0 +1,51 @@
+warning: function `verify_sync_committee_signature` is never used
+   --> attest/vendor/helios-consensus-core/src/consensus_core.rs:531:4
+    |
+531 | fn verify_sync_committee_signature(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `helios-consensus-core` (lib) generated 1 warning
+warning: unused import: `Message`
+  --> attest/program/src/public.rs:29:64
+   |
+29 |     Effect, InstanceConfig, JobState, KeyWitnesses, LcSummary, Message, PeriodJob, committee_hash, instance_id,
+   |                                                                ^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `eth_attest` (lib) generated 1 warning (run `cargo fix --lib -p eth_attest` to apply 1 suggestion)
+warning: unreachable pattern
+   --> attest/program/tests/spec_vectors.rs:119:9
+    |
+119 |         _ => verify_generic_update_with::<M, _>(g, slot, store, gvr, forks, |committee, bits, root, sig| {
+    |         ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> attest/program/tests/spec_vectors.rs:119:9
+    |
+110 |         0 => verify_generic_update(g, slot, store, gvr, forks).is_ok(),
+    |         - matches some of the same values
+111 |         _ => verify_generic_update_with::<M, _>(g, slot, store, gvr, forks, |committee, bits, root, sig| {
+    |         - matches some of the same values
+...
+119 |         _ => verify_generic_update_with::<M, _>(g, slot, store, gvr, forks, |committee, bits, root, sig| {
+    |         ^ collectively making this unreachable
+    = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: `eth_attest` (test "spec_vectors") generated 1 warning
+warning: the following packages contain code that will be rejected by a future version of Rust: block v0.1.6, proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+
+running 1 test
+consensus-specs light-client vectors ($W/specs):
+  sync cases run: 22; process_update steps: 70 (each through 3 paths: 210 path-checks passed; 132 path-checks applied an update, the rest expected the store unchanged); failed: 0
+  not applicable: 70 optimistic-header checks, 12 updates after a force_update, 17 sync cases (["altair/light_client/sync/pyspec_tests/advance_finality_without_sync_committee: pre-Capella bootstrap", "altair/light_client/sync/pyspec_tests/capella_store_with_legacy_data: pre-Capella bootstrap", "altair/light_client/sync/pyspec_tests/deneb_store_with_legacy_data: pre-Capella bootstrap", "altair/light_client/sync/pyspec_tests/electra_store_with_legacy_data: pre-Capella bootstrap", "altair/light_client/sync/pyspec_tests/light_client_sync: pre-Capella bootstrap", "altair/light_client/sync/pyspec_tests/light_client_sync_no_force_update: pre-Capella bootstrap", "altair/light_client/sync/pyspec_tests/supply_sync_committee_from_past_update: pre-Capella bootstrap", "bellatrix/light_client/sync/pyspec_tests/advance_finality_without_sync_committee: pre-Capella bootstrap", "bellatrix/light_client/sync/pyspec_tests/capella_deneb_fork: pre-Capella bootstrap", "bellatrix/light_client/sync/pyspec_tests/capella_electra_fork: pre-Capella bootstrap", "bellatrix/light_client/sync/pyspec_tests/capella_fork: pre-Capella bootstrap", "bellatrix/light_client/sync/pyspec_tests/capella_store_with_legacy_data: pre-Capella bootstrap", "bellatrix/light_client/sync/pyspec_tests/deneb_store_with_legacy_data: pre-Capella bootstrap", "bellatrix/light_client/sync/pyspec_tests/electra_store_with_legacy_data: pre-Capella bootstrap", "bellatrix/light_client/sync/pyspec_tests/light_client_sync: pre-Capella bootstrap", "bellatrix/light_client/sync/pyspec_tests/light_client_sync_no_force_update: pre-Capella bootstrap", "bellatrix/light_client/sync/pyspec_tests/supply_sync_committee_from_past_update: pre-Capella bootstrap"])
+  applied updates re-checked with one participation bit cleared: 132 refused of 132
+  upgrade_store steps (no-ops for Helios's fork-tagged headers): 2
+  not applicable: update_ranking 6, single_merkle_proof 22, data_collection 10 cases
+test consensus_spec_light_client_vectors ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.11s
+

@@ -23,8 +23,20 @@ case "${1:-public}" in
     export CARGO_TARGET_DIR=$W/target RISC0_SKIP_BUILD=1
     cd "$W/src/lez-bridge"
     $LOCK nice -n 19 cargo test -j 4 -p eth_attest -p bridge_core --features eth_attest/public-update \
-      --test public_update --test consumer --test error_codes --test finality_split --test instance --test audit --test panic_texts > "$W/logs/workspace-$T.log" 2>&1
+      --test public_update --test consumer --test error_codes --test finality_split --test spec_vectors --test instance --test audit --test panic_texts > "$W/logs/workspace-$T.log" 2>&1
     rc=$?; tail -40 "$W/logs/workspace-$T.log"; echo "workspace rc=$rc ($W/logs/workspace-$T.log)"; echo "disk free $(free_gb) GB"; exit $rc ;;
+  vectors)
+    # The official consensus-specs light-client vectors (CC0-1.0), fetched at test time, never
+    # vendored: release v1.6.1, the minimal preset's light_client cases only.
+    S=$W/specs; mkdir -p "$S"
+    if [ ! -d "$S/tests/minimal" ]; then
+      curl -sSfL -o "$S/minimal.tar.gz" https://github.com/ethereum/consensus-specs/releases/download/v1.6.1/minimal.tar.gz \
+        && (cd "$S" && tar -xzf minimal.tar.gz "*/light_client/*") && rm -f "$S/minimal.tar.gz" || { echo "fetch failed"; exit 1; }
+    fi
+    export CARGO_TARGET_DIR=$W/target RISC0_SKIP_BUILD=1 CONSENSUS_SPEC_TESTS=$S
+    cd "$W/src/lez-bridge"
+    $LOCK nice -n 19 cargo test -j 4 -p eth_attest --features public-update --test spec_vectors -- --nocapture > "$W/logs/vectors-$T.log" 2>&1
+    rc=$?; grep -E "consensus-specs|sync cases|re-checked|not applicable|upgrade_store|FAIL|test result|panicked" "$W/logs/vectors-$T.log"; echo "vectors rc=$rc ($W/logs/vectors-$T.log)"; exit $rc ;;
   run) shift; exec nice -n 10 "$W/target-cycles/release/attest_cycles" "$@" ;;
   cli)
     # The lez-bridge CLI with the public-path commands (release, guests not embedded: deploy

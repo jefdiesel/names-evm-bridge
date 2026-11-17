@@ -1341,9 +1341,14 @@ async fn fetch_update(http: &reqwest::Client, beacon: &str, kind: &str, prev: &L
             );
             return Ok(update);
         }
-        println!("signed in period {sig_period}: the store (period {store_period}) needs the period-{store_period} update first");
+        println!("signed in period {sig_period}: the store (period {store_period}) needs period updates first");
     }
-    let u = period_update(http, beacon, store_period).await?;
+    // Catch-up, one period per update: a store that does not know its next committee needs its
+    // own period's update (which proves it); one that does needs the next period's update, which
+    // that committee signed and which moves the store into that period.
+    let want = if prev.next_committee.is_some() { store_period + 1 } else { store_period };
+    println!("period update for period {want} (store period {store_period}, next committee {})", if prev.next_committee.is_some() { "known" } else { "unknown" });
+    let u = period_update(http, beacon, want).await?;
     Ok(LcUpdate::Period(u))
 }
 
