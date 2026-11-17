@@ -1,0 +1,2 @@
+  log 0 of tx 2: address 0x42ed97b6b3f0249db3222ff44f42ce1ae7af8dd3, 1 topics, 32 data bytes; statement id 0x2d94760a95acddac16ccabd261854facc7b95a80cdc34638a2cc8ae85a3cd23e
+  whole transaction 108523 user cycles; message 2418 bytes; anchor PDA AhwtcYhjBdhd2rhCEr7cotf41Jmiyo8PZ7tUihmp91s8

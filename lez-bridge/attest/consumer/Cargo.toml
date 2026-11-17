@@ -1,0 +1,19 @@
+[package]
+name = "eth_consumer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# The RFP-021 reference consumers (branch public-update): an ERC-20 transfer to a given contract,
+# and a native ETH transfer to a given contract (through the contract's deposit event), each
+# proved as a receipt-log statement under an anchor of an attestation instance and spent once
+# (a nullifier keyed on the statement id). One program; each deployment is configured by `Init`.
+[dependencies]
+borsh.workspace = true
+eth_attest_core.workspace = true
+lee_core.workspace = true
+
+[dev-dependencies]
+lee_core = { workspace = true, features = ["host"] }
+eth_attest = { workspace = true }
+eth_attest_core = { workspace = true, features = ["testkit"] }

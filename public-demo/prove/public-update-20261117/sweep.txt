@@ -1,0 +1,98 @@
+# participation sweep, public update path, SYNTHETIC committee over the recorded Sepolia finality update
+  signing root 0x977022072e9381afca09ab36b663e8f58fbffe7fd7e5dc30a4e215664d5f5f4f (Helios, through the hook); committee hash 0x8f66b883bcb02ab95d76b304efeef0f1ff44c56b844b095c0490c917a29cdf0f
+  N=512: 512/512 signers, 1 key witnesses (aggregate + 0 non-signers)
+  message 26659 bytes (borsh)
+  N=512: submitter's actor (UpdatePublic): user=9161483 total=9961472 segments=10 (0.92x the 10M cap)
+  N=512: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=512: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=506: 506/512 signers, 7 key witnesses (aggregate + 6 non-signers)
+  message 27247 bytes (borsh)
+  N=506: submitter's actor (UpdatePublic): user=9227923 total=9961472 segments=10 (0.92x the 10M cap)
+  N=506: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=506: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=480: 480/512 signers, 33 key witnesses (aggregate + 32 non-signers)
+  message 29795 bytes (borsh)
+  N=480: submitter's actor (UpdatePublic): user=9511483 total=10485760 segments=10 (0.95x the 10M cap)
+  N=480: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=480: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=469: 469/512 signers, 44 key witnesses (aggregate + 43 non-signers)
+  message 30873 bytes (borsh)
+  N=469: submitter's actor (UpdatePublic): user=9633854 total=10485760 segments=10 (0.96x the 10M cap)
+  N=469: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=469: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=450: 450/512 signers, 63 key witnesses (aggregate + 62 non-signers)
+  message 32735 bytes (borsh)
+  N=450: submitter's actor (UpdatePublic): user=9841590 total=10616832 segments=11 (0.98x the 10M cap)
+  N=450: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=450: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=445: 445/512 signers, 68 key witnesses (aggregate + 67 non-signers)
+  message 33225 bytes (borsh)
+  N=445: submitter's actor (UpdatePublic): user=9895589 total=10747904 segments=11 (0.99x the 10M cap)
+  N=445: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=445: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=443: 443/512 signers, 70 key witnesses (aggregate + 69 non-signers)
+  message 33421 bytes (borsh)
+  N=443: submitter's actor (UpdatePublic): user=9917388 total=10747904 segments=11 (0.99x the 10M cap)
+  N=443: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=443: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=442: 442/512 signers, 71 key witnesses (aggregate + 70 non-signers)
+  message 33519 bytes (borsh)
+  N=442: submitter's actor (UpdatePublic): user=9928798 total=10747904 segments=11 (0.99x the 10M cap)
+  N=442: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=442: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=441: 441/512 signers, 72 key witnesses (aggregate + 71 non-signers)
+  message 33617 bytes (borsh)
+  N=441: submitter's actor (UpdatePublic): user=9939182 total=10747904 segments=11 (0.99x the 10M cap)
+  N=441: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=441: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=440: 440/512 signers, 73 key witnesses (aggregate + 72 non-signers)
+  message 33715 bytes (borsh)
+  N=440: submitter's actor (UpdatePublic): user=9950587 total=10747904 segments=11 (1.00x the 10M cap)
+  N=440: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=440: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=430: 430/512 signers, 83 key witnesses (aggregate + 82 non-signers)
+  message 34695 bytes (borsh)
+  N=430: submitter's actor (UpdatePublic): user=10059447 total=11010048 segments=11 (1.01x the 10M cap)
+  N=430: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=430: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=427: 427/512 signers, 86 key witnesses (aggregate + 85 non-signers)
+  message 34989 bytes (borsh)
+  N=427: submitter's actor (UpdatePublic): user=10097830 total=11010048 segments=11 (1.01x the 10M cap)
+  N=427: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=427: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=420: 420/512 signers, 93 key witnesses (aggregate + 92 non-signers)
+  message 35675 bytes (borsh)
+  N=420: submitter's actor (UpdatePublic): user=10174699 total=11010048 segments=11 (1.02x the 10M cap)
+  N=420: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=420: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=400: 400/512 signers, 113 key witnesses (aggregate + 112 non-signers)
+  message 37635 bytes (borsh)
+  N=400: submitter's actor (UpdatePublic): user=10392605 total=11534336 segments=11 (1.04x the 10M cap)
+  N=400: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=400: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+  N=342: 342/512 signers, 171 key witnesses (aggregate + 170 non-signers)
+  message 43319 bytes (borsh)
+  N=342: submitter's actor (UpdatePublic): user=11037115 total=12058624 segments=12 (1.10x the 10M cap)
+  N=342: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  N=342: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+
+### Participation sweep (synthetic committee; recorded Sepolia headers and branches)
+| signers N/512 | submitter's actor | whole transaction | of 10M | fits | Begin (composed) | Finish (composed) |
+|---:|---:|---:|---:|---|---:|---:|
+| 512 | 9161483 | 9219123 | 92.19% | yes | 5580346 | 3638777 |
+| 506 | 9227923 | 9285563 | 92.86% | yes | 5646786 | 3638777 |
+| 480 | 9511483 | 9569123 | 95.69% | yes | 5930346 | 3638777 |
+| 469 | 9633854 | 9691494 | 96.91% | yes | 6052717 | 3638777 |
+| 450 | 9841590 | 9899230 | 98.99% | yes | 6260453 | 3638777 |
+| 445 | 9895589 | 9953229 | 99.53% | yes | 6314452 | 3638777 |
+| 443 | 9917388 | 9975028 | 99.75% | yes | 6336251 | 3638777 |
+| 442 | 9928798 | 9986438 | 99.86% | yes | 6347661 | 3638777 |
+| 441 | 9939182 | 9996822 | 99.97% | yes | 6358045 | 3638777 |
+| 440 | 9950587 | 10008227 | 100.08% | NO | 6369450 | 3638777 |
+| 430 | 10059447 | 10117087 | 101.17% | NO | 6478310 | 3638777 |
+| 427 | 10097830 | 10155470 | 101.55% | NO | 6516693 | 3638777 |
+| 420 | 10174699 | 10232339 | 102.32% | NO | 6593562 | 3638777 |
+| 400 | 10392605 | 10450245 | 104.50% | NO | 6811468 | 3638777 |
+| 342 | 11037115 | 11094755 | 110.95% | NO | 7455978 | 3638777 |
+lowest N in this sweep that fits one transaction: 441
+(Begin = submitter's actor - 3581137 final exponentiation; Finish = 3581137 + Advance + RecordAnchor; job account write/read not included)

@@ -1,0 +1,10 @@
+# reference consumer erc20-11155111: config PDA 2h2ysSFoTbngCENmtC4La7dNniAyafLLKEyp6RUnNh25
+  block 12156175 (0xeaa55b9fded95df5541ba345aff0874ee8dac9e3ef7d8f0f5cedccb39bb56eba), 118 receipts, receipts root matches the header
+  accepted natively: sender 0x133e695512bf7b11ad5f7c2739971e99ea5b0965, amount 0x00000000000000000000000000000000000000000000000000476dbc80667a8d, recipient 0xbdc1fe97e787ae7f653ffbccd74ec49814fe6aa1
+  statement id 0xd02461729b36422c41e7cea91b014a815561d1213e0dbb0b93c4911e8804b67f; nullifier PDA Qsa7oNA62FMVWGYRaS3VLhBhwEr4ZAr8Hf4dx7aEw9y; anchor PDA 4ZWpzYmUYxiRM7tPR6DdKvAEAPMGJgQfaV1ErQkDhR2m
+  consumer: the claim in the signer's actor: user=167515 total=262144 segments=1 (0.02x the 10M cap)
+  attestation: AssertAnchor: user=17097 total=65536 segments=1 (0.00x the 10M cap)
+  consumer: nullifier PDA: user=13150 total=65536 segments=1 (0.00x the 10M cap)
+  consumer: config PDA check: user=18548 total=65536 segments=1 (0.00x the 10M cap)
+  whole claim transaction 216310 user cycles; message 5789 bytes
+messages written: consumer-erc20-11155111-init.hex, consumer-erc20-11155111-claim-0-1.hex

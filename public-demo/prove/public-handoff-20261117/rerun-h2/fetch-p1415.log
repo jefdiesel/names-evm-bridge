@@ -1,0 +1,23 @@
+store now:
+  instance 0x4e66926d34a1d27ad37b07a077f662a8eaea614f49b4bf09cfb04ff30139ba1d  chain 11155111  updates 0
+  finalized beacon slot 11599840 (period 1415, epoch 362495)  root 0xb0bb44007299221f4e545390c0ea3f46363b70e9680b2d303953e3486378de89
+    proposer 1186  parent 0xd032684157ed7e2da24cda3d4d342db5527c654578b0868a5c03fd5af3007a65  state 0xc9bf3c079665309888c979ce325c756a3441693aaeb58baed4a7bc3bc856cea4  body 0x1dbbd9707fd0806387311261cfab8f73862abc9674ff91d0c328c8c53e8fc0b2
+  execution block hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730  state root - (Gloas header: block hash only)  number -
+  current committee 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced  next committee unknown
+committee witness: current 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced (24624 bytes)
+period update: signature slot 11591745 (period 1415), attested slot 11591744, finalized slot 11591680, participation 509/512, carries the next committee
+verified natively (Helios consensus-core, the program's own code). Public effects of this update:
+  1. Advance -> store 7cxpPQWxRQAa7RgqiBHveASFDtb397dCsgd1SH5SxbfK (551 bytes: the old and new summary, both public)
+       next: instance 0x4e66926d34a1d27ad37b07a077f662a8eaea614f49b4bf09cfb04ff30139ba1d  chain 11155111  updates 1
+       next: finalized beacon slot 11599840 (period 1415, epoch 362495)  root 0xb0bb44007299221f4e545390c0ea3f46363b70e9680b2d303953e3486378de89
+       next:   proposer 1186  parent 0xd032684157ed7e2da24cda3d4d342db5527c654578b0868a5c03fd5af3007a65  state 0xc9bf3c079665309888c979ce325c756a3441693aaeb58baed4a7bc3bc856cea4  body 0x1dbbd9707fd0806387311261cfab8f73862abc9674ff91d0c328c8c53e8fc0b2
+       next: execution block hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730  state root - (Gloas header: block hash only)  number -
+       next: current committee 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced  next committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891
+  (the finalized header is unchanged: no anchor recorded; the next committee is learned)
+  event Advanced { beacon_slot 11599840, block_hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730, next_committee_known true }
+  valid from LEZ block time 1794834540000 ms (start of the signature slot; now 1794940543469: ok)
+  private (never published by LEZ): the update (26424 bytes), the committee witness, HH6Mk2iz8VkqNj5kJRsw5fXmCiUaP53WKKA2HV293yZo
+NEXT_SLOT=11599840
+NEXT_BLOCK_HASH=0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730
+saved the update, its kind and the committee witness in $W/run-h2/p1415
+Error: HH6Mk2iz8VkqNj5kJRsw5fXmCiUaP53WKKA2HV293yZo is not a private account of this wallet. An update costs 37-46M user cycles, over LEZ's 10M cap per public transaction and per block, so it must run in a private account's proved execution (`lez-bridge wallet account new private`, fund it with `shield`)

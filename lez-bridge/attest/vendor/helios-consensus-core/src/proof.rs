@@ -46,13 +46,46 @@ pub fn is_next_committee_proof_valid<S: ConsensusSpec>(
         (23, 5)
     };
 
-    is_proof_valid(
+    // RFP-021 patch 2 (branch public-update): the next committee's root by direct SHA-256 calls
+    // (`sync_committee_root`, equal to `tree_hash_root`) instead of `tree_hash`, which costs about
+    // 8M zkVM cycles for 512 keys against about 1.3M. Same data, same root, same branch check.
+    is_root_proof_valid(
         attested_header.state_root,
-        next_committee,
+        sync_committee_root(next_committee),
         next_committee_branch,
         depth,
         index,
     )
+}
+
+/// RFP-021 patch 2: `hash_tree_root(SyncCommittee)` by direct SHA-256 calls. A key is a 48-byte
+/// vector, so its root is SHA-256(key ‖ 16 zero bytes); the 512 key roots are merkleized (depth 9)
+/// and the result hashed with the aggregate key's root. Mainnet preset (512 keys) only.
+pub fn sync_committee_root<S: ConsensusSpec>(committee: &SyncCommittee<S>) -> B256 {
+    let ssz = ssz::Encode::as_ssz_bytes(committee);
+    let leaf = |k: &[u8]| {
+        let mut h = Sha256::new();
+        h.update(k);
+        h.update([0u8; 16]);
+        B256::from_slice(h.finalize().as_slice())
+    };
+    let n = ssz.len() / 48 - 1;
+    let mut layer: Vec<B256> = (0..n).map(|i| leaf(&ssz[i * 48..i * 48 + 48])).collect();
+    while layer.len() > 1 {
+        layer = layer
+            .chunks(2)
+            .map(|p| {
+                let mut h = Sha256::new();
+                h.update(p[0]);
+                h.update(p[1]);
+                B256::from_slice(h.finalize().as_slice())
+            })
+            .collect();
+    }
+    let mut h = Sha256::new();
+    h.update(layer[0]);
+    h.update(leaf(&ssz[n * 48..n * 48 + 48]));
+    B256::from_slice(h.finalize().as_slice())
 }
 
 pub fn is_current_committee_proof_valid<S: ConsensusSpec>(

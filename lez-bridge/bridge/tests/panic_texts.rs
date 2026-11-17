@@ -231,8 +231,8 @@ const ATTESTED_CASES: [(&str, Option<&str>); 14] = [
     // From the attestation program: insufficient finality, about the public anchor only. On LEZ
     // an anchor PDA that does not exist fails earlier, as the runtime's UnadmittedPublicActor
     // (the simulator admits only bridge PDAs); the bridge cannot seed another program's PDA.
-    ("an anchor the instance did not finalize", Some("anchor not finalized by this instance")),
-    ("another chain id", Some("anchor is for another chain")),
+    ("an anchor the instance did not finalize", Some("RFP021-E01 header not finalized: anchor not finalized by this instance")),
+    ("another chain id", Some("RFP021-E07 chain id mismatch: anchor is for another chain")),
     ("another attestation instance", Some("claim for another attestation source")),
 ];
 
@@ -659,6 +659,11 @@ fn no_program_panic_can_print_a_value() {
     // by attest/program/tests/instance.rs.
     assert_eq!(attest.len(), 2, "{attest:#?}");
     assert!(attest.iter().all(|p| p.contains("interpolates {e}")), "{attest:#?}");
+    // The public path (branch public-update): the same kind of exception, three verifiers
+    // (finality, period Begin, period Finish); texts pinned by attest/program/tests/public_update.rs.
+    let public = scan("attest/program/src/public.rs", include_str!("../../attest/program/src/public.rs"));
+    assert_eq!(public.len(), 3, "{public:#?}");
+    assert!(public.iter().all(|p| p.contains("interpolates {e}")), "{public:#?}");
     // The scanner does find what it looks for.
     let planted = "fn f(r: Result<u8, ()>, x: u8) {\n    let a = r.expect(\"decodes\");\n    assert_eq!(a, x, \"same\");\n    assert!(a == x, \"{x} differs\");\n    panic!(\"{}\", x);\n}\n";
     assert_eq!(scan("planted", planted).len(), 4, "{:#?}", scan("planted", planted));

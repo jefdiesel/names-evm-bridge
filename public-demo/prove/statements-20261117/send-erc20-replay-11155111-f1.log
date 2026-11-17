@@ -1,0 +1,9 @@
+== erc20-replay-11155111-f1 2026-11-17T18:44:18Z: program HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n accounts 4ZWpzYmUYxiRM7tPR6DdKvAEAPMGJgQfaV1ErQkDhR2m@DVM9PDn8VGnGAyw24jbesZ62GGcMJ1ppYBeFmmZSjwzi,Qsa7oNA62FMVWGYRaS3VLhBhwEr4ZAr8Hf4dx7aEw9y@HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n,2h2ysSFoTbngCENmtC4La7dNniAyafLLKEyp6RUnNh25@HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n gas limit 10000000
+before: balance {"jsonrpc":"2.0","id":1,"result":99999604303528} fee state {"jsonrpc":"2.0","id":1,"result":{"height":48,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":48}
+
+thread 'main' (1) panicked at $W/src/lez-bridge/attest/consumer/src/lib.rs:202:21:
+already claimed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+tx 1a35a5f54b55821089888aefac7d3f2e7b0e302ddfc55f66e08aec4b14916994
+Error: 1a35a5f54b55821089888aefac7d3f2e7b0e302ddfc55f66e08aec4b14916994 was included in block 49 but reverted
+after: balance {"jsonrpc":"2.0","id":1,"result":99999524252496} fee state {"jsonrpc":"2.0","id":1,"result":{"height":49,"base_fee_exec":9,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":10,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":49} (rc 5)

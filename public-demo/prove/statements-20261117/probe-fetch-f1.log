@@ -1,0 +1,3 @@
+anchor block hash 0xeaa55b9fded95df5541ba345aff0874ee8dac9e3ef7d8f0f5cedccb39bb56eba (instance's latest: false)
+header RLP rebuilt from eth_getBlockByHash (674 bytes), hashes to the anchor
+Error: eth_getProof (public nodes serve only about the last 128 blocks): eth_getProof at https://ethereum-sepolia-rpc.publicnode.com: {"code":4444,"message":"distance to target block exceeds maximum proof window"}

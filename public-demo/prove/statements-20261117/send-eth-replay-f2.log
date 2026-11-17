@@ -1,0 +1,9 @@
+== eth-replay-f2 2026-11-17T18:51:06Z: program HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n accounts 6AzxoVVZgeRNN8KZwcpk84fy8ym5wr2Qj4AiHoeX1SCG@DVM9PDn8VGnGAyw24jbesZ62GGcMJ1ppYBeFmmZSjwzi,7d5TyqQMP8eHayEKyQ9weVYfJ68GZCBEG2YUXQHg8Mzr@HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n,4vK7Qce9kJ2etKAj5k3yQ4pBXTuDDD62uCrKz2HWBGH2@HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n gas limit 10000000
+before: balance {"jsonrpc":"2.0","id":1,"result":99999274146642} fee state {"jsonrpc":"2.0","id":1,"result":{"height":75,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":75}
+
+thread 'main' (1) panicked at $W/src/lez-bridge/attest/consumer/src/lib.rs:202:21:
+already claimed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+tx b388db64e0090f4deb0a987cac65a86f706274e619e6566133c75796d26ecd16
+Error: b388db64e0090f4deb0a987cac65a86f706274e619e6566133c75796d26ecd16 was included in block 76 but reverted
+after: balance {"jsonrpc":"2.0","id":1,"result":99999194120074} fee state {"jsonrpc":"2.0","id":1,"result":{"height":76,"base_fee_exec":9,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":10,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":76} (rc 5)

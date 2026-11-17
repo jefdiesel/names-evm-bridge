@@ -1,0 +1,109 @@
+...   |
+483 | |         ),
+484 | |     )?;
+    | |______^
+    |
+    = note: a Transition does nothing unless committed
+help: use `let _ = ...` to ignore the resulting value
+    |
+475 |     let _ = exec(
+    |     +++++++
+
+warning: `attest_cycles` (bin "attest_cycles") generated 15 warnings
+    Finished `release` profile [optimized] target(s) in 26.46s
+warning: the following packages contain code that will be rejected by a future version of Rust: block v0.1.6, proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+disk free 31 GB
+# public update path (UpdatePublic), recorded fixtures, guest attest_guest_public
+  guest image id 160d7581a3d20b39725fe5f310826a54199baffea74cdb35b865c26a5e63cfa5 (1047584 bytes ELF)
+  Sepolia finality update, same period (509/512): 509/512 signers, 4 key witnesses (aggregate + 3 non-signers)
+  message 26953 bytes (borsh)
+  Sepolia finality update, same period (509/512): submitter's actor (UpdatePublic): user=9194655 total=9961472 segments=10 (0.92x the 10M cap)
+  Sepolia finality update, same period (509/512): store applies Advance: user=41760 total=131072 segments=1 (0.00x the 10M cap)
+  Sepolia finality update, same period (509/512): anchor PDA records an anchor: user=20123 total=65536 segments=1 (0.00x the 10M cap)
+
+### Sepolia finality update, same period (509/512)
+| program call | user cycles |
+|---|---:|
+| submitter's actor: verify the update, send Advance | 9194655 |
+| store: Advance (+ sends RecordAnchor) | 41760 |
+| anchor PDA: RecordAnchor | 20123 |
+| **whole transaction** | **9256538** (92.57% of the 10M cap; margin 743462) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 1
+  mainnet finality update, same period (507/512): 507/512 signers, 6 key witnesses (aggregate + 5 non-signers)
+  message 27817 bytes (borsh)
+  mainnet finality update, same period (507/512): submitter's actor (UpdatePublic): user=9447503 total=10485760 segments=10 (0.94x the 10M cap)
+  mainnet finality update, same period (507/512): store applies Advance: user=49251 total=131072 segments=1 (0.00x the 10M cap)
+  mainnet finality update, same period (507/512): anchor PDA records an anchor: user=20229 total=65536 segments=1 (0.00x the 10M cap)
+  mainnet finality update, same period (507/512): anchor PDA records an anchor: user=20227 total=65536 segments=1 (0.00x the 10M cap)
+
+### mainnet finality update, same period (507/512)
+| program call | user cycles |
+|---|---:|
+| submitter's actor: verify the update, send Advance | 9447503 |
+| store: Advance (+ sends RecordAnchor) | 49251 |
+| anchor PDA: RecordAnchor | 20229 |
+| anchor PDA: RecordAnchor | 20227 |
+| **whole transaction** | **9537210** (95.37% of the 10M cap; margin 462790) |
+  new store: finalized slot 15639264, block hash 0xfba5c8b519815f5906ce94ca7c6996e5eeb7a2bce27e4f40374462cbbcbf8c58, updates 1
+  period update 1410: 509/512 signers, signed by the store's current committee
+  period update 1410: Begin, submitter's actor: user=3122773 total=3670016 segments=4 (0.31x the 10M cap)
+  period update 1410: Begin, job PDA opens: user=38566 total=131072 segments=1 (0.00x the 10M cap)
+  period update 1410: Finish, submitter's actor: user=8948844 total=9568256 segments=10 (0.89x the 10M cap)
+  period update 1410: Finish, job PDA: user=66251 total=131072 segments=1 (0.01x the 10M cap)
+  period update 1410: store applies Advance: user=38204 total=131072 segments=1 (0.00x the 10M cap)
+
+### handoff 1: period update 1410, Begin
+| program call | user cycles |
+|---|---:|
+| Begin: submitter's actor (every check but the signature) | 3122773 |
+| Begin: job PDA opens | 38566 |
+| **whole transaction** | **3161339** (31.61% of the 10M cap; margin 6838661) |
+  new store: finalized slot 11550720, block hash 0xe2d51b402f0b20715dfec7179672edef53e6ad9ed432f4c385346fc3784a1870, updates 1
+
+### handoff 1: period update 1410, Finish
+| program call | user cycles |
+|---|---:|
+| Finish: submitter's actor (the signature) | 8948844 |
+| Finish: job PDA (done, sends Advance) | 66251 |
+| store: Advance (+ sends RecordAnchor) | 38204 |
+| **whole transaction** | **9053299** (90.53% of the 10M cap; margin 946701) |
+  new store: finalized slot 11550720, block hash 0xe2d51b402f0b20715dfec7179672edef53e6ad9ed432f4c385346fc3784a1870, updates 1
+  rotation into 1411: 509/512 signers, 4 key witnesses (aggregate + 3 non-signers)
+  message 26985 bytes (borsh)
+  rotation into 1411: submitter's actor (UpdatePublic): user=9252177 total=9961472 segments=10 (0.93x the 10M cap)
+  rotation into 1411: store applies Advance: user=42979 total=131072 segments=1 (0.00x the 10M cap)
+  rotation into 1411: anchor PDA records an anchor: user=20123 total=65536 segments=1 (0.00x the 10M cap)
+
+### handoff 1: finality update signed by the next committee (rotation into 1411)
+| program call | user cycles |
+|---|---:|
+| submitter's actor: verify the update, send Advance | 9252177 |
+| store: Advance (+ sends RecordAnchor) | 42979 |
+| anchor PDA: RecordAnchor | 20123 |
+| **whole transaction** | **9315279** (93.15% of the 10M cap; margin 684721) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 2
+  period update 1411: 509/512 signers, signed by the store's current committee
+  period update 1411: Begin, submitter's actor: user=3121776 total=3670016 segments=4 (0.31x the 10M cap)
+  period update 1411: Begin, job PDA opens: user=38566 total=131072 segments=1 (0.00x the 10M cap)
+  period update 1411: Finish, submitter's actor: user=8949024 total=9568256 segments=10 (0.89x the 10M cap)
+  period update 1411: Finish, job PDA: user=66251 total=131072 segments=1 (0.01x the 10M cap)
+  period update 1411: store applies Advance: user=38204 total=131072 segments=1 (0.00x the 10M cap)
+
+### handoff 2: period update 1411, Begin
+| program call | user cycles |
+|---|---:|
+| Begin: submitter's actor (every check but the signature) | 3121776 |
+| Begin: job PDA opens | 38566 |
+| **whole transaction** | **3160342** (31.60% of the 10M cap; margin 6839658) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 3
+
+### handoff 2: period update 1411, Finish
+| program call | user cycles |
+|---|---:|
+| Finish: submitter's actor (the signature) | 8949024 |
+| Finish: job PDA (done, sends Advance) | 66251 |
+| store: Advance (+ sends RecordAnchor) | 38204 |
+| **whole transaction** | **9053479** (90.53% of the 10M cap; margin 946521) |
+  new store: finalized slot 11563424, block hash 0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1, updates 3
+run rc=0 ($W/logs/public-20261117T175102Z.txt)

@@ -1,0 +1,7 @@
+
+thread 'main' (1) panicked at $W/src/lez-bridge/attest/program/src/public.rs:306:17:
+the job is on the current store: it can still finish
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Error: The transaction reverts when simulated and would still pay its fee, so it was not sent: Failed to execute program: Guest panicked: the job is on the current store: it can still finish
+tx 2902d31fc9fb37d8349ae02ebdd8ce60e36de65e0946be223a7fa63489a2d04a
+applied in block 21

@@ -1,0 +1,32 @@
+# public update path, REAL PERIOD update from $W/run-h2/p1415
+  store now: finalized slot 11599840 (period 1415), updates 0, next committee unknown; signature slot 11591745 (period 1415): signed by the current committee
+  real period update: 509/512 signers, signed by the store's current committee
+  real period update: Begin, submitter's actor: user=3126474 total=3670016 segments=4 (0.31x the 10M cap)
+  real period update: Begin, store is current: user=28128 total=131072 segments=1 (0.00x the 10M cap)
+  real period update: Begin, job PDA opens: user=38796 total=131072 segments=1 (0.00x the 10M cap)
+  real period update: Finish, submitter's actor: user=275266 total=524288 segments=1 (0.03x the 10M cap)
+  real period update: Finish, store is current: user=28128 total=131072 segments=1 (0.00x the 10M cap)
+  real period update: Finish, job PDA: user=8977059 total=9699328 segments=10 (0.90x the 10M cap)
+  real period update: store applies Advance: user=38395 total=131072 segments=1 (0.00x the 10M cap)
+
+### real period update, Begin
+| program call | user cycles |
+|---|---:|
+| Begin: submitter's actor (every check but the signature) | 3126474 |
+| Begin: store asserts it is the job's prev | 28128 |
+| Begin: job PDA opens | 38796 |
+| **whole transaction** | **3193398** (31.93% of the 10M cap; margin 6806602) |
+  new store: finalized slot 11599840, block hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730, updates 1
+
+### real period update, Finish
+| program call | user cycles |
+|---|---:|
+| Finish: submitter's actor | 275266 |
+| Finish: store asserts it is the job's prev | 28128 |
+| Finish: job PDA (the signature; done; sends Advance) | 8977059 |
+| store: Advance (+ sends RecordAnchor) | 38395 |
+| **whole transaction** | **9318848** (93.19% of the 10M cap; margin 681152) |
+  new store: finalized slot 11599840, block hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730, updates 1
+JOB_ID=0x93db12b638d3b0f0764bdffb97ac963bbe3aab9d018d8bcfd527143ac975af37
+JOB_PDA=AvgxwQVueMcNLdSSXHKQcbTBkg4yEwU4aAjdhGUgpzYA
+messages written to $W/run-h2/message-p1415.hex.begin (26907 bytes) and $W/run-h2/message-p1415.hex.finish (25838 bytes)

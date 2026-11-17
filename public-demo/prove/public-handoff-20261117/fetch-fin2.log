@@ -1,0 +1,24 @@
+store now:
+  instance 0xd681456fe74b497b6dbde580bc6b0dd29f64c33982452b3a3adab1c0c08a480c  chain 11155111  updates 2
+  finalized beacon slot 11600288 (period 1416, epoch 362509)  root 0x3d4135fe1f1715af6fcfd5eddb3df6d5c51588c04b7b8b64bb7bdc03f5b6d4f5
+    proposer 1446  parent 0x377491d739381f566d9fc4996bd6051220c3d8916b13b58646ae9bc9a03db45e  state 0xd3069f9b07faed6b1606e07e77f574dbd1018e5b4cbda1627af7e34d6795ebb8  body 0x86ed9302da98a64f80b0e3073ac25e74306e6d1125fc6619a46c4eee609bd422
+  execution block hash 0xf75aed1e60904cb631cb07fe5526506d19cdd66b601e72dd1c03717ff42c4d2b  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+committee witness: current 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891 (24624 bytes)
+finality update from https://lodestar-sepolia.chainsafe.io (gloas): signature period 1416, finalized slot 11600320; store period 1416
+finality update: signature slot 11600385 (period 1416), attested slot 11600384, finalized slot 11600320, participation 506/512
+verified natively (Helios consensus-core, the program's own code). Public effects of this update:
+  1. Advance -> store D9ySaXLiigG46uq7K3yEDWzcpnwNde9tU3JuibcdXYZv (519 bytes: the old and new summary, both public)
+       next: instance 0xd681456fe74b497b6dbde580bc6b0dd29f64c33982452b3a3adab1c0c08a480c  chain 11155111  updates 3
+       next: finalized beacon slot 11600320 (period 1416, epoch 362510)  root 0x5632c3fb38c566118bd0da11ebcc2432df116b9d0ae471197b8276139ef159a4
+       next:   proposer 1476  parent 0x3d408431c72c8468e17e7edf4a6787a55bf08a9624475ad8cce4077cca24bf60  state 0xc1268839a393a381808e39408a2107194ca5e6d32cdf7adc18de4fda34541725  body 0xcf31068c2c54b38c114e35983109ad3322bc386b546e6e407054ec329d250f2a
+       next: execution block hash 0x21eb76e7084e12f946b2805332daf9d6cbb70e231d2502c9ad8de9cfd3a215a5  state root - (Gloas header: block hash only)  number -
+       next: current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+  2. RecordAnchor block hash 0x21eb76e7084e12f946b2805332daf9d6cbb70e231d2502c9ad8de9cfd3a215a5 -> anchor PDA z2LXsnrRnCq7VQPYuviVAgSBqfP9MXuFGD8yrDBsYZm (new)
+  event Advanced { beacon_slot 11600320, block_hash 0x21eb76e7084e12f946b2805332daf9d6cbb70e231d2502c9ad8de9cfd3a215a5, next_committee_known false }
+  valid from LEZ block time 1794938220000 ms (start of the signature slot; now 1794938310479: ok)
+  private (never published by LEZ): the update (1448 bytes), the committee witness, BaiDTsuN6donDtdsMVqgiejwNCq8DToN3tMiaF8u3EvU
+NEXT_SLOT=11600320
+NEXT_BLOCK_HASH=0x21eb76e7084e12f946b2805332daf9d6cbb70e231d2502c9ad8de9cfd3a215a5
+saved the update, its kind and the committee witness in $W/run-h/fin2
+Error: BaiDTsuN6donDtdsMVqgiejwNCq8DToN3tMiaF8u3EvU is not a private account of this wallet. An update costs 37-46M user cycles, over LEZ's 10M cap per public transaction and per block, so it must run in a private account's proved execution (`lez-bridge wallet account new private`, fund it with `shield`)

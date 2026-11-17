@@ -1,0 +1,12 @@
+== sim-E07 2026-11-17T19:14:33Z: program Gvn9t7ELG8bHgta7WBd9mLuCh4hmedwwbJ3URCqs8wQC accounts @DVM9PDn8VGnGAyw24jbesZ62GGcMJ1ppYBeFmmZSjwzi gas limit 10000000
+before: balance {"jsonrpc":"2.0","id":1,"result":99998783928142} fee state {"jsonrpc":"2.0","id":1,"result":{"height":169,"base_fee_exec":10,"base_fee_stor":8,"next_base_fee_exec_floor":9,"next_base_fee_exec_ceiling":11,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":169}
+Error: bad account 
+after: balance {"jsonrpc":"2.0","id":1,"result":99998783928142} fee state {"jsonrpc":"2.0","id":1,"result":{"height":169,"base_fee_exec":10,"base_fee_stor":8,"next_base_fee_exec_floor":9,"next_base_fee_exec_ceiling":11,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":169} (rc 1)
+== sim-E07 2026-11-17T19:15:06Z: program Gvn9t7ELG8bHgta7WBd9mLuCh4hmedwwbJ3URCqs8wQC accounts AhwtcYhjBdhd2rhCEr7cotf41Jmiyo8PZ7tUihmp91s8@Cc42wGgDmePzPPXBsG6pKU4X4Ushe3NL72dSLUWT7YAu gas limit 10000000
+before: balance {"jsonrpc":"2.0","id":1,"result":99998783928142} fee state {"jsonrpc":"2.0","id":1,"result":{"height":171,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":171}
+
+thread 'main' (1) panicked at $W/src/lez-bridge/attest/program/src/lib.rs:321:13:
+RFP021-E07 chain id mismatch: anchor is for another chain
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Error: The transaction reverts when simulated and would still pay its fee, so it was not sent: Failed to execute program: Guest panicked: RFP021-E07 chain id mismatch: anchor is for another chain
+after: balance {"jsonrpc":"2.0","id":1,"result":99998783928142} fee state {"jsonrpc":"2.0","id":1,"result":{"height":171,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":171} (rc 1)

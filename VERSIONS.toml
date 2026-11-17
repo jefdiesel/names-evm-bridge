@@ -351,7 +351,7 @@ build_commit = { v = "adc0bcacc2ca7827c6836f061cf11727c81b3533", src = "public-d
 update_image = { v = "0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017", elf_sha256 = "cf06043dd43f99c185b9995050854ae9f30479c071937a0de00c656a81604fe7", risc0_zkvm = "3.1.0", src = "public-demo/v4/BUILD-outbound.txt UPDATE_IMAGE_ID_TRUSTED_TIP (G2-lite trusted tip, feature unchecked-private); public-demo/prove/prove-outbound-rc3.sh" }
 release_image = { v = "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4", elf_sha256 = "2353c51e8366f2379a0acf703257a15a6eff449575e17b12e55e6700ea102d8a", risc0_zkvm = "3.0.5", src = "public-demo/v4/BUILD-outbound.txt RELEASE_IMAGE_ID (release guest unchanged, on 3.0.5)" }
 genesis_g2_state = { v = "0xa339efab8cc3c73264e144d6b07b093a2258334dedf1ec00cb65095270954051", src = "outbound_host genesis --block 11598 --bridge CuV1ctZ2…nMA (the tip right after the v5 bridge deploy, before its Initialize in 11617), 2026-11-15; = g2State() read 2026-11-15" }
-g2_updates = { v = 0, src = "g2State() = genesis_g2_state, read 2026-11-15; count every accepted update here" }
+g2_updates = { v = 1, src = "update 1 accepted on Sepolia in block 12149823 (tx 0xe50535929f42d25531900606cf57879a1a41aa26bd9093696cf98a5542322a24), g2State 0x7c04d3d5…0e6b; later hourly updates are listed in the updater's state.json" }
 
 [deployments.v5.verifier]
 kind = "risc0-groth16"
@@ -427,6 +427,14 @@ roles = ["lez_host", "lez_guests"]
 
 [[workspace]]
 path = "lez-bridge/methods/attest_guest"
+roles = ["lez_guests"]
+
+[[workspace]]
+path = "lez-bridge/methods/attest_guest_public"
+roles = ["lez_guests"]
+
+[[workspace]]
+path = "lez-bridge/methods/eth_consumer_guest"
 roles = ["lez_guests"]
 
 [[workspace]]
@@ -810,6 +818,18 @@ private = true
 file = "public-demo/prove/prove-outbound-rc3.sh"
 re = '^ELF_SHA=([0-9a-f]{64})'
 value = "deployments.v4.update_image.elf_sha256"
+private = true
+
+[[pin]]
+file = "public-demo/prove/prove-outbound-remote.sh"
+re = '^IMAGE_DEFAULT=(0x[0-9a-f]{64})'
+value = "deployments.v5.update_image"
+private = true
+
+[[pin]]
+file = "public-demo/prove/prove-outbound-remote.sh"
+re = '^ELF_SHA=\$\{ELF_SHA:-([0-9a-f]{64})\}'
+value = "deployments.v5.update_image.elf_sha256"
 private = true
 
 [[pin]]

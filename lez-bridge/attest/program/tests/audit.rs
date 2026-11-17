@@ -99,7 +99,7 @@ fn an_instance_with_another_fork_epoch_refuses_the_real_update() {
     // The bootstrap (a Gloas header) is itself refused under this schedule: read as Fulu, its
     // execution branch is checked at the wrong generalized index...
     let init_err = init(&mut w, ALICE, "sepolia", "bootstrap_same_period", cfg.clone()).map(|_| ()).unwrap_err();
-    assert_eq!(init_err, "bootstrap rejected: invalid execution payload proof");
+    assert_eq!(init_err, "RFP021-E04 checkpoint stale or invalid: bootstrap rejected: invalid execution payload proof");
     assert!(w.states.is_empty());
     // ...so stand the instance up with the real store under the altered config (test-only), and
     // submit the real update to it.
@@ -110,7 +110,7 @@ fn an_instance_with_another_fork_epoch_refuses_the_real_update() {
     // fixture the attested header and the signature slot are in the same epoch, and moving Gloas
     // changes the header shape (the mainnet test below isolates the domain instead).
     let err = submit(&mut w, BOB, &n, LcUpdate::Finality(fx("sepolia", "finality_update.ssz"))).unwrap_err();
-    assert_eq!(err, "finality update rejected: invalid execution payload proof");
+    assert_eq!(err, "RFP021-E01 header not finalized: finality update rejected: invalid execution payload proof");
     assert_eq!(w.states, before);
     // The control: the same planting with the real config accepts the update.
     let mut w2 = World::default();
@@ -210,7 +210,7 @@ fn a_tampered_receipts_root_is_refused_with_the_exact_error() {
     let before = f.w.states.clone();
     // The consumer refuses with the class only: the exact error (with its trie path and node
     // bytes) is for native callers, never a program's panic.
-    assert_eq!(f.probe(&witness, f.proof.clone(), 1, sample_log(3)), Err(want.class().as_str().to_owned()));
+    assert_eq!(f.probe(&witness, f.proof.clone(), 1, sample_log(3)), Err(want.class().refusal().to_owned()));
     assert_eq!(f.w.states, before);
     // The control: the untampered header verifies.
     let good = f.finalized_header(f.root);
@@ -228,13 +228,13 @@ fn a_tampered_log_proof_is_refused_with_the_exact_error() {
     bad.receipt[at] ^= 1;
     let want = InclusionError::ReceiptProof(mismatch(key, &f.receipts[1], &bad.receipt));
     assert_eq!(verify_receipt_log(&ctx(&f.n), &witness, &bad, 1), Err(want.clone()));
-    assert_eq!(f.probe(&witness, bad, 1, sample_log(3)), Err(want.class().as_str().to_owned()));
+    assert_eq!(f.probe(&witness, bad, 1, sample_log(3)), Err(want.class().refusal().to_owned()));
     // A proof node with one byte changed: the root no longer matches it.
     let mut bad = f.proof.clone();
     bad.nodes[0][5] ^= 1;
     let want = InclusionError::ReceiptProof(mismatch(Nibbles::new(), &bad.nodes[0], &word_rlp(&f.root)));
     assert_eq!(verify_receipt_log(&ctx(&f.n), &witness, &bad, 1), Err(want.clone()));
-    assert_eq!(f.probe(&witness, bad, 1, sample_log(3)), Err(want.class().as_str().to_owned()));
+    assert_eq!(f.probe(&witness, bad, 1, sample_log(3)), Err(want.class().refusal().to_owned()));
     // Another index's proof presented for index 1 (the existing case), now exactly.
     let mut bad = f.proof.clone();
     bad.receipt = f.receipts[0].clone();
@@ -436,12 +436,12 @@ fn truncated_or_oversized_ssz_updates_are_refused_cleanly() {
     for (what, u) in variants(&fin) {
         let err = submit(&mut w, BOB, &n, LcUpdate::Finality(u)).unwrap_err();
         assert_clean(&err);
-        assert_eq!(err, "finality update does not decode: NoMatchingVariant", "finality {what}");
+        assert_eq!(err, "RFP021-E08 malformed input: finality update does not decode: NoMatchingVariant", "finality {what}");
     }
     for (what, u) in variants(&per) {
         let err = submit(&mut w, BOB, &n, LcUpdate::Period(u)).unwrap_err();
         assert_clean(&err);
-        assert_eq!(err, "update does not decode: NoMatchingVariant", "period {what}");
+        assert_eq!(err, "RFP021-E08 malformed input: update does not decode: NoMatchingVariant", "period {what}");
     }
     // A period update presented as a finality update and the other way round.
     let err = submit(&mut w, BOB, &n, LcUpdate::Finality(per.clone())).unwrap_err();
@@ -455,7 +455,7 @@ fn truncated_or_oversized_ssz_updates_are_refused_cleanly() {
             current_committee.resize(cut, 0);
         }
         let err = w.tx(BOB, ATTEST, &m).unwrap_err();
-        assert_eq!(err, "committee witness does not match the store (current)");
+        assert_eq!(err, "RFP021-E13 witness mismatch: committee witness does not match the store (current)");
     }
     // Truncated or oversized bootstraps.
     let boot = fx("sepolia", "bootstrap_prev_period.ssz");
@@ -465,7 +465,7 @@ fn truncated_or_oversized_ssz_updates_are_refused_cleanly() {
         let m = Message::Instruction(Instruction::Init { config: cfg2.clone(), bootstrap: b });
         let err = w.tx(CAROL, ATTEST, &m).unwrap_err();
         assert_clean(&err);
-        assert_eq!(err, "bootstrap does not decode: NoMatchingVariant", "bootstrap {what}");
+        assert_eq!(err, "RFP021-E08 malformed input: bootstrap does not decode: NoMatchingVariant", "bootstrap {what}");
     }
     assert_eq!(w.states, before, "nothing was created or advanced");
     // The intact update still goes through.
@@ -525,7 +525,7 @@ fn malformed_header_rlp_is_refused_cleanly() {
     m.witness = Witness { anchor: Anchor::BlockHash(keccak256(&bad).0), header_rlp: Some(bad) };
     let err = probe_storage(&mut w, ctx(&n), &m, Predicate::Eq(word(1))).unwrap_err();
     // The consumer refuses with the class only, never InclusionError's Display.
-    assert_eq!(err, "anchor witness invalid");
+    assert_eq!(err, "RFP021-E05 inclusion proof invalid: anchor witness invalid");
     assert_clean(&err);
 }
 
@@ -647,7 +647,7 @@ fn a_proof_path_past_64_nibbles_is_refused_without_a_panic() {
     m.witness = Witness { anchor: Anchor::StateRoot(root), header_rlp: None };
     m.proof.account = proof;
     let err = probe_storage(&mut w, ctx(&n), &m, Predicate::Eq(word(1))).unwrap_err();
-    assert_eq!(err, "account proof invalid");
+    assert_eq!(err, "RFP021-E05 inclusion proof invalid: account proof invalid");
     assert_clean(&err);
     // The control: the same nodes fed to alloy-trie directly still panic, so the check above is
     // what stops it.

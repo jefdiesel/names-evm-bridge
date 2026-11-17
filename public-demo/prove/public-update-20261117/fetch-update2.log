@@ -1,0 +1,60 @@
+store now:
+  instance 0x672612194eb967a11efd248a41029559eadbb1944ef7d598e52e035f597b908c  chain 11155111  updates 1
+  finalized beacon slot 11599936 (period 1416, epoch 362498)  root 0x8f386a929a16382ba3ac78861a7756eedf9abec379514649819eee0e4cf0fe24
+    proposer 1159  parent 0x1a992558c47fcb1ed23cb6ee4f724c37b9b34dbbae7c004b4ab92b48030d9371  state 0xd107fbf7d782c497ef091140b6962d5ce7bb51af606764a375845822b3b477c7  body 0xb9fd9127d7904e0978045feb9d04d68f9932724988c6c046449117691f3a5338
+  execution block hash 0x06cdaa0b58d66154062791858b8565128dd1163ae3c8d44d828f63497fe3af1f  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+committee witness: current 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891 (24624 bytes)
+finality update from https://lodestar-sepolia.chainsafe.io (gloas): signature period 1416, finalized slot 11599936; store period 1416
+Error: the beacon node's finality update finalizes slot 11599936, not after the store's 11599936: wait for the next epoch (6.4 min) and retry
+store now:
+  instance 0x672612194eb967a11efd248a41029559eadbb1944ef7d598e52e035f597b908c  chain 11155111  updates 1
+  finalized beacon slot 11599936 (period 1416, epoch 362498)  root 0x8f386a929a16382ba3ac78861a7756eedf9abec379514649819eee0e4cf0fe24
+    proposer 1159  parent 0x1a992558c47fcb1ed23cb6ee4f724c37b9b34dbbae7c004b4ab92b48030d9371  state 0xd107fbf7d782c497ef091140b6962d5ce7bb51af606764a375845822b3b477c7  body 0xb9fd9127d7904e0978045feb9d04d68f9932724988c6c046449117691f3a5338
+  execution block hash 0x06cdaa0b58d66154062791858b8565128dd1163ae3c8d44d828f63497fe3af1f  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+committee witness: current 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891 (24624 bytes)
+finality update from https://lodestar-sepolia.chainsafe.io (gloas): signature period 1416, finalized slot 11599936; store period 1416
+Error: the beacon node's finality update finalizes slot 11599936, not after the store's 11599936: wait for the next epoch (6.4 min) and retry
+store now:
+  instance 0x672612194eb967a11efd248a41029559eadbb1944ef7d598e52e035f597b908c  chain 11155111  updates 1
+  finalized beacon slot 11599936 (period 1416, epoch 362498)  root 0x8f386a929a16382ba3ac78861a7756eedf9abec379514649819eee0e4cf0fe24
+    proposer 1159  parent 0x1a992558c47fcb1ed23cb6ee4f724c37b9b34dbbae7c004b4ab92b48030d9371  state 0xd107fbf7d782c497ef091140b6962d5ce7bb51af606764a375845822b3b477c7  body 0xb9fd9127d7904e0978045feb9d04d68f9932724988c6c046449117691f3a5338
+  execution block hash 0x06cdaa0b58d66154062791858b8565128dd1163ae3c8d44d828f63497fe3af1f  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+committee witness: current 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891 (24624 bytes)
+finality update from https://lodestar-sepolia.chainsafe.io (gloas): signature period 1416, finalized slot 11599936; store period 1416
+Error: the beacon node's finality update finalizes slot 11599936, not after the store's 11599936: wait for the next epoch (6.4 min) and retry
+store now:
+  instance 0x672612194eb967a11efd248a41029559eadbb1944ef7d598e52e035f597b908c  chain 11155111  updates 1
+  finalized beacon slot 11599936 (period 1416, epoch 362498)  root 0x8f386a929a16382ba3ac78861a7756eedf9abec379514649819eee0e4cf0fe24
+    proposer 1159  parent 0x1a992558c47fcb1ed23cb6ee4f724c37b9b34dbbae7c004b4ab92b48030d9371  state 0xd107fbf7d782c497ef091140b6962d5ce7bb51af606764a375845822b3b477c7  body 0xb9fd9127d7904e0978045feb9d04d68f9932724988c6c046449117691f3a5338
+  execution block hash 0x06cdaa0b58d66154062791858b8565128dd1163ae3c8d44d828f63497fe3af1f  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+committee witness: current 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891 (24624 bytes)
+finality update from https://lodestar-sepolia.chainsafe.io (gloas): signature period 1416, finalized slot 11599936; store period 1416
+Error: the beacon node's finality update finalizes slot 11599936, not after the store's 11599936: wait for the next epoch (6.4 min) and retry
+store now:
+  instance 0x672612194eb967a11efd248a41029559eadbb1944ef7d598e52e035f597b908c  chain 11155111  updates 1
+  finalized beacon slot 11599936 (period 1416, epoch 362498)  root 0x8f386a929a16382ba3ac78861a7756eedf9abec379514649819eee0e4cf0fe24
+    proposer 1159  parent 0x1a992558c47fcb1ed23cb6ee4f724c37b9b34dbbae7c004b4ab92b48030d9371  state 0xd107fbf7d782c497ef091140b6962d5ce7bb51af606764a375845822b3b477c7  body 0xb9fd9127d7904e0978045feb9d04d68f9932724988c6c046449117691f3a5338
+  execution block hash 0x06cdaa0b58d66154062791858b8565128dd1163ae3c8d44d828f63497fe3af1f  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+committee witness: current 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891 (24624 bytes)
+finality update from https://lodestar-sepolia.chainsafe.io (gloas): signature period 1416, finalized slot 11599968; store period 1416
+finality update: signature slot 11600034 (period 1416), attested slot 11600033, finalized slot 11599968, participation 506/512
+verified natively (Helios consensus-core, the program's own code). Public effects of this update:
+  1. Advance -> store 22AY9N7AFp5fXiAgcub33CpwgaJ6Gi6URVR6gxkxt5xN (519 bytes: the old and new summary, both public)
+       next: instance 0x672612194eb967a11efd248a41029559eadbb1944ef7d598e52e035f597b908c  chain 11155111  updates 2
+       next: finalized beacon slot 11599968 (period 1416, epoch 362499)  root 0xc73767ea653a3c5b4c361bf8e163a0934bad0cae0aba96fb9bab2f2fac67db46
+       next:   proposer 606  parent 0x1d48669bffd3c4627181c1fd6747ca90e0d99c0787978f6c5fec655115f90851  state 0xe9c6db642a95ae4682328e294ef462eda16f12dbd1d2e6262390a2b9ccd25d4a  body 0xb023ea2771934b7e123e1932a55b5053945e61f895d5c8fce008da567e1d3f02
+       next: execution block hash 0x5a4de05ed218280cc9ba46096efbf5cef37f980fc88ada68e2136a15c84a7239  state root - (Gloas header: block hash only)  number -
+       next: current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+  2. RecordAnchor block hash 0x5a4de05ed218280cc9ba46096efbf5cef37f980fc88ada68e2136a15c84a7239 -> anchor PDA 7SAVDsRijbZLUb1ijoybqvzsBeNvsJ7DzhQDUZGJFSW1 (new)
+  event Advanced { beacon_slot 11599968, block_hash 0x5a4de05ed218280cc9ba46096efbf5cef37f980fc88ada68e2136a15c84a7239, next_committee_known false }
+  valid from LEZ block time 1794934008000 ms (start of the signature slot; now 1794934023123: ok)
+  private (never published by LEZ): the update (1448 bytes), the committee witness, EktHDPS687r3YXhganm9XQAPtD5LqCPiyL18nRmc1rrS
+NEXT_SLOT=11599968
+NEXT_BLOCK_HASH=0x5a4de05ed218280cc9ba46096efbf5cef37f980fc88ada68e2136a15c84a7239
+saved the update, its kind and the committee witness in $W/run/update2
+Error: EktHDPS687r3YXhganm9XQAPtD5LqCPiyL18nRmc1rrS is not a private account of this wallet. An update costs 37-46M user cycles, over LEZ's 10M cap per public transaction and per block, so it must run in a private account's proved execution (`lez-bridge wallet account new private`, fund it with `shield`)

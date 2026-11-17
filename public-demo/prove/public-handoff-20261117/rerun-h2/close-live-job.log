@@ -1,0 +1,7 @@
+
+thread 'main' (1) panicked at $W/src/lez-bridge/attest/program/src/public.rs:306:17:
+the job is on the current store: it can still finish
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+tx 8047cd33cd7d9b1031354b9450b72cd00a6515c5e430e513be2cfc68ed0ed71b
+Error: 8047cd33cd7d9b1031354b9450b72cd00a6515c5e430e513be2cfc68ed0ed71b was included in block 18 but reverted
+job PDA after the reverted CloseJob: {'DVM9PDn8VGnGAyw24jbesZ62GGcMJ1ppYBeFmmZSjwzi': 3688}

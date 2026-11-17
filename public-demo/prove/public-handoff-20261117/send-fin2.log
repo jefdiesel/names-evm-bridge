@@ -1,0 +1,6 @@
+== send 2026-11-17T17:58:48Z: accounts D9ySaXLiigG46uq7K3yEDWzcpnwNde9tU3JuibcdXYZv@DKjavTXCFHwi14YTkwAVqVHy2TzWBytNT7ALi41PEVhg,z2LXsnrRnCq7VQPYuviVAgSBqfP9MXuFGD8yrDBsYZm@DKjavTXCFHwi14YTkwAVqVHy2TzWBytNT7ALi41PEVhg gas limit 10000000
+before: balance {"jsonrpc":"2.0","id":1,"result":99999720660101} fee state {"jsonrpc":"2.0","id":1,"result":{"height":28,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":28}
+5316f238e29bbf2b2026871372b59bd3cf3a95f14aa096ff78d1264a1152b4e9  $W/bin/lez-bridge.rawcall
+tx 58c03ce114382d52995bf167430a5b65c8f7c8a5d7d1d3be73aeb461b4d77e5b
+applied in block 29
+after: balance {"jsonrpc":"2.0","id":1,"result":99999646120781} fee state {"jsonrpc":"2.0","id":1,"result":{"height":29,"base_fee_exec":9,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":10,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":29} (rc 0)

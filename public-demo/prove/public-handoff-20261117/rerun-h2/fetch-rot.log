@@ -1,0 +1,24 @@
+store now:
+  instance 0x4e66926d34a1d27ad37b07a077f662a8eaea614f49b4bf09cfb04ff30139ba1d  chain 11155111  updates 1
+  finalized beacon slot 11599840 (period 1415, epoch 362495)  root 0xb0bb44007299221f4e545390c0ea3f46363b70e9680b2d303953e3486378de89
+    proposer 1186  parent 0xd032684157ed7e2da24cda3d4d342db5527c654578b0868a5c03fd5af3007a65  state 0xc9bf3c079665309888c979ce325c756a3441693aaeb58baed4a7bc3bc856cea4  body 0x1dbbd9707fd0806387311261cfab8f73862abc9674ff91d0c328c8c53e8fc0b2
+  execution block hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730  state root - (Gloas header: block hash only)  number -
+  current committee 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced  next committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891
+committee witness: current 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced (24624 bytes), next (24624 bytes)
+finality update from https://lodestar-sepolia.chainsafe.io (gloas): signature period 1416, finalized slot 11600512; store period 1415
+finality update: signature slot 11600577 (period 1416), attested slot 11600576, finalized slot 11600512, participation 506/512
+verified natively (Helios consensus-core, the program's own code). Public effects of this update:
+  1. Advance -> store 7cxpPQWxRQAa7RgqiBHveASFDtb397dCsgd1SH5SxbfK (551 bytes: the old and new summary, both public)
+       next: instance 0x4e66926d34a1d27ad37b07a077f662a8eaea614f49b4bf09cfb04ff30139ba1d  chain 11155111  updates 2
+       next: finalized beacon slot 11600512 (period 1416, epoch 362516)  root 0xf85d7e9f81ca37891f3551dd315c225bbac5a256acc8e44109be1906aad6ce30
+       next:   proposer 676  parent 0x8e84e0fc3cf84de04a2de254278d2405bbe9763b284c0922890d65225c04acfd  state 0xa140c8b91640515a0909c98e713cffa9eb6cda376ee2236cc6495b9b5188c0f8  body 0xacae95dc85c324738a27316f7b22c5a3c50b995817364d3736d46fb856ef37bc
+       next: execution block hash 0xf432338ed96cf8d8417b49cfab308671caecb007047fef276d3df219ff09b9d8  state root - (Gloas header: block hash only)  number -
+       next: current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+  2. RecordAnchor block hash 0xf432338ed96cf8d8417b49cfab308671caecb007047fef276d3df219ff09b9d8 -> anchor PDA E6HxpteJeA3HRVpjFGAdRZWghmzK9e5aNZ9RvDNMDC8b (new)
+  event Advanced { beacon_slot 11600512, block_hash 0xf432338ed96cf8d8417b49cfab308671caecb007047fef276d3df219ff09b9d8, next_committee_known false }
+  valid from LEZ block time 1794940524000 ms (start of the signature slot; now 1794940626530: ok)
+  private (never published by LEZ): the update (1448 bytes), the committee witness, HH6Mk2iz8VkqNj5kJRsw5fXmCiUaP53WKKA2HV293yZo
+NEXT_SLOT=11600512
+NEXT_BLOCK_HASH=0xf432338ed96cf8d8417b49cfab308671caecb007047fef276d3df219ff09b9d8
+saved the update, its kind and the committee witness in $W/run-h2/rot
+Error: HH6Mk2iz8VkqNj5kJRsw5fXmCiUaP53WKKA2HV293yZo is not a private account of this wallet. An update costs 37-46M user cycles, over LEZ's 10M cap per public transaction and per block, so it must run in a private account's proved execution (`lez-bridge wallet account new private`, fund it with `shield`)

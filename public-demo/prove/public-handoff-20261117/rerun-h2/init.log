@@ -1,0 +1,26 @@
+network check: genesis root, genesis time and 8 fork versions agree with https://lodestar-sepolia.chainsafe.io
+checkpoint 0xb0bb44007299221f4e545390c0ea3f46363b70e9680b2d303953e3486378de89 at slot 11599840 (period 1415, epoch 362495), from https://lodestar-sepolia.chainsafe.io
+  cross-checked with https://ethereum-sepolia-beacon-api.publicnode.com
+bootstrap verified natively (Helios consensus-core, the program's own code):
+  instance 0x4e66926d34a1d27ad37b07a077f662a8eaea614f49b4bf09cfb04ff30139ba1d  chain 11155111  updates 0
+  finalized beacon slot 11599840 (period 1415, epoch 362495)  root 0xb0bb44007299221f4e545390c0ea3f46363b70e9680b2d303953e3486378de89
+    proposer 1186  parent 0xd032684157ed7e2da24cda3d4d342db5527c654578b0868a5c03fd5af3007a65  state 0xc9bf3c079665309888c979ce325c756a3441693aaeb58baed4a7bc3bc856cea4  body 0x1dbbd9707fd0806387311261cfab8f73862abc9674ff91d0c328c8c53e8fc0b2
+  execution block hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730  state root - (Gloas header: block hash only)  number -
+  current committee 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced  next committee unknown
+instance id 0x4e66926d34a1d27ad37b07a077f662a8eaea614f49b4bf09cfb04ff30139ba1d
+  config PDA Bhooymgzt4YU9PVp8saht5xNwH9Y1Hk1yoCoML1dZ3A8
+  store PDA  7cxpPQWxRQAa7RgqiBHveASFDtb397dCsgd1SH5SxbfK
+  anchor PDA G9bYjJypY158Wj3iEceYnwKj34q2bZxpAEzjSWXc7dLi for block hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730
+init message 25696 bytes; public transaction from HH6Mk2iz8VkqNj5kJRsw5fXmCiUaP53WKKA2HV293yZo
+submitted in 296.7ms
+tx 0451aff161b3c070735102cab385803ba792f1e6c13145bccd3c00821839233f
+applied in block 14
+charged: fee 73145168 (payer balance 99999976246224 -> 99999903101056); wire bytes 26286; base fees exec 8 / stor 8 at height 13 (after: 9 / 8 at 14); so execution gas = (fee - bytes x stor) / exec = 9116860 in block 14
+  (a block charges at its opening fee state, the quote before; the head moved after it. If another block came in between, the figure is approximate; the dry run's metered cycles are exact)
+on chain:
+  instance 0x4e66926d34a1d27ad37b07a077f662a8eaea614f49b4bf09cfb04ff30139ba1d  chain 11155111  updates 0
+  finalized beacon slot 11599840 (period 1415, epoch 362495)  root 0xb0bb44007299221f4e545390c0ea3f46363b70e9680b2d303953e3486378de89
+    proposer 1186  parent 0xd032684157ed7e2da24cda3d4d342db5527c654578b0868a5c03fd5af3007a65  state 0xc9bf3c079665309888c979ce325c756a3441693aaeb58baed4a7bc3bc856cea4  body 0x1dbbd9707fd0806387311261cfab8f73862abc9674ff91d0c328c8c53e8fc0b2
+  execution block hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730  state root - (Gloas header: block hash only)  number -
+  current committee 0xa1cc4756837e76cd0253bada0850d0f49a71c851e1bbc3b7a6abb74eb63c0ced  next committee unknown
+INSTANCE=0x4e66926d34a1d27ad37b07a077f662a8eaea614f49b4bf09cfb04ff30139ba1d

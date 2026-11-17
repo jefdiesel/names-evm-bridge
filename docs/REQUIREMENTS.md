@@ -142,7 +142,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | R10 | "defers submission by an interval it varies per instance" | In | 3 | NS |
 | R11 | "Statement submissions are independent of one another" | In | 1 | TST |
 | R12 | "CI must be green on the default branch" | In | 1 | TST suites green in CI |
-| P1 | attestation and predicate "within a single LEZ transaction" | In | 1, 3 | LOC 263K cycles; updates: private today, two public steps in M3 (`DESIGN.md` §9.3a) |
+| P1 | attestation and predicate "within a single LEZ transaction" | In | 1, 3 | LOC 263K cycles; updates: an in-period finality update as one public transaction on a local chain (`DESIGN.md` §9.3b, branch `public-update`), period updates private today, two public steps in M3 (`DESIGN.md` §9.3a) |
 | P2 | "cycle count, gas cost, proof time, and proof size for each" | In | 1, 3 | LOC; proof size NS |
 | P3 | "amortised per-attestation cost of sync-committee tracking" | In | 7 | DES |
 | P4 | proving "on a mid-range laptop", "including … a private transaction" | In | 4 | LOC one desktop |

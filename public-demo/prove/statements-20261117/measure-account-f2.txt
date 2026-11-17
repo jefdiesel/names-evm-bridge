@@ -1,0 +1,6 @@
+# account-field statement on real data (reference probe)
+  account 0x8c8b2664de28e5287158db4db65d448638871b74 balance = 0x00000000000000000000000000000000000000000000000003311fc80a570000; anchor 0xd09a889c9549ab90c92da730984ca6ea404c2744f0696e87416beffd99357f3f; statement id 0xd9a41f95a7ce9318ad38759f0a0e59b230c421393a52db949698cb9817fe11e4
+  probe: the statement in the signer's actor: user=199110 total=524288 segments=1 (0.02x the 10M cap)
+  attestation: AssertAnchor: user=17097 total=65536 segments=1 (0.00x the 10M cap)
+  whole transaction 216207 user cycles; message 4681 bytes; anchor PDA 6AzxoVVZgeRNN8KZwcpk84fy8ym5wr2Qj4AiHoeX1SCG
+message written to $W/run-h2/slot-f2/probe-account-balance.hex

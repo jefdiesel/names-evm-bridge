@@ -1,0 +1,17 @@
+# public update path, REAL finality update from $W/run-h2/rot
+  store now: finalized slot 11599840 (period 1415), updates 1, next committee known; signature slot 11600577 (period 1416): signed by the NEXT committee
+  real update: 506/512 signers, 7 key witnesses (aggregate + 6 non-signers)
+  message 27279 bytes (borsh)
+  real update: submitter's actor (UpdatePublic): user=9284296 total=10485760 segments=10 (0.93x the 10M cap)
+  real update: store applies Advance: user=43267 total=131072 segments=1 (0.00x the 10M cap)
+  real update: anchor PDA records an anchor: user=20363 total=65536 segments=1 (0.00x the 10M cap)
+
+### real update, as one public transaction
+| program call | user cycles |
+|---|---:|
+| submitter's actor: verify the update, send Advance | 9284296 |
+| store: Advance (+ sends RecordAnchor) | 43267 |
+| anchor PDA: RecordAnchor | 20363 |
+| **whole transaction** | **9347926** (93.48% of the 10M cap; margin 652074) |
+  new store: finalized slot 11600512, block hash 0xf432338ed96cf8d8417b49cfab308671caecb007047fef276d3df219ff09b9d8, updates 2
+message written to $W/run-h2/message-rot.hex (27279 bytes, 54558 hex chars)

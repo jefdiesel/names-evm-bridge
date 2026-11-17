@@ -1,0 +1,9 @@
+== erc20-claim-1-f1 2026-11-17T18:44:30Z: program HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n accounts 4ZWpzYmUYxiRM7tPR6DdKvAEAPMGJgQfaV1ErQkDhR2m@DVM9PDn8VGnGAyw24jbesZ62GGcMJ1ppYBeFmmZSjwzi,HjjUJT34rLeYQL9YxrpPr2UPT2zdD89ABXrmwCGotif1@HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n,GSgN3Mpyn55XEJpwdrhSTa9jkVPZPnygYUdukMT81dre@HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n gas limit 10000000
+before: balance {"jsonrpc":"2.0","id":1,"result":99999524252496} fee state {"jsonrpc":"2.0","id":1,"result":{"height":49,"base_fee_exec":9,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":10,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":49}
+
+thread 'main' (1) panicked at $W/src/lez-bridge/attest/program/src/lib.rs:314:13:
+anchor is for another chain
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+tx 8fd2386df16132dd202a800f577ed8c8966e22f65ca736f443bb7051e05e2289
+Error: 8fd2386df16132dd202a800f577ed8c8966e22f65ca736f443bb7051e05e2289 was included in block 50 but reverted
+after: balance {"jsonrpc":"2.0","id":1,"result":99999434201464} fee state {"jsonrpc":"2.0","id":1,"result":{"height":50,"base_fee_exec":10,"base_fee_stor":8,"next_base_fee_exec_floor":9,"next_base_fee_exec_ceiling":11,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":50} (rc 5)

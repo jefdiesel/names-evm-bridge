@@ -34,9 +34,35 @@ pub struct Verified {
     /// slot. Helios's `expected_current_slot >= signature_slot` check, enforced by the sequencer
     /// through the response's timestamp window instead of a clock read.
     pub not_before_ms: u64,
+    /// The LEZ block time until which (exclusive) it may be applied: the weak-subjectivity
+    /// deadline of `prev` (`eth_attest_core::ws_deadline_ms`), the window's end.
+    pub deadline_ms: u64,
 }
 
-fn forks(c: &InstanceConfig) -> Forks {
+/// The weak-subjectivity rule (F10): an update signed at or after `prev`'s deadline is refused,
+/// and the deadline also ends the response's timestamp window, so the sequencer refuses any update
+/// once its block time passes it, whatever slot the update was signed in.
+///
+/// # Errors
+/// The update is signed past the bound (`RFP021-E04`).
+pub fn ws_check(config: &InstanceConfig, prev: &LcSummary, signature_slot: u64) -> Result<u64, String> {
+    let deadline = eth_attest_core::ws_deadline_ms(config, prev).ok_or("time overflow")?;
+    let signed = config
+        .genesis_time
+        .checked_add(signature_slot.checked_mul(config.seconds_per_slot).ok_or("slot overflow")?)
+        .and_then(|t| t.checked_mul(1000))
+        .ok_or("time overflow")?;
+    if signed >= deadline {
+        return Err(format!(
+            "weak-subjectivity bound passed: the store's finalized slot {} is more than {} epochs before this update's signature slot {signature_slot}; this instance must be replaced from a fresh checkpoint",
+            prev.finalized.beacon.slot,
+            eth_attest_core::ws_epochs(config.evm_chain_id)
+        ));
+    }
+    Ok(deadline)
+}
+
+pub(crate) fn forks(c: &InstanceConfig) -> Forks {
     let k = |i: usize| Fork {
         epoch: c.forks[i].epoch,
         fork_version: c.forks[i].version.into(),
@@ -53,7 +79,7 @@ fn forks(c: &InstanceConfig) -> Forks {
     }
 }
 
-fn to_helios(b: &BeaconHeader) -> BeaconBlockHeader {
+pub(crate) fn to_helios(b: &BeaconHeader) -> BeaconBlockHeader {
     BeaconBlockHeader {
         slot: b.slot,
         proposer_index: b.proposer_index,
@@ -63,7 +89,7 @@ fn to_helios(b: &BeaconHeader) -> BeaconBlockHeader {
     }
 }
 
-fn finalized_of(h: &LightClientHeader) -> Result<Finalized, String> {
+pub(crate) fn finalized_of(h: &LightClientHeader) -> Result<Finalized, String> {
     let b = h.beacon();
     let beacon = BeaconHeader {
         slot: b.slot,
@@ -178,6 +204,7 @@ pub fn verify_update(
             check_participation(config, &GenericUpdate::from(&u))?;
             crate::mark!("lc: participation policy (GenericUpdate clone + popcount)");
             let slot = *u.signature_slot();
+            ws_check(config, prev, slot)?;
             helios_verify_finality(&u, slot, &store, genesis_root, &forks)?;
             crate::mark!("lc: Helios verify_finality_update");
             apply_finality_update(&mut store, &u);
@@ -190,6 +217,7 @@ pub fn verify_update(
             check_participation(config, &GenericUpdate::from(&u))?;
             crate::mark!("lc: participation policy (GenericUpdate clone + popcount)");
             let slot = *u.signature_slot();
+            ws_check(config, prev, slot)?;
             helios_verify_update(&u, slot, &store, genesis_root, &forks).map_err(|e| format!("update rejected: {e}"))?;
             crate::mark!("lc: Helios verify_update");
             apply_update(&mut store, &u);
@@ -235,6 +263,7 @@ pub fn verify_update(
     Ok(Verified {
         next: next_summary,
         not_before_ms: start.checked_mul(1000).ok_or("time overflow")?,
+        deadline_ms: ws_check(config, prev, signature_slot)?,
     })
 }
 
@@ -248,7 +277,7 @@ fn helios_verify_finality(
     verify_finality_update(u, expected_current_slot, store, genesis_root, forks).map_err(|e| format!("finality update rejected: {e}"))
 }
 
-fn check_participation(config: &InstanceConfig, u: &GenericUpdate<S>) -> Result<(), String> {
+pub(crate) fn check_participation(config: &InstanceConfig, u: &GenericUpdate<S>) -> Result<(), String> {
     let n = u.sync_aggregate.sync_committee_bits.iter().filter(|b| *b).count();
     if n < usize::from(config.min_participants) {
         return Err(format!(

@@ -63,9 +63,9 @@ fn fail(e: InclusionError) -> ! {
 /// The guest's entry point.
 #[must_use]
 pub fn handle(input: &ReceiveInput) -> Response {
-    assert!(input.from.is_none() && input.is_authorized, "the signer's own actor, from the transaction");
+    assert!(input.from.is_none() && input.is_authorized, "RFP021-E12 not permitted: the signer's own actor, from the transaction");
     let Ok(probe) = borsh::from_slice::<Probe>(&input.message) else {
-        panic!("probe message")
+        panic!("RFP021-E08 malformed input: probe message")
     };
     match probe {
         Probe::Storage { attest, ctx, witness, address, slot, predicate, proof } => {
@@ -78,7 +78,7 @@ pub fn handle(input: &ReceiveInput) -> Response {
         }
         Probe::Log { attest, ctx, witness, proof, log_index, expect } => {
             let s = verify_receipt_log(&ctx, &witness, &proof, log_index).unwrap_or_else(|e| fail(e));
-            assert!(s.log == expect, "not the expected log");
+            assert!(s.log == expect, "RFP021-E06 predicate not satisfied: not the expected log");
             Response::set_state(ActorState::from(s.id().to_vec())).send(assert_anchor(&attest, &ctx.instance_id, ctx.evm_chain_id, &s.anchor))
         }
     }

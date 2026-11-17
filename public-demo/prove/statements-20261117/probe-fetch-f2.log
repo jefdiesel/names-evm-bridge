@@ -1,0 +1,12 @@
+anchor block hash 0xd09a889c9549ab90c92da730984ca6ea404c2744f0696e87416beffd99357f3f (instance's latest: false)
+header RLP rebuilt from eth_getBlockByHash (677 bytes), hashes to the anchor
+Error: eth_getProof (public nodes serve only about the last 128 blocks): eth_getProof at https://ethereum-sepolia-rpc.publicnode.com: {"code":4444,"message":"distance to target block exceeds maximum proof window"}
+anchor block hash 0xd09a889c9549ab90c92da730984ca6ea404c2744f0696e87416beffd99357f3f (instance's latest: false)
+header RLP rebuilt from eth_getBlockByHash (677 bytes), hashes to the anchor
+eth_getProof at block 12156207 from https://sepolia.rpc.thirdweb.com
+saved the header and proof in $W/run-h2/slot-f2
+statement verified natively: contract 0x8c8b2664de28e5287158db4db65d448638871b74 slot 0x2f1d8d91b7c9c5846e901bd243a284810df5b5b43305d6549bab96136f68161a value 0x0000000000000000000000000000000000000000000000000000000000000001 (9 account + 4 storage nodes)
+STATEMENT_ID=0x0ee1112a9c0bacd2f457c032839c3996fbb484ce85fd38b479ec9ec01a2efc1a
+anchor block hash 0xd09a889c9549ab90c92da730984ca6ea404c2744f0696e87416beffd99357f3f (instance's latest: false)
+header RLP rebuilt from eth_getBlockByHash (677 bytes), hashes to the anchor
+Error: eth_getProof (public nodes serve only about the last 128 blocks): eth_getProof at https://sepolia.rpc.thirdweb.com: {"code":-32005,"message":"Rate limit exceeded. Upgrade your plan at https://thirdweb.com/pricing"}

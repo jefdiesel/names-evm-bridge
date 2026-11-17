@@ -15,6 +15,10 @@
 //! - `prove-slot`: an `eth_getProof` storage statement through the probe, publicly (0.25–1.0M
 //!   cycles), against an anchor the instance finalized.
 //!
+//! - `update-public`, `close-job`, `prove-account`, `prove-log` (branch public-update): the public
+//!   update path (finality in one transaction, period updates in two through a job), and account
+//!   and receipt-log statements; refusals carry the programs' `RFP021-Enn` codes.
+//!
 //! Every fetch is a plain public HTTP GET/POST with a generic user agent. Fetched material can be
 //! saved (`--save-dir`) and replayed (`--load-dir`), so a proof started hours later uses exactly
 //! what was checked.
@@ -183,6 +187,100 @@ pub enum AttestCommand {
         #[arg(long, conflicts_with = "save_dir")]
         load_dir: Option<PathBuf>,
         /// Fetch, check natively and save; send nothing (the anchor need not be recorded yet).
+        #[arg(long)]
+        fetch_only: bool,
+    },
+    /// Advance an instance by a PUBLIC update from a public account (branch public-update): a
+    /// finality update in one transaction (signed by the store's current committee, or by its
+    /// next one: the rotation), or a period update in two (`--step begin`, then `--step finish`,
+    /// or `both`). Verified natively first with the program's own code; a refusal prints its
+    /// `RFP021-Enn` code and sends nothing.
+    UpdatePublic {
+        #[arg(long)]
+        program: AccountId,
+        #[arg(long)]
+        instance: String,
+        /// A public account of this wallet: signs and pays.
+        #[arg(long)]
+        from: AccountId,
+        #[arg(long)]
+        beacon: Option<String>,
+        #[arg(long, value_parser = ["finality", "period"], default_value = "finality")]
+        kind: String,
+        /// A period update's step(s).
+        #[arg(long, value_parser = ["both", "begin", "finish"], default_value = "both")]
+        step: String,
+        #[arg(long)]
+        update_file: Option<PathBuf>,
+        #[arg(long, conflicts_with_all = ["update_file", "save_dir"])]
+        load_dir: Option<PathBuf>,
+        #[arg(long)]
+        save_dir: Option<PathBuf>,
+        #[arg(long)]
+        committees: Option<PathBuf>,
+    },
+    /// Close a period job whose store has moved on (anyone; branch public-update).
+    CloseJob {
+        #[arg(long)]
+        program: AccountId,
+        #[arg(long)]
+        instance: String,
+        /// The job id (32 bytes of hex), as `update-public --step begin` prints it.
+        #[arg(long)]
+        job_id: String,
+        #[arg(long)]
+        from: AccountId,
+    },
+    /// Prove an account field (nonce, balance, storage root, code hash) through the reference
+    /// probe, publicly, against an anchor of the instance (branch public-update).
+    ProveAccount {
+        #[arg(long)]
+        probe: AccountId,
+        #[arg(long)]
+        program: AccountId,
+        #[arg(long)]
+        instance: String,
+        #[arg(long)]
+        from: AccountId,
+        #[arg(long)]
+        eth_rpc: Option<String>,
+        /// The account (20 bytes of hex).
+        #[arg(long)]
+        address: String,
+        #[arg(long, value_parser = ["nonce", "balance", "storage-root", "code-hash"])]
+        field: String,
+        /// Default: the instance's latest execution block hash.
+        #[arg(long)]
+        anchor_block_hash: Option<String>,
+        #[arg(long)]
+        save_dir: Option<PathBuf>,
+        #[arg(long, conflicts_with = "save_dir")]
+        load_dir: Option<PathBuf>,
+        #[arg(long)]
+        fetch_only: bool,
+    },
+    /// Prove a receipt log (log `--log-index` of transaction `--tx-index` in the anchored block)
+    /// through the reference probe, publicly (branch public-update). The receipts come from
+    /// `eth_getBlockReceipts`; their trie must give the header's receipts root.
+    ProveLog {
+        #[arg(long)]
+        probe: AccountId,
+        #[arg(long)]
+        program: AccountId,
+        #[arg(long)]
+        instance: String,
+        #[arg(long)]
+        from: AccountId,
+        #[arg(long)]
+        eth_rpc: String,
+        /// The anchor: an execution block hash the instance recorded.
+        #[arg(long)]
+        anchor_block_hash: String,
+        #[arg(long)]
+        tx_index: u64,
+        #[arg(long)]
+        log_index: u64,
+        /// Check natively and print; send nothing.
         #[arg(long)]
         fetch_only: bool,
     },
@@ -938,7 +1036,269 @@ pub async fn run(wallet: &mut WalletCore<SequencerClient>, sequencer: &str, comm
             }
             Ok(())
         }
+        AttestCommand::UpdatePublic { program, instance, from, beacon, kind, step, update_file, load_dir, save_dir, committees } => {
+            update_public(wallet, sequencer, program, &instance, from, beacon, &kind, &step, update_file, load_dir, save_dir, committees).await
+        }
+        AttestCommand::CloseJob { program, instance, job_id, from } => {
+            let id = hex32(&instance)?;
+            let jid = hex32(&job_id)?;
+            let job = eth_attest_core::job_address(&program, &jid);
+            let state = public_state(wallet, job, program).await?;
+            ensure!(!state.is_empty(), "no job 0x{} (PDA {job}): nothing sent", to_hex(&jid));
+            let accounts = vec![
+                signer(wallet, from, program),
+                AccountIdentity::PublicNoSign(job).select_program_actor_state(program),
+                AccountIdentity::PublicNoSign(store_address(&program, &id)).select_program_actor_state(program),
+            ];
+            let message = borsh::to_vec(&AttestMessage::Instruction(AttestInstruction::CloseJob { job_id: jid }))?;
+            println!("close job 0x{} (PDA {job}); public transaction from {from}", to_hex(&jid));
+            send_tx(wallet, &[program], accounts, &message, None).await.map(drop)
+        }
+        AttestCommand::ProveAccount { probe, program, instance, from, eth_rpc: rpc, address, field, anchor_block_hash, save_dir, load_dir, fetch_only } => {
+            use eth_attest_core::inclusion::{AccountField, AccountFields, AccountProof, verify_account_field};
+            let id = hex32(&instance)?;
+            let (config, store) = read_instance(wallet, program, id).await?;
+            let address = eth(&address)?;
+            let anchor = match &anchor_block_hash {
+                Some(h) => Anchor::BlockHash(hex32(h)?),
+                None => Anchor::BlockHash(store.finalized.execution.block_hash),
+            };
+            let Anchor::BlockHash(hash) = anchor else { unreachable!() };
+            let (header, p) = match &load_dir {
+                Some(dir) => (
+                    hex_bytes(&std::fs::read_to_string(dir.join("header.rlp.hex")).context("header.rlp.hex")?)?,
+                    serde_json::from_slice::<Value>(&std::fs::read(dir.join("eth_getProof.json")).context("eth_getProof.json")?)?,
+                ),
+                None => {
+                    let rpc = rpc.ok_or_else(|| anyhow!("give --eth-rpc (or --load-dir)"))?;
+                    let http = http()?;
+                    let (rlp, number) = header_for(&http, &rpc, &hash).await?;
+                    let p = eth_rpc(&http, &rpc, "eth_getProof", json!([format!("0x{}", to_hex(&address)), [], format!("0x{number:x}")]))
+                        .await
+                        .context("eth_getProof (many public nodes serve only the last ~64-128 blocks)")?;
+                    if let Some(dir) = &save_dir {
+                        std::fs::create_dir_all(dir)?;
+                        std::fs::write(dir.join("eth_getProof.json"), serde_json::to_vec_pretty(&p)?)?;
+                        std::fs::write(dir.join("header.rlp.hex"), format!("0x{}", to_hex(&rlp)))?;
+                        println!("saved the header and proof in {}", dir.display());
+                    }
+                    (rlp, p)
+                }
+            };
+            let pf = p.get("result").unwrap_or(&p);
+            let f = |k: &str| -> Result<String> { pf.get(k).and_then(Value::as_str).map(str::to_owned).ok_or_else(|| anyhow!("eth_getProof: no `{k}`")) };
+            let nodes: Vec<Vec<u8>> = pf["accountProof"].as_array().ok_or_else(|| anyhow!("no accountProof"))?.iter().map(|n| hex_bytes(n.as_str().unwrap_or_default())).collect::<Result<_>>()?;
+            let fields = AccountFields {
+                nonce: u64::from_str_radix(f("nonce")?.trim_start_matches("0x"), 16)?,
+                balance: word_arg(&f("balance")?)?,
+                storage_root: hex32(&f("storageHash")?)?,
+                code_hash: hex32(&f("codeHash")?)?,
+            };
+            let (which, value) = match field.as_str() {
+                "nonce" => (AccountField::Nonce, eth_attest_core::inclusion::word(u128::from(fields.nonce))),
+                "balance" => (AccountField::Balance, fields.balance),
+                "storage-root" => (AccountField::StorageRoot, fields.storage_root),
+                _ => (AccountField::CodeHash, fields.code_hash),
+            };
+            let proof = AccountProof { fields, nodes };
+            let witness = AnchorWitness { anchor, header_rlp: Some(header) };
+            let ctx = StatementContext { evm_chain_id: config.evm_chain_id, instance_id: id };
+            let s = verify_account_field(&ctx, &witness, &address, which, Predicate::Eq(value), &proof)
+                .map_err(|e| anyhow!("{}: the statement does not verify natively, nothing sent: {e}", eth_attest::check::code_of_inclusion(&e).prefix()))?;
+            println!("statement verified natively: account 0x{} {field} = 0x{}", to_hex(&address), to_hex(&value));
+            println!("STATEMENT_ID=0x{}", to_hex(&s.id()));
+            if fetch_only {
+                return Ok(());
+            }
+            ensure!(anchor_record(wallet, program, &id, &anchor).await?.is_some(), "the instance has not finalized {}: nothing sent", anchor_text(&anchor));
+            let accounts = vec![signer(wallet, from, probe), AccountIdentity::PublicNoSign(anchor_address(&program, &id, &anchor)).select_program_actor_state(program)];
+            let message = borsh::to_vec(&Probe::Account { attest: program, ctx, witness, address, field: which, predicate: Predicate::Eq(value), proof })?;
+            let fees = FeeProbe::before(sequencer, from).await?;
+            if let Some((tx, block)) = send_tx(wallet, &[probe, program], accounts, &message, None).await? {
+                fees.report(&tx, block).await?;
+            }
+            Ok(())
+        }
+        AttestCommand::ProveLog { probe, program, instance, from, eth_rpc: rpc, anchor_block_hash, tx_index, log_index, fetch_only } => {
+            let id = hex32(&instance)?;
+            let (config, _) = read_instance(wallet, program, id).await?;
+            let hash = hex32(&anchor_block_hash)?;
+            let anchor = Anchor::BlockHash(hash);
+            let http = http()?;
+            let (header, number) = header_for(&http, &rpc, &hash).await?;
+            let receipts = eth_rpc(&http, &rpc, "eth_getBlockReceipts", json!([format!("0x{number:x}")])).await?;
+            let enc: Vec<Vec<u8>> = receipts.as_array().ok_or_else(|| anyhow!("no receipts"))?.iter().map(receipt_rlp).collect::<Result<_>>()?;
+            let (root, proof) = eth_attest_core::testkit::receipts_trie(&enc, tx_index);
+            let roots = eth_attest_core::inclusion::header_roots(&header).map_err(|e| anyhow!("{e}"))?;
+            ensure!(roots.receipts_root == Some(root), "the receipts from {rpc} do not give the header's receipts root");
+            println!("block {number}: {} receipts, receipts root matches the header", enc.len());
+            let witness = AnchorWitness { anchor, header_rlp: Some(header) };
+            let ctx = StatementContext { evm_chain_id: config.evm_chain_id, instance_id: id };
+            let s = eth_attest_core::inclusion::verify_receipt_log(&ctx, &witness, &proof, log_index)
+                .map_err(|e| anyhow!("{}: the statement does not verify natively, nothing sent: {e}", eth_attest::check::code_of_inclusion(&e).prefix()))?;
+            println!("log {log_index} of tx {tx_index}: address 0x{}, {} topics, {} data bytes", to_hex(&s.log.address), s.log.topics.len(), s.log.data.len());
+            println!("STATEMENT_ID=0x{}", to_hex(&s.id()));
+            if fetch_only {
+                return Ok(());
+            }
+            ensure!(anchor_record(wallet, program, &id, &anchor).await?.is_some(), "the instance has not finalized {}: nothing sent", anchor_text(&anchor));
+            let accounts = vec![signer(wallet, from, probe), AccountIdentity::PublicNoSign(anchor_address(&program, &id, &anchor)).select_program_actor_state(program)];
+            let message = borsh::to_vec(&Probe::Log { attest: program, ctx, witness, proof, log_index, expect: s.log })?;
+            let fees = FeeProbe::before(sequencer, from).await?;
+            if let Some((tx, block)) = send_tx(wallet, &[probe, program], accounts, &message, None).await? {
+                fees.report(&tx, block).await?;
+            }
+            Ok(())
+        }
     }
+}
+
+/// A receipt as the receipts trie holds it, from `eth_getBlockReceipts` JSON:
+/// `type ‖ rlp([status, cumulativeGasUsed, logsBloom, logs])` (legacy: no type byte).
+fn receipt_rlp(r: &Value) -> Result<Vec<u8>> {
+    let s = |k: &str, v: &Value| -> Result<String> { v.get(k).and_then(Value::as_str).map(str::to_owned).ok_or_else(|| anyhow!("receipt: no `{k}`")) };
+    let int = |k: &str, v: &Value| -> Result<Vec<u8>> {
+        let t = s(k, v)?;
+        let t = t.trim_start_matches("0x").trim_start_matches('0');
+        let t = if t.len() % 2 == 1 { format!("0{t}") } else { t.to_owned() };
+        hex_bytes(&t)
+    };
+    let list = |items: &[Vec<u8>]| -> Vec<u8> {
+        let payload = items.concat();
+        let mut out = rlp_len(payload.len(), 0xc0);
+        out.extend_from_slice(&payload);
+        out
+    };
+    let mut logs = Vec::new();
+    for l in r["logs"].as_array().ok_or_else(|| anyhow!("receipt: no logs"))? {
+        let topics: Vec<Vec<u8>> = l["topics"].as_array().ok_or_else(|| anyhow!("log: no topics"))?.iter().map(|t| hex_bytes(t.as_str().unwrap_or_default()).map(|b| rlp_bytes(&b))).collect::<Result<_>>()?;
+        logs.push(list(&[rlp_bytes(&hex_bytes(&s("address", l)?)?), list(&topics), rlp_bytes(&hex_bytes(&s("data", l)?)?)]));
+    }
+    let body = list(&[rlp_bytes(&int("status", r)?), rlp_bytes(&int("cumulativeGasUsed", r)?), rlp_bytes(&hex_bytes(&s("logsBloom", r)?)?), list(&logs)]);
+    let ty = int("type", r)?;
+    Ok(match ty.as_slice() {
+        [] => body,
+        [t] => [vec![*t], body].concat(),
+        _ => bail!("receipt type"),
+    })
+}
+
+/// `update-public`: see [`AttestCommand::UpdatePublic`].
+#[allow(clippy::too_many_arguments)]
+async fn update_public(
+    wallet: &mut WalletCore<SequencerClient>,
+    sequencer: &str,
+    program: AccountId,
+    instance: &str,
+    from: AccountId,
+    beacon: Option<String>,
+    kind: &str,
+    step: &str,
+    update_file: Option<PathBuf>,
+    load_dir: Option<PathBuf>,
+    save_dir: Option<PathBuf>,
+    committees: Option<PathBuf>,
+) -> Result<()> {
+    use eth_attest::check;
+    let id = hex32(instance)?;
+    let (config, prev) = read_instance(wallet, program, id).await?;
+    let beacon = beacon
+        .or_else(|| network_by_chain(config.evm_chain_id).map(|n| n.beacon.to_owned()))
+        .ok_or_else(|| anyhow!("give --beacon for chain {}", config.evm_chain_id))?;
+    println!("store now:");
+    print_summary("  ", &prev);
+    let http = http()?;
+    let cache = committees.map_or_else(default_cache, Ok)?;
+    let witness_dir = load_dir.clone().unwrap_or_else(|| cache.clone());
+    let period = kind == "period";
+    let bytes = match (&load_dir, update_file) {
+        (Some(dir), _) => std::fs::read(dir.join("update.ssz")).context("update.ssz")?,
+        (None, Some(path)) => std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?,
+        (None, None) => match fetch_update(&http, &beacon, kind, &prev).await? {
+            LcUpdate::Finality(b) | LcUpdate::Period(b) => b,
+        },
+    };
+    let lc = if period { LcUpdate::Period(bytes.clone()) } else { LcUpdate::Finality(bytes.clone()) };
+    println!("{}", describe_update(&lc)?);
+    // The signing committee, as Helios selects it: by the signature slot's period.
+    let g = update_info(&lc)?;
+    let store_period = prev.finalized.beacon.slot / SLOTS_PER_PERIOD;
+    let want = if g.signature_slot / SLOTS_PER_PERIOD == store_period {
+        prev.current_committee
+    } else {
+        prev.next_committee.ok_or_else(|| anyhow!("RFP021-E03 handoff not verified: signed in period {}, but the store does not know its next committee (send the period-{store_period} update first): nothing sent", g.signature_slot / SLOTS_PER_PERIOD))?
+    };
+    let committee_ssz = committee(&http, &beacon, &witness_dir, &config, &prev, want).await?;
+    println!("signed by the store's {} committee 0x{}", if want == prev.current_committee { "current" } else { "NEXT" }, to_hex(&want));
+    let bits = eth_attest::public::update_bits(&bytes, period).map_err(|e| anyhow!(e))?;
+    let keys = eth_attest::public::key_witnesses(&committee_ssz, &bits).map_err(|e| anyhow!(e))?;
+    println!("{}/512 signers, {} key witnesses", bits.iter().filter(|b| **b).count(), keys.absent.len() + 1);
+    if let Some(dir) = &save_dir {
+        std::fs::create_dir_all(dir)?;
+        std::fs::write(dir.join("update.kind"), kind)?;
+        std::fs::write(dir.join("update.ssz"), &bytes)?;
+        save_committee(dir, &committee_ssz)?;
+        std::fs::write(dir.join("prev.borsh.hex"), to_hex(&borsh::to_vec(&prev)?))?;
+    }
+    let store = || AccountIdentity::PublicNoSign(store_address(&program, &id)).select_program_actor_state(program);
+    let anchors_of = |next: &LcSummary| -> Vec<_> {
+        if next.finalized == prev.finalized {
+            Vec::new()
+        } else {
+            next.finalized.anchors().iter().map(|a| AccountIdentity::PublicNoSign(anchor_address(&program, &id, a)).select_program_actor_state(program)).collect()
+        }
+    };
+    let refuse = |c: check::Code| anyhow!("{}: the update does not verify natively, nothing sent", c.prefix());
+    if !period {
+        let v = check::finality_public(&program, &config, &prev, &committee_ssz, &keys, &bytes).map_err(refuse)?;
+        println!("verified natively (the program's own code); the store advances to:");
+        print_summary("  ", &v.next);
+        let mut accounts = vec![signer(wallet, from, program), store()];
+        accounts.extend(anchors_of(&v.next));
+        let message = borsh::to_vec(&AttestMessage::Instruction(AttestInstruction::UpdatePublic { config, prev, committee: committee_ssz, keys, update: bytes }))?;
+        println!("update message {} bytes; public transaction from {from}", message.len());
+        let fees = FeeProbe::before(sequencer, from).await?;
+        if let Some((tx, block)) = send_tx(wallet, &[program], accounts, &message, None).await? {
+            fees.report(&tx, block).await?;
+            let (_, now) = read_instance(wallet, program, id).await?;
+            ensure!(now == v.next, "the store on chain is not the summary verified here");
+            println!("store on chain now:");
+            print_summary("  ", &now);
+        }
+        return Ok(());
+    }
+    let job = check::period_begin(&program, &config, &prev, &bytes).map_err(refuse)?;
+    check::period_finish(&job, &committee_ssz, &keys).map_err(refuse)?;
+    let jid = eth_attest_core::job_id(&job.prev, &job.update_digest);
+    let job_pda = eth_attest_core::job_address(&program, &jid);
+    println!("verified natively (both steps); JOB_ID=0x{} JOB_PDA={job_pda}", to_hex(&jid));
+    let job_acct = || AccountIdentity::PublicNoSign(job_pda).select_program_actor_state(program);
+    if step == "begin" || step == "both" {
+        let accounts = vec![signer(wallet, from, program), job_acct(), store()];
+        let message = borsh::to_vec(&AttestMessage::Instruction(AttestInstruction::PeriodBegin { config: config.clone(), prev: prev.clone(), update: bytes.clone() }))?;
+        println!("Begin: message {} bytes; public transaction from {from}", message.len());
+        let fees = FeeProbe::before(sequencer, from).await?;
+        match send_tx(wallet, &[program], accounts, &message, None).await? {
+            Some((tx, block)) => fees.report(&tx, block).await?,
+            None => return Ok(()),
+        }
+    }
+    if step == "finish" || step == "both" {
+        let mut accounts = vec![signer(wallet, from, program), store(), job_acct()];
+        accounts.extend(anchors_of(&job.next));
+        let next = job.next.clone();
+        let message = borsh::to_vec(&AttestMessage::Instruction(AttestInstruction::PeriodFinish { job, committee: committee_ssz, keys }))?;
+        println!("Finish: message {} bytes; public transaction from {from}", message.len());
+        let fees = FeeProbe::before(sequencer, from).await?;
+        if let Some((tx, block)) = send_tx(wallet, &[program], accounts, &message, None).await? {
+            fees.report(&tx, block).await?;
+            let (_, now) = read_instance(wallet, program, id).await?;
+            ensure!(now == next, "the store on chain is not the summary verified here");
+            println!("store on chain now:");
+            print_summary("  ", &now);
+        }
+    }
+    Ok(())
 }
 
 fn print_ids(program: &AccountId, config: &InstanceConfig, genesis: Option<&LcSummary>) {

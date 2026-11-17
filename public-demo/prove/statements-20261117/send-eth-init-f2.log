@@ -1,0 +1,5 @@
+== eth-init-f2 2026-11-17T18:50:28Z: program HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n accounts 4vK7Qce9kJ2etKAj5k3yQ4pBXTuDDD62uCrKz2HWBGH2@HBdZtcY57WPGJcpKRAYmdx2zx2zDNsiw3vRbRNUHZ87n gas limit 10000000
+before: balance {"jsonrpc":"2.0","id":1,"result":99999275700202} fee state {"jsonrpc":"2.0","id":1,"result":{"height":73,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":73}
+tx 3e646d26e150e64f070a7caefb3901a802b6f84c5474a66d9e1267f44cd79873
+applied in block 74
+after: balance {"jsonrpc":"2.0","id":1,"result":99999275439346} fee state {"jsonrpc":"2.0","id":1,"result":{"height":74,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":74} (rc 0)

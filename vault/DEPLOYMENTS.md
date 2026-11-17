@@ -160,7 +160,7 @@ Sepolia block 12134858, 820,681 gas, leaf 0, bound to the team's public LEZ acco
 the vault's `Deposit` log carrying that root, and `depositCount()` 1 at `finalized`.
 
 **How v3 differs from v2 (read this first):**
-- **v2 can never release** (its update image id is a placeholder). **v3, as deployed, cannot accept
+- **No honest proof can release v2** (its update image id is a placeholder). It is bound to the 3.0.0 verifier, which GHSA-g6qg-9j8p-7j87 covers, so a forged proof could; test ETH only. **v3, as deployed, cannot accept
   any update either, so nothing can be released from it** (found 2026-11-15): it was deployed with `initialG2State` zero
   (`g2State()` reads `0x00…00`), `update` requires `prevState == g2State`, and the G2-lite guest's
   `prevState` is always the hash of a real state, never zero. Every other check of `update` passes

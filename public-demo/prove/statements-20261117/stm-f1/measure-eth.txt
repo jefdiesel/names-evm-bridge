@@ -1,0 +1,10 @@
+# reference consumer eth-11155111: config PDA 6RFz6veBv3Z6cUGNkdyTdBb9NTMqXho6eVzr3c42Cps6
+  block 12156175 (0xeaa55b9fded95df5541ba345aff0874ee8dac9e3ef7d8f0f5cedccb39bb56eba), 118 receipts, receipts root matches the header
+  accepted natively: sender 0xa1f78bed1a79b9aec972e373e0e7f63d8cace4a8, amount 0x000000000000000000000000000000000000000000000000000012309ce54000, recipient 0x7b79995e5f793a07bc00c21412e50ecae098e7f9
+  statement id 0x4c649db01d0d630b447ac7bd1a300ca7a1e5e2853cf918dab83ba2b600fc3b11; nullifier PDA 3HnTpDXgFEzvfdDvHVKvJshiQPbrsa4FqyxKwCKDhEdD; anchor PDA 4ZWpzYmUYxiRM7tPR6DdKvAEAPMGJgQfaV1ErQkDhR2m
+  consumer: the claim in the signer's actor: user=150034 total=262144 segments=1 (0.02x the 10M cap)
+  attestation: AssertAnchor: user=17097 total=65536 segments=1 (0.00x the 10M cap)
+  consumer: nullifier PDA: user=13150 total=65536 segments=1 (0.00x the 10M cap)
+  consumer: config PDA check: user=17636 total=65536 segments=1 (0.00x the 10M cap)
+  whole claim transaction 197917 user cycles; message 4491 bytes
+messages written: consumer-eth-11155111-init.hex, consumer-eth-11155111-claim-81-2.hex

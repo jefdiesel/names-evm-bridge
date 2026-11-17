@@ -92,9 +92,33 @@ impl InclusionClass {
         }
     }
 
-    /// Panics with [`InclusionClass::as_str`] and nothing else: the program-side refusal.
+    /// The typed code of this class (`codes`): the predicate class is
+    /// [`crate::codes::Code::PredicateNotSatisfied`], every other class an invalid inclusion proof.
+    #[must_use]
+    pub const fn code(self) -> crate::codes::Code {
+        match self {
+            Self::Predicate => crate::codes::Code::PredicateNotSatisfied,
+            _ => crate::codes::Code::InclusionProofInvalid,
+        }
+    }
+
+    /// The program-side refusal: the code's tag and text, then [`InclusionClass::as_str`], and
+    /// nothing else (fixed texts only).
+    #[must_use]
+    pub const fn refusal(self) -> &'static str {
+        match self {
+            Self::Anchor => "RFP021-E05 inclusion proof invalid: anchor witness invalid",
+            Self::AccountProof => "RFP021-E05 inclusion proof invalid: account proof invalid",
+            Self::StorageProof => "RFP021-E05 inclusion proof invalid: storage proof invalid",
+            Self::ReceiptProof => "RFP021-E05 inclusion proof invalid: receipt proof invalid",
+            Self::Receipt => "RFP021-E05 inclusion proof invalid: receipt or log invalid",
+            Self::Predicate => "RFP021-E06 predicate not satisfied: the predicate does not hold",
+        }
+    }
+
+    /// Panics with [`InclusionClass::refusal`] and nothing else.
     pub fn refuse(self) -> ! {
-        panic!("{}", self.as_str())
+        panic!("{}", self.refusal())
     }
 }
 

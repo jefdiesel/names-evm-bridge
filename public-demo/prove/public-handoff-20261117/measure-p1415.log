@@ -1,0 +1,28 @@
+# public update path, REAL PERIOD update from $W/run-h/p1415
+  store now: finalized slot 11599840 (period 1415), updates 0, next committee unknown; signature slot 11591745 (period 1415): signed by the current committee
+  real period update: 509/512 signers, signed by the store's current committee
+  real period update: Begin, submitter's actor: user=3121776 total=3670016 segments=4 (0.31x the 10M cap)
+  real period update: Begin, job PDA opens: user=38566 total=131072 segments=1 (0.00x the 10M cap)
+  real period update: Finish, submitter's actor: user=8948534 total=9568256 segments=10 (0.89x the 10M cap)
+  real period update: Finish, job PDA: user=66251 total=131072 segments=1 (0.01x the 10M cap)
+  real period update: store applies Advance: user=38204 total=131072 segments=1 (0.00x the 10M cap)
+
+### real period update, Begin
+| program call | user cycles |
+|---|---:|
+| Begin: submitter's actor (every check but the signature) | 3121776 |
+| Begin: job PDA opens | 38566 |
+| **whole transaction** | **3160342** (31.60% of the 10M cap; margin 6839658) |
+  new store: finalized slot 11599840, block hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730, updates 1
+
+### real period update, Finish
+| program call | user cycles |
+|---|---:|
+| Finish: submitter's actor (the signature) | 8948534 |
+| Finish: job PDA (done, sends Advance) | 66251 |
+| store: Advance (+ sends RecordAnchor) | 38204 |
+| **whole transaction** | **9052989** (90.53% of the 10M cap; margin 947011) |
+  new store: finalized slot 11599840, block hash 0xccf655604ddad10cc3d7f7f6ff9e1ba565daa48088702fcd4eb37f3c5be35730, updates 1
+JOB_ID=0xc1a9f7edf9c3e42e8503318fb0599b42c0ad6d1c2b380942a23e8c06ed69dd41
+JOB_PDA=4j1nfbTftUhZ1aPwLoRQFxqi12471d9G54968wbLjra6
+messages written to $W/run-h/message-p1415.hex.begin (26907 bytes) and $W/run-h/message-p1415.hex.finish (25838 bytes)

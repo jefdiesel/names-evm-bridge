@@ -13,13 +13,13 @@ bridge_core.workspace = true
 # Seed-derived secrets, deposit requests and the recovery scan (`recover.rs`).
 bridge_client = { path = "../client" }
 bridge_token_core.workspace = true
-eth_attest_core.workspace = true
+eth_attest_core = { workspace = true, features = ["testkit"] }
 bridge_methods = { path = "../methods" }
 # RFP-021 client (`attest ...`): the program crate itself, natively, so the CLI runs the same
 # Helios verification before it builds a transaction and decodes the SSZ committees it must
 # supply as the witness. This links Helios consensus-core and zkcrypto bls12_381 into the host
 # binary only; no guest changes. The guests it deploys come prebuilt from attest_methods.
-eth_attest.workspace = true
+eth_attest = { workspace = true, features = ["public-update"] }
 eth_attest_probe = { path = "../attest/probe" }
 attest_methods = { path = "../attest/methods" }
 helios-consensus-core = { git = "https://github.com/a16z/helios", rev = "2af9b41887e069144ee56cd710f3ddca195473f8" }

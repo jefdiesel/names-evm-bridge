@@ -14,10 +14,11 @@ members = [
     "attest/program",
     "attest/probe",
     "attest/methods",
+    "attest/consumer",
 ]
 # The attestation guests and the cycle-count host are separate workspaces with their own
 # [patch] sections (RISC Zero BLS/SHA forks), so nothing here is rebuilt against those patches.
-exclude = ["methods/attest_guest", "methods/attest_probe_guest", "attest/cycles", "methods/release_guest", "release", "attest/lcbench", "methods/lc_bench_zk", "methods/lc_bench_blst", "methods/lc_bench_fast", "attest/vendor/helios-consensus-core"]
+exclude = ["methods/attest_guest", "methods/attest_guest_public", "methods/eth_consumer_guest", "methods/attest_probe_guest", "attest/cycles", "methods/release_guest", "release", "attest/lcbench", "methods/lc_bench_zk", "methods/lc_bench_blst", "methods/lc_bench_fast", "attest/vendor/helios-consensus-core"]
 
 [workspace.package]
 version = "0.1.0"
@@ -40,6 +41,14 @@ borsh = "1.5.7"
 # Same keccak patch LEZ applies, so the guests match what the zone builds.
 [patch.crates-io]
 keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
+
+# Helios 0.12.0 (2af9b41) with one function added, `verify_generic_update_with` (the signature
+# check as a hook; attest/vendor/helios-consensus-core/SPIKE-PATCH.diff), which the attestation
+# program's `public-update` feature uses, and patch 2: `is_next_committee_proof_valid` roots the next
+# committee by direct SHA-256 (`sync_committee_root`, equal to `tree_hash_root`, tested). Every
+# other function is Helios's, unchanged.
+[patch."https://github.com/a16z/helios"]
+helios-consensus-core = { path = "attest/vendor/helios-consensus-core" }
 
 # Helios's BLS12-381 verification is slow unoptimised; the attest tests run real Sepolia and
 # mainnet updates natively, so optimise the curve and hashing crates even in the test profile.

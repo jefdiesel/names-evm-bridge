@@ -1,0 +1,12 @@
+anchor block hash 0x21eb76e7084e12f946b2805332daf9d6cbb70e231d2502c9ad8de9cfd3a215a5 (instance's latest: false)
+header and proof from $W/run-h/slot-fin2 (fetched earlier)
+statement verified natively: contract 0x8c8b2664de28e5287158db4db65d448638871b74 slot 0x2f1d8d91b7c9c5846e901bd243a284810df5b5b43305d6549bab96136f68161a value 0x0000000000000000000000000000000000000000000000000000000000000001 (9 account + 4 storage nodes)
+STATEMENT_ID=0x148198c49837f221ba3b3f49ba571460f818158806709d31bb55f890d698cc3d
+anchor recorded by the instance at beacon slot 11600320
+probe message 5789 bytes; public transaction from BaiDTsuN6donDtdsMVqgiejwNCq8DToN3tMiaF8u3EvU
+submitted in 280.2ms
+tx aabd49ecb964e72f61ede8372558e1a336e22ef56eba3674198ef53534b83dfe
+applied in block 30
+charged: fee 2510275 (payer balance 99999646120781 -> 99999643610506); wire bytes 6251; base fees exec 9 / stor 8 at height 29 (after: 8 / 8 at 30); so execution gas = (fee - bytes x stor) / exec = 273363 in block 30
+  (a block charges at its opening fee state, the quote before; the head moved after it. If another block came in between, the figure is approximate; the dry run's metered cycles are exact)
+the probe actor (BaiDTsuN6donDtdsMVqgiejwNCq8DToN3tMiaF8u3EvU, 2SQEqfPjt6cWng1Z9v1vXDge66GEUctjgDg9JUks5RkH) holds statement id 0x148198c49837f221ba3b3f49ba571460f818158806709d31bb55f890d698cc3d

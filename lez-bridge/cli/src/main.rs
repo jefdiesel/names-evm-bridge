@@ -676,7 +676,10 @@ async fn main() {
 
 async fn real_main(cli: Cli) -> Result<()> {
     let mut overrides = sequencer_overrides(&cli.sequencer)?;
-    let is_init = matches!(&cli.command, Command::Attest { rfp021: Some(attest::AttestCommand::Init { .. }), .. });
+    let is_init = matches!(
+        &cli.command,
+        Command::Attest { rfp021: Some(attest::AttestCommand::Init { .. } | attest::AttestCommand::UpdatePublic { .. }), .. }
+    );
     overrides.gas_limit = cli.gas_limit.or(is_init.then_some(attest::INIT_GAS_LIMIT));
     match cli.command {
         Command::Wallet { args } if out::json() && args.iter().map(String::as_str).eq(["account", "list"]) => {

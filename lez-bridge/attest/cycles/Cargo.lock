@@ -1038,12 +1038,16 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 name = "attest_cycles"
 version = "0.1.0"
 dependencies = [
+ "alloy-primitives",
+ "alloy-rlp",
  "anyhow",
+ "blst",
  "borsh",
  "bridge_core",
  "eth_attest",
  "eth_attest_core",
  "eth_attest_probe",
+ "eth_consumer",
  "ethereum_ssz 0.9.1",
  "helios-consensus-core",
  "hex",
@@ -1233,9 +1237,9 @@ dependencies = [
 
 [[package]]
 name = "blst"
-version = "0.3.17"
+version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c20659f9bbee16cbbd2f7393e40ab6309f5a98f76a2eb57a995ec508b72387fe"
+checksum = "dcdb4c7013139a150f9fc55d123186dbfaba0d912817466282c73ac49e71fb45"
 dependencies = [
  "cc",
  "glob",
@@ -2251,6 +2255,7 @@ name = "eth_attest"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives",
+ "blst",
  "borsh",
  "eth_attest_core",
  "ethereum_ssz 0.9.1",
@@ -2274,6 +2279,15 @@ dependencies = [
 
 [[package]]
 name = "eth_attest_probe"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "eth_attest_core",
+ "lee_core",
+]
+
+[[package]]
+name = "eth_consumer"
 version = "0.1.0"
 dependencies = [
  "borsh",
@@ -2815,7 +2829,6 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 [[package]]
 name = "helios-consensus-core"
 version = "0.12.0"
-source = "git+https://github.com/a16z/helios?rev=2af9b41887e069144ee56cd710f3ddca195473f8#2af9b41887e069144ee56cd710f3ddca195473f8"
 dependencies = [
  "alloy",
  "alloy-rlp",
@@ -2823,7 +2836,6 @@ dependencies = [
  "ethereum_ssz 0.9.1",
  "ethereum_ssz_derive 0.9.1",
  "eyre",
- "getrandom 0.2.17",
  "serde",
  "sha2 0.9.9",
  "ssz_types",
@@ -2833,7 +2845,6 @@ dependencies = [
  "tree_hash 0.10.0",
  "tree_hash_derive 0.10.0",
  "typenum",
- "wasmtimer",
 ]
 
 [[package]]
@@ -5714,7 +5725,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
@@ -6295,20 +6306,6 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
-]
-
-[[package]]
-name = "wasmtimer"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c62b7f338e4397a45d054c15a2b36a93d57cccdda7be11a7d7b045d47b5e70ce"
-dependencies = [
- "futures",
- "js-sys",
- "parking_lot",
- "pin-project-lite",
- "slab",
- "wasm-bindgen",
 ]
 
 [[package]]

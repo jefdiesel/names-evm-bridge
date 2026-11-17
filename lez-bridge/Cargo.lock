@@ -1489,7 +1489,7 @@ dependencies = [
  "bitflags 2.13.2",
  "cexpr",
  "clang-sys",
- "itertools 0.11.0",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "regex",
@@ -1664,9 +1664,9 @@ dependencies = [
 
 [[package]]
 name = "blst"
-version = "0.3.17"
+version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c20659f9bbee16cbbd2f7393e40ab6309f5a98f76a2eb57a995ec508b72387fe"
+checksum = "dcdb4c7013139a150f9fc55d123186dbfaba0d912817466282c73ac49e71fb45"
 dependencies = [
  "cc",
  "glob",
@@ -2677,7 +2677,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c54e03a951783e8b327515db3f2a2fd0e3bed362a96b066f341ce66ed49b4ead"
 dependencies = [
  "data-encoding",
- "syn 1.0.109",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -2860,7 +2860,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3197,7 +3197,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e35d6e78f4cebb90e51d543db8fe41528851d6deeef6ef21ebd4bfdc1e784776"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3207,15 +3207,18 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "alloy-trie",
+ "blst",
  "borsh",
  "eth_attest_core",
  "eth_attest_probe",
+ "eth_consumer",
  "ethereum_ssz 0.9.1",
  "helios-consensus-core",
  "hex",
  "lee_core",
  "risc0-zkvm",
  "serde_json",
+ "sha2 0.10.9",
  "tree_hash 0.10.0",
 ]
 
@@ -3236,6 +3239,16 @@ name = "eth_attest_probe"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "eth_attest_core",
+ "lee_core",
+]
+
+[[package]]
+name = "eth_consumer"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "eth_attest",
  "eth_attest_core",
  "lee_core",
 ]
@@ -4000,7 +4013,6 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 [[package]]
 name = "helios-consensus-core"
 version = "0.12.0"
-source = "git+https://github.com/a16z/helios?rev=2af9b41887e069144ee56cd710f3ddca195473f8#2af9b41887e069144ee56cd710f3ddca195473f8"
 dependencies = [
  "alloy",
  "alloy-rlp",
@@ -4008,7 +4020,6 @@ dependencies = [
  "ethereum_ssz 0.9.1",
  "ethereum_ssz_derive 0.9.1",
  "eyre",
- "getrandom 0.2.17",
  "serde",
  "sha2 0.9.9",
  "ssz_types",
@@ -4018,7 +4029,6 @@ dependencies = [
  "tree_hash 0.10.0",
  "tree_hash_derive 0.10.0",
  "typenum",
- "wasmtimer",
 ]
 
 [[package]]
@@ -7038,7 +7048,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8048,7 +8058,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -8087,9 +8097,9 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -9011,7 +9021,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -10088,7 +10098,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -11156,20 +11166,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "wasmtimer"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c62b7f338e4397a45d054c15a2b36a93d57cccdda7be11a7d7b045d47b5e70ce"
-dependencies = [
- "futures",
- "js-sys",
- "parking_lot",
- "pin-project-lite",
- "slab",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "web-sys"
 version = "0.3.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11254,7 +11250,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

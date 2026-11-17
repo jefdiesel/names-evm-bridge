@@ -37,11 +37,14 @@
 //!    an *immutable* program header committed on chain (`lee/state_machine/core/src/circuit_io.rs:71-94`).
 //!    **The program must therefore be deployed with an immutable header**; a mutable header lets
 //!    whoever controls it swap the code (RFP-021 Verification Security #3).
-//! 3. **That code emits `Advance` only after verifying.** The single place this program builds an
-//!    `Advance` is [`instruct`] for [`Instruction::Update`], immediately after
-//!    [`lc::verify_update`] succeeded for exactly the `(config, prev)` it puts in the message:
-//!    the instance id is recomputed from the config the verifier used, the committee witness must
-//!    hash to `prev`'s commitments, and the destination store is derived from `prev.instance_id`.
+//! 3. **That code emits `Advance` only after verifying.** Without the `public-update` feature the
+//!    single place this program builds an `Advance` is [`instruct`] for [`Instruction::Update`],
+//!    immediately after [`lc::verify_update`] succeeded for exactly the `(config, prev)` it puts in
+//!    the message: the instance id is recomputed from the config the verifier used, the committee
+//!    witness must hash to `prev`'s commitments, and the destination store is derived from
+//!    `prev.instance_id`. With the feature, two more places (`public.rs`): `UpdatePublic` right
+//!    after `verify_finality_public`, and a job PDA right after it checked the signature of the
+//!    job `PeriodBegin` verified (every other check) for that `prev`.
 //! 4. **The verifier's "previous store" is the real one.** The store PDA compares the `prev` in
 //!    the message with its own state, field for field, and refuses on any difference ("the store
 //!    changed since this update was verified"). Two racing submitters: the second fails cleanly.
@@ -82,7 +85,10 @@ use lee_core::{
     program::{PdaSeed, ProgramEvent, ReceiveInput, Response, SyncMessage},
 };
 
+pub mod check;
 pub mod lc;
+#[cfg(feature = "public-update")]
+pub mod public;
 
 /// Phase marks for the cycle-count spike (`attest/lcbench`). Compiled out unless the
 /// `cycle-marks` feature is on, and records nothing outside the zkVM.
@@ -131,7 +137,7 @@ fn event<T: BorshSerialize>(name: &str, data: &T) -> ProgramEvent {
     let selector = eth_attest_core::sha256(&[b"rfp021_attest::", name.as_bytes()]);
     ProgramEvent {
         selector: selector[..8].try_into().unwrap_or_else(|_| unreachable!()),
-        data: borsh::to_vec(data).unwrap_or_else(|_| panic!("event serializes")),
+        data: borsh::to_vec(data).unwrap_or_else(|_| panic!("RFP021-E08 malformed input: event serializes")),
     }
 }
 
@@ -139,19 +145,19 @@ fn event<T: BorshSerialize>(name: &str, data: &T) -> ProgramEvent {
 /// `expect` on a `Result`, so a refusal never prints a value (account ids, chain ids, decoder
 /// errors). `bridge/tests/panic_texts.rs` checks the source.
 fn state<T: BorshSerialize>(value: &T) -> ActorState {
-    ActorState::from(borsh::to_vec(value).unwrap_or_else(|_| panic!("state serializes")))
+    ActorState::from(borsh::to_vec(value).unwrap_or_else(|_| panic!("RFP021-E08 malformed input: state serializes")))
 }
 
 /// The guest's entry point.
 #[must_use]
 pub fn handle(input: &ReceiveInput) -> Response {
     let Ok(message) = borsh::from_slice::<Message>(&input.message) else {
-        panic!("message must decode")
+        panic!("RFP021-E08 malformed input: message must decode")
     };
     match message {
         Message::Instruction(i) => instruct(input, i),
         Message::Effect(e) => {
-            assert!(input.from_own_program(), "only this program may send an effect");
+            assert!(input.from_own_program(), "RFP021-E12 not permitted: only this program may send an effect");
             apply(input, e)
         }
         Message::Query(q) => query(input, &q),
@@ -161,14 +167,17 @@ pub fn handle(input: &ReceiveInput) -> Response {
 /// Runs an instruction in the signer's own actor: all heavy verification happens here.
 #[must_use]
 pub fn instruct(input: &ReceiveInput, instruction: Instruction) -> Response {
-    assert!(input.from.is_none(), "an instruction is sent by the transaction itself");
+    assert!(input.from.is_none(), "RFP021-E12 not permitted: an instruction is sent by the transaction itself");
     // Any account may submit; it only has to be the signer's own (so a PDA of this program can
     // never be made to run an instruction).
-    assert!(input.is_authorized, "the submitter's account must sign");
+    assert!(input.is_authorized, "RFP021-E12 not permitted: the submitter's account must sign");
     let program = input.receiver.program_account_id;
     match instruction {
         Instruction::Init { config, bootstrap } => {
-            let genesis = lc::verify_bootstrap(&program, &config, &bootstrap).unwrap_or_else(|e| panic!("{e}"));
+            let genesis = lc::verify_bootstrap(&program, &config, &bootstrap).unwrap_or_else(|e| {
+                let e = eth_attest_core::codes::coded(&e);
+                panic!("{e}")
+            });
             let seed = config_seed(&genesis.instance_id);
             Response::keep_state().send(effect(seed, &program, Effect::Create { config, genesis }))
         }
@@ -180,12 +189,21 @@ pub fn instruct(input: &ReceiveInput, instruction: Instruction) -> Response {
             update,
         } => {
             let v = lc::verify_update(&program, &config, &prev, &current_committee, next_committee.as_deref(), &update)
-                .unwrap_or_else(|e| panic!("{e}"));
+                .unwrap_or_else(|e| {
+                let e = eth_attest_core::codes::coded(&e);
+                panic!("{e}")
+            });
             let seed = store_seed(&prev.instance_id);
             Response::keep_state()
                 .send(effect(seed, &program, Effect::Advance { prev, next: v.next }))
-                .timestamp_window(v.not_before_ms..)
+                .try_timestamp_window(v.not_before_ms..v.deadline_ms)
+                .unwrap_or_else(|_| panic!("RFP021-E04 checkpoint stale or invalid: weak-subjectivity bound passed"))
         }
+        // The public path (branch public-update, DESIGN.md §9.3a/§9.3b): src/public.rs.
+        #[cfg(feature = "public-update")]
+        i => public::instruct(&program, i),
+        #[cfg(not(feature = "public-update"))]
+        _ => panic!("RFP021-E12 not permitted: this build of the program has no public update path"),
     }
 }
 
@@ -214,34 +232,34 @@ fn apply(input: &ReceiveInput, e: Effect) -> Response {
     match e {
         Effect::Create { config, genesis } => {
             let id = instance_id(&program, &config);
-            assert!(here == config_address(&program, &id), "create goes to the instance's config");
-            assert!(input.pre_state.is_empty(), "this instance already exists");
+            assert!(here == config_address(&program, &id), "RFP021-E12 not permitted: create goes to the instance's config");
+            assert!(input.pre_state.is_empty(), "RFP021-E09 stale or replayed: this instance already exists");
             config.validate();
-            assert!(genesis.instance_id == id, "store for another instance");
-            assert!(genesis.evm_chain_id == config.evm_chain_id, "store for another chain");
-            assert!(genesis.updates == 0, "a new store has no updates");
+            assert!(genesis.instance_id == id, "RFP021-E13 witness mismatch: store for another instance");
+            assert!(genesis.evm_chain_id == config.evm_chain_id, "RFP021-E07 chain id mismatch: store for another chain");
+            assert!(genesis.updates == 0, "RFP021-E08 malformed input: a new store has no updates");
             Response::set_state(state(&config)).send(effect(store_seed(&id), &program, Effect::Open { genesis }))
         }
         Effect::Open { genesis } => {
             assert!(
                 sender_is(input, &config_address(&program, &genesis.instance_id)),
-                "only the instance's config opens its store"
+                "RFP021-E12 not permitted: only the instance's config opens its store"
             );
-            assert!(here == store_address(&program, &genesis.instance_id), "open goes to the instance's store");
-            assert!(input.pre_state.is_empty(), "the store is already open");
+            assert!(here == store_address(&program, &genesis.instance_id), "RFP021-E12 not permitted: open goes to the instance's store");
+            assert!(input.pre_state.is_empty(), "RFP021-E09 stale or replayed: the store is already open");
             let r = Response::set_state(state(&genesis));
             record_anchors(&program, &genesis, r)
         }
         Effect::Advance { prev, next } => {
-            assert!(here == store_address(&program, &prev.instance_id), "advance goes to the instance's store");
-            assert!(!input.pre_state.is_empty(), "no such instance");
+            assert!(here == store_address(&program, &prev.instance_id), "RFP021-E12 not permitted: advance goes to the instance's store");
+            assert!(!input.pre_state.is_empty(), "RFP021-E13 witness mismatch: no such instance");
             let Ok(current) = borsh::from_slice::<LcSummary>(&input.pre_state) else {
-                panic!("store state does not decode")
+                panic!("RFP021-E08 malformed input: store state does not decode")
             };
-            assert!(current == prev, "the store changed since this update was verified");
-            assert!(next.instance_id == prev.instance_id, "advance for another instance");
-            assert!(next.evm_chain_id == prev.evm_chain_id, "advance for another chain");
-            assert!(prev.is_advanced_by(&next), "the update does not advance the store");
+            assert!(current == prev, "RFP021-E09 stale or replayed: the store changed since this update was verified");
+            assert!(next.instance_id == prev.instance_id, "RFP021-E13 witness mismatch: advance for another instance");
+            assert!(next.evm_chain_id == prev.evm_chain_id, "RFP021-E07 chain id mismatch: advance for another chain");
+            assert!(prev.is_advanced_by(&next), "RFP021-E10 not newer: the update does not advance the store");
             let mut r = Response::set_state(state(&next)).event(event(
                 "Advanced",
                 &Advanced {
@@ -259,9 +277,9 @@ fn apply(input: &ReceiveInput, e: Effect) -> Response {
         Effect::RecordAnchor(rec) => {
             assert!(
                 sender_is(input, &store_address(&program, &rec.instance_id)),
-                "only the instance's store records anchors"
+                "RFP021-E12 not permitted: only the instance's store records anchors"
             );
-            assert!(here == anchor_address(&program, &rec.instance_id, &rec.anchor), "anchor record goes to its PDA");
+            assert!(here == anchor_address(&program, &rec.instance_id, &rec.anchor), "RFP021-E12 not permitted: anchor record goes to its PDA");
             if input.pre_state.is_empty() {
                 Response::set_state(state(&rec))
             } else {
@@ -269,6 +287,14 @@ fn apply(input: &ReceiveInput, e: Effect) -> Response {
                 // execution block; the first record stands.
                 Response::keep_state()
             }
+        }
+        #[cfg(feature = "public-update")]
+        e @ (Effect::JobOpen(_) | Effect::JobFinish { .. } | Effect::JobClose { .. } | Effect::AssertStale { .. } | Effect::AssertCurrent { .. }) => {
+            public::apply_job(input, e)
+        }
+        #[cfg(not(feature = "public-update"))]
+        Effect::JobOpen(_) | Effect::JobFinish { .. } | Effect::JobClose { .. } | Effect::AssertStale { .. } | Effect::AssertCurrent { .. } => {
+            panic!("RFP021-E12 not permitted: this build of the program has no public update path")
         }
     }
 }
@@ -284,28 +310,28 @@ fn query(input: &ReceiveInput, q: &Query) -> Response {
         } => {
             // Fixed texts: the anchor, instance and chain are public in the query itself, and
             // the same for every claim made under this anchor.
-            assert!(here == anchor_address(&program, instance_id, anchor), "wrong anchor account");
-            assert!(!input.pre_state.is_empty(), "anchor not finalized by this instance");
+            assert!(here == anchor_address(&program, instance_id, anchor), "RFP021-E12 not permitted: wrong anchor account");
+            assert!(!input.pre_state.is_empty(), "RFP021-E01 header not finalized: anchor not finalized by this instance");
             let Ok(rec) = borsh::from_slice::<AnchorRecord>(&input.pre_state) else {
-                panic!("anchor state does not decode")
+                panic!("RFP021-E08 malformed input: anchor state does not decode")
             };
             assert!(
                 rec.instance_id == *instance_id && rec.anchor == *anchor,
-                "anchor not finalized by this instance"
+                "RFP021-E01 header not finalized: anchor not finalized by this instance"
             );
-            assert!(rec.evm_chain_id == *evm_chain_id, "anchor is for another chain");
+            assert!(rec.evm_chain_id == *evm_chain_id, "RFP021-E07 chain id mismatch: anchor is for another chain");
         }
         Query::AssertInstance {
             instance_id: id,
             evm_chain_id,
         } => {
-            assert!(here == config_address(&program, id), "wrong instance account");
-            assert!(!input.pre_state.is_empty(), "no such instance");
+            assert!(here == config_address(&program, id), "RFP021-E12 not permitted: wrong instance account");
+            assert!(!input.pre_state.is_empty(), "RFP021-E13 witness mismatch: no such instance");
             let Ok(config) = borsh::from_slice::<InstanceConfig>(&input.pre_state) else {
-                panic!("config state does not decode")
+                panic!("RFP021-E08 malformed input: config state does not decode")
             };
-            assert!(instance_id(&program, &config) == *id, "no such instance");
-            assert!(config.evm_chain_id == *evm_chain_id, "instance is for another chain");
+            assert!(instance_id(&program, &config) == *id, "RFP021-E13 witness mismatch: no such instance");
+            assert!(config.evm_chain_id == *evm_chain_id, "RFP021-E07 chain id mismatch: instance is for another chain");
         }
     }
     Response::keep_state()

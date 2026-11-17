@@ -40,6 +40,7 @@ use lee_core::{
 };
 use risc0_zkvm::sha::{Impl, Sha256 as _};
 
+pub mod codes;
 pub mod inclusion;
 #[cfg(feature = "testkit")]
 pub mod testkit;
@@ -126,6 +127,27 @@ impl InstanceConfig {
             "fork epochs must not decrease"
         );
     }
+}
+
+/// The weak-subjectivity bound (RFP-021 F10, branch `public-update`), in epochs: how far past the
+/// store's finalized header an update may be applied. Electra's guide gives 3,532 epochs (about
+/// 15.7 days) for mainnet at 8.4M ETH or more and a safety decay of 10
+/// (`specs/electra/weak-subjectivity.md`); Gloas's guide, which Sepolia runs, gives 1,348 to 1,611
+/// epochs for 4.2M to 67M ETH (`specs/gloas/weak-subjectivity.md`): its lower value is used for
+/// every chain but mainnet. `DESIGN.md` §9.6.
+#[must_use]
+pub const fn ws_epochs(evm_chain_id: u64) -> u64 {
+    if evm_chain_id == 1 { 3_532 } else { 1_348 }
+}
+
+/// The LEZ block time (ms, exclusive) until which an update may still be applied to `store`: the
+/// start of its finalized slot plus the weak-subjectivity bound. Past it the instance refuses every
+/// update (`RFP021-E04`) and must be replaced by a new instance from a fresh checkpoint.
+#[must_use]
+pub fn ws_deadline_ms(config: &InstanceConfig, store: &LcSummary) -> Option<u64> {
+    let slots = ws_epochs(config.evm_chain_id).checked_mul(32)?;
+    let at = store.finalized.beacon.slot.checked_add(slots)?;
+    config.genesis_time.checked_add(at.checked_mul(config.seconds_per_slot)?)?.checked_mul(1000)
 }
 
 /// `SHA256(INSTANCE_TAG ‖ program ‖ borsh(config))`.
@@ -317,6 +339,98 @@ pub enum Instruction {
         next_committee: Option<Vec<u8>>,
         update: LcUpdate,
     },
+    /// Advance an instance by one finality update in a PUBLIC transaction (branch
+    /// `public-update`, `DESIGN.md` §9.3a): the same Helios checks as [`Instruction::Update`],
+    /// with the signature checked as the committee's aggregate key minus the non-signers' keys,
+    /// given uncompressed in `keys` and bound to the committee witness byte for byte. Only a
+    /// finality update signed in the store's own period while the next committee is unknown;
+    /// anything else is refused (use [`Instruction::Update`]). Its result is the same
+    /// [`Effect::Advance`], checked by the store exactly as for `Update`. Programs built without
+    /// the `public-update` feature refuse it.
+    UpdatePublic {
+        config: InstanceConfig,
+        prev: LcSummary,
+        /// The SSZ (24,624 bytes) of the committee that signed: the one Helios selects by the
+        /// signature period (the current committee, or the next one once the store knows it),
+        /// checked against that commitment in `prev`.
+        committee: Vec<u8>,
+        keys: KeyWitnesses,
+        /// `/eth/v1/beacon/light_client/finality_update` SSZ.
+        update: Vec<u8>,
+    },
+    /// Step 1 of a PUBLIC period update (one item of `/eth/v1/beacon/light_client/updates`, which
+    /// carries the next sync committee): every Helios check except the signature, the next
+    /// committee's root by direct SHA-256 (vendored Helios, patch 2). Opens the job PDA
+    /// [`job_address`] keyed on `prev` and the whole update; refused if that job exists.
+    PeriodBegin { config: InstanceConfig, prev: LcSummary, update: Vec<u8> },
+    /// Step 2: the signature check of an open job, with the signing committee's SSZ and the key
+    /// witnesses. The job then sends `Advance { prev, next }` to the store, which applies it only
+    /// if it still equals `prev`. Anyone may finish a job.
+    PeriodFinish { job: PeriodJob, committee: Vec<u8>, keys: KeyWitnesses },
+    /// Close a job whose `prev` is no longer the store's state (finished, failed or stale).
+    /// Anyone may close; a job on the current store cannot be closed.
+    CloseJob { job_id: [u8; 32] },
+}
+
+/// What step 1 of a public period update verified, kept in the job PDA until step 2.
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct PeriodJob {
+    pub prev: LcSummary,
+    pub next: LcSummary,
+    /// SHA-256 of the whole update SSZ (signature and participation bits included).
+    pub update_digest: [u8; 32],
+    /// What the signature must sign (Helios's `compute_committee_sign_root`).
+    pub signing_root: [u8; 32],
+    pub signature: [u8; 96],
+    /// The participation bits (SSZ `Bitvector[512]`, bit i = byte i/8, bit i%8).
+    pub bits: [u8; 64],
+    /// The commitment of the committee that must have signed (`prev.current_committee`, or
+    /// `prev.next_committee` when Helios selects the next one).
+    pub committee: [u8; 32],
+    /// The LEZ block time from which `next` may be applied (start of the signature slot).
+    pub not_before_ms: u64,
+    /// ... and until which (exclusive): the weak-subjectivity deadline of `prev` ([`ws_deadline_ms`]).
+    pub deadline_ms: u64,
+}
+
+/// A job PDA's state.
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub enum JobState {
+    Open(PeriodJob),
+    Done,
+}
+
+const JOB_TAG: &[u8] = b"RFP021/job/v1";
+const JOB_SEED_DOMAIN: &[u8] = b"/RFP021/attest/job/v1";
+
+/// `SHA256(JOB_TAG ‖ borsh(prev) ‖ update_digest)`: one job per (store state, whole update).
+#[must_use]
+pub fn job_id(prev: &LcSummary, update_digest: &[u8; 32]) -> [u8; 32] {
+    sha256(&[JOB_TAG, &borsh::to_vec(prev).unwrap_or_else(|_| panic!("summary serializes")), update_digest])
+}
+
+#[must_use]
+pub fn job_seed(job_id: &[u8; 32]) -> PdaSeed {
+    PdaSeed::new(sha256(&[JOB_SEED_DOMAIN, job_id]))
+}
+
+#[must_use]
+pub fn job_address(program: &AccountId, job_id: &[u8; 32]) -> AccountId {
+    AccountId::for_public_pda(program, &job_seed(job_id))
+}
+
+/// An uncompressed BLS12-381 G1 point: x ‖ y, 48 bytes each, big endian, flag bits clear.
+pub type G1Uncompressed = [u8; 96];
+
+/// The keys [`Instruction::UpdatePublic`] needs, so the program never decompresses a key:
+/// the committee's aggregate key and each non-signer's key, uncompressed. Each must compress to
+/// the committed bytes at its position in the committee witness.
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct KeyWitnesses {
+    /// `SyncCommittee.aggregate_pubkey`, uncompressed.
+    pub aggregate: G1Uncompressed,
+    /// Every non-signer, in increasing index order: (index 0..512, key uncompressed).
+    pub absent: Vec<(u16, G1Uncompressed)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
@@ -329,6 +443,21 @@ pub enum Effect {
     Advance { prev: LcSummary, next: LcSummary },
     /// To an anchor PDA, from the store PDA.
     RecordAnchor(AnchorRecord),
+    /// To a job PDA, from a submitter's actor that ran step 1 (`PeriodBegin`).
+    JobOpen(PeriodJob),
+    /// To a job PDA (`PeriodFinish`, after [`Effect::AssertCurrent`] in the same transaction): the
+    /// job PDA checks the signature with the committee's SSZ and the key witnesses, then sends the
+    /// store its `Advance`.
+    JobFinish { job: PeriodJob, committee: Vec<u8>, keys: KeyWitnesses },
+    /// To a job PDA, from any actor (`CloseJob`): the job closes if the store has moved.
+    JobClose { job_id: [u8; 32] },
+    /// To the store PDA, from a job PDA: panics unless the store's state differs from `prev` (an
+    /// empty store counts as moved).
+    AssertStale { prev: LcSummary },
+    /// To the store PDA (`PeriodBegin`, `PeriodFinish`): panics unless the store's state is `prev`,
+    /// so a job opens only on a real instance's current state and a stale Finish stops before the
+    /// signature check.
+    AssertCurrent { prev: LcSummary },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]

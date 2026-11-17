@@ -41,6 +41,8 @@ pub const PROBE: AccountId = AccountId::new([0x9B; 32]);
 pub const PROBE2: AccountId = AccountId::new([0x9C; 32]);
 pub const ALICE: AccountId = AccountId::new([0xA1; 32]);
 pub const BOB: AccountId = AccountId::new([0xB1; 32]);
+/// The reference consumers (`attest/consumer`), branch public-update.
+pub const CONSUMER: AccountId = AccountId::new([0xC0; 32]);
 pub const CAROL: AccountId = AccountId::new([0xC1; 32]);
 
 // ---------------------------------------------------------------------------------------------
@@ -79,6 +81,8 @@ impl World {
             eth_attest::handle
         } else if to.program_account_id == PROBE || to.program_account_id == PROBE2 {
             probe
+        } else if to.program_account_id == CONSUMER {
+            eth_consumer::handle
         } else {
             return Err(format!("no program at {:?}", to.program_account_id));
         };

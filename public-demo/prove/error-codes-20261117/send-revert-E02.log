@@ -1,0 +1,9 @@
+== revert-E02 2026-11-17T19:14:07Z: program Cc42wGgDmePzPPXBsG6pKU4X4Ushe3NL72dSLUWT7YAu accounts Ci44Kazwgmgkk1cDijMS4A2PcWFcedAtxWpb4Q1CvKrR@Cc42wGgDmePzPPXBsG6pKU4X4Ushe3NL72dSLUWT7YAu,4D211RVXiJdfT7SppjVkVYiQwB7GrjooLMrBrVN4ebZV@Cc42wGgDmePzPPXBsG6pKU4X4Ushe3NL72dSLUWT7YAu gas limit 10000000
+before: balance {"jsonrpc":"2.0","id":1,"result":99998947976786} fee state {"jsonrpc":"2.0","id":1,"result":{"height":167,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":167}
+
+thread 'main' (1) panicked at $W/src/lez-bridge/attest/program/src/public.rs:333:17:
+RFP021-E02 signature invalid: update rejected: invalid sync committee signature
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+tx 5c5a2972b6f0cd519ae36c821473fc5400c72d7be3c5636539e796cab5c912d9
+Error: 5c5a2972b6f0cd519ae36c821473fc5400c72d7be3c5636539e796cab5c912d9 was included in block 168 but reverted
+after: balance {"jsonrpc":"2.0","id":1,"result":99998867754602} fee state {"jsonrpc":"2.0","id":1,"result":{"height":168,"base_fee_exec":9,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":10,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":168} (rc 5)

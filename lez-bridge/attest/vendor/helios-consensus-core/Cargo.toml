@@ -3,7 +3,8 @@ name = "helios-consensus-core"
 version = "0.12.0"
 license = "MIT"
 # Vendored from a16z/helios @ 2af9b41887e069144ee56cd710f3ddca195473f8 (tag 0.12.0) for the RFP-021
-# cycle spike (branch lc-cycles). One change: `verify_generic_update_with` in consensus_core.rs.
+# cycle spike (branch lc-cycles). Changes: `verify_generic_update_with` in consensus_core.rs (patch 1);
+# the next committee root by direct SHA-256, `sync_committee_root` in proof.rs (patch 2, public-update).
 # Workspace-inherited versions written out from Helios's root Cargo.toml.
 edition = "2021"
 

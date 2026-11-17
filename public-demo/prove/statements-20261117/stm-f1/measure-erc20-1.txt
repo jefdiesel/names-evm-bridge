@@ -1,0 +1,5 @@
+# reference consumer erc20-1: config PDA GSgN3Mpyn55XEJpwdrhSTa9jkVPZPnygYUdukMT81dre
+  block 12156175 (0xeaa55b9fded95df5541ba345aff0874ee8dac9e3ef7d8f0f5cedccb39bb56eba), 118 receipts, receipts root matches the header
+  accepted natively: sender 0x133e695512bf7b11ad5f7c2739971e99ea5b0965, amount 0x00000000000000000000000000000000000000000000000000476dbc80667a8d, recipient 0xbdc1fe97e787ae7f653ffbccd74ec49814fe6aa1
+  statement id 0xdab28305055484f6f9e21bd430deb69e46af325c892038750fcf62d7db54c795; nullifier PDA HjjUJT34rLeYQL9YxrpPr2UPT2zdD89ABXrmwCGotif1; anchor PDA 4ZWpzYmUYxiRM7tPR6DdKvAEAPMGJgQfaV1ErQkDhR2m
+messages written: consumer-erc20-1-init.hex, consumer-erc20-1-claim-0-1.hex

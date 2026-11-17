@@ -1,0 +1,5 @@
+== stmt-log-f1 2026-11-17T18:42:41Z: program Gvn9t7ELG8bHgta7WBd9mLuCh4hmedwwbJ3URCqs8wQC accounts 4ZWpzYmUYxiRM7tPR6DdKvAEAPMGJgQfaV1ErQkDhR2m@DVM9PDn8VGnGAyw24jbesZ62GGcMJ1ppYBeFmmZSjwzi gas limit 10000000
+before: balance {"jsonrpc":"2.0","id":1,"result":99999608059784} fee state {"jsonrpc":"2.0","id":1,"result":{"height":41,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":41}
+tx 813ccdbdac44937820024277d11003799bdf81b391cdd8790309bd24d05d02e1
+applied in block 42
+after: balance {"jsonrpc":"2.0","id":1,"result":99999606616848} fee state {"jsonrpc":"2.0","id":1,"result":{"height":42,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}} head {"jsonrpc":"2.0","id":1,"result":42} (rc 0)

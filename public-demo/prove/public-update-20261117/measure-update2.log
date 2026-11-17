@@ -1,0 +1,17 @@
+# public update path, REAL update from $W/run/update2
+  store now: finalized slot 11599936, updates 1
+  real update: 506/512 signers, 7 key witnesses (aggregate + 6 non-signers)
+  message 27247 bytes (borsh)
+  real update: submitter's actor (UpdatePublic): user=9227743 total=9961472 segments=10 (0.92x the 10M cap)
+  real update: store applies Advance: user=39510 total=131072 segments=1 (0.00x the 10M cap)
+  real update: anchor PDA records an anchor: user=18130 total=65536 segments=1 (0.00x the 10M cap)
+
+### real update, as one public transaction
+| program call | user cycles |
+|---|---:|
+| submitter's actor: verify the update, send Advance | 9227743 |
+| store: Advance (+ sends RecordAnchor) | 39510 |
+| anchor PDA: RecordAnchor | 18130 |
+| **whole transaction** | **9285383** (92.85% of the 10M cap; margin 714617) |
+  new store: finalized slot 11599968, block hash 0x5a4de05ed218280cc9ba46096efbf5cef37f980fc88ada68e2136a15c84a7239, updates 2
+message written to $W/run/message-update2.hex (27247 bytes, 54494 hex chars)
