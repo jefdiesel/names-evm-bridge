@@ -1,0 +1,4 @@
+SYNTHETIC planted values (a test of the adversary, not of the bridge); run a2, inbound problem
+planted exact20  5 users: paired right (everything) 5 / 5; feature exact20 alone singles out the right deposit 5 / 5
+planted sub8     5 users: paired right (everything) 5 / 5; feature sub8 alone singles out the right deposit 5 / 5
+planted fee      4 users: paired right (everything) 4 / 4; feature fee alone singles out the right deposit 4 / 4
