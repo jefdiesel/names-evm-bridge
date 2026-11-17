@@ -19,6 +19,8 @@ Security problems: report them privately as [`SECURITY.md`](SECURITY.md) says. E
 
 ## Current status (2026-11-17)
 
+Every result, with where it ran, what kind of proof it used and its record: [docs/EVIDENCE.md](docs/EVIDENCE.md). Work of 2026-11-17 is on branches beside `main` (`public-update`, `lc-public`, `seq-sig`, `privacy-test`, `open-relay`, `failsafe`).
+
 **Where things have run:**
 - **Ethereum:** demo vaults on the **public Sepolia testnet** (`vault/DEPLOYMENTS.md`).
   - **v4** (`0xC2c6A059eAB928966B24FA5549d441A3B17B54Ed`, 2026-11-15) and **v5** (`0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10`, the same design with no release delay, the deposit page's default): every update and release proof is checked by RISC Zero's `RiscZeroGroth16Verifier` 3.1.0 (`0x8c915b5071206C6E328BC18529586c513408aB3b`), behind `vault/src/UpdateGatedVerifier.sol`, which takes updates only from one submitter key and releases from anyone.

@@ -1,7 +1,7 @@
 # RFP-022 Security #9 failsafe: design
 
 - **Date:** 2026-11-13
-- **Status:** design, not implemented.
+- **Status:** design. The Ethereum half (wind-down and reclaim) is built and ran locally on the `failsafe` branch, 2026-11-17; the LEZ half is not built. See `docs/EVIDENCE.md`.
 - **All byte and cycle figures in this file are estimates. None was measured.**
 
 Sources read: the spec (S8, S9, Trust model, Loss of access, F14, R4), `DESIGN.md` (§0, §3.4, §5, §6.3, §10, §12), `vault/src/BridgeVault.sol` (all of it), `lez-bridge/bridge/src/lib.rs`, `lez-bridge/release/core/src/lib.rs` and the release guest, and `research/lez-and-l1-provability.md`.
