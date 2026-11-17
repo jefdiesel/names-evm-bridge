@@ -85,6 +85,28 @@ pub fn allowed_relay(text: &str, sequencer: &str) -> Result<Relay> {
     bail!("--relay {text}: give no value (the chain's endpoint, {sequencer}) or a loopback http://…/relay URL")
 }
 
+/// `--relay` as given, as a list: one entry (see [`allowed_relay`]), several comma-separated, or
+/// `config`, the client configuration's list in `LEZ_BRIDGE_RELAYS` (comma-separated, tried in
+/// order). Every entry must pass [`allowed_relay`]; duplicates are dropped.
+pub fn allowed_relays(text: &str, sequencer: &str) -> Result<Vec<Relay>> {
+    let list = if text == "config" {
+        std::env::var("LEZ_BRIDGE_RELAYS").map_err(|_| anyhow!("--relay config: LEZ_BRIDGE_RELAYS (the client's relay list) is not set"))?
+    } else {
+        text.to_owned()
+    };
+    let mut out: Vec<Relay> = Vec::new();
+    for entry in list.split(',').map(str::trim) {
+        let r = allowed_relay(entry, sequencer)?;
+        if !out.contains(&r) {
+            out.push(r);
+        }
+    }
+    if out.is_empty() {
+        bail!("--relay names no relay");
+    }
+    Ok(out)
+}
+
 fn http() -> Result<reqwest::Client> {
     reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
@@ -340,8 +362,13 @@ fn refusal_json(r: &Refusal) -> Value {
 /// The checks every half-signed transaction the relay pays for must pass, whatever it calls: a
 /// strict decode, exactly one signature (the sender's, valid), the signers and nonces exactly the
 /// sender and the payer, no promotions or admission evidence, the payer's fee within the caps and
-/// no tip, no declared actor of the payer's account. Returns the transaction and the sender.
+/// no tip, no declared actor of the payer's account (with `payer_credit`, exactly one: its native
+/// actor, which a relay refund credits). Returns the transaction and the sender.
 fn half_signed(bytes: &[u8], payer: AccountId, max_gas: u64, max_fee: u128, who: &str) -> std::result::Result<(PublicTransaction, AccountId), Refusal> {
+    half_signed_with(bytes, payer, max_gas, max_fee, who, false)
+}
+
+fn half_signed_with(bytes: &[u8], payer: AccountId, max_gas: u64, max_fee: u128, who: &str, payer_credit: bool) -> std::result::Result<(PublicTransaction, AccountId), Refusal> {
     if bytes.len() > MAX_TX_BYTES {
         return refuse(format!("transaction is {} bytes, more than {MAX_TX_BYTES}", bytes.len()));
     }
@@ -383,15 +410,20 @@ fn half_signed(bytes: &[u8], payer: AccountId, max_gas: u64, max_fee: u128, who:
     if fee.max_fee > max_fee {
         return refuse(format!("max_fee {} is more than {max_fee}", fee.max_fee));
     }
-    if m.public_context.actors.iter().any(|a| a.account_id == payer) {
+    // A signer is authorized in the whole execution: the payer's only declared actor may be its
+    // native balance, and only for a refunded claim, whose bridge code sends it nothing but the
+    // refund's credit (the exact actor set and the instruction are checked by the caller).
+    let payer_native = Actor::native_balance(payer);
+    if m.public_context.actors.iter().any(|a| a.account_id == payer && !(payer_credit && *a == payer_native)) {
         return refuse("the transaction declares an actor of the relay's payer");
     }
     Ok((tx, sender))
 }
 
-/// Strict decode of a half-signed claim; checks that need no chain state.
-pub fn decode(bytes: &[u8], bridge: AccountId, payer: AccountId, max_gas: u64, max_fee: u128) -> std::result::Result<(PublicTransaction, AccountId, Instruction), Refusal> {
-    let (tx, claimer) = half_signed(bytes, payer, max_gas, max_fee, "claimer")?;
+/// Strict decode of a half-signed claim; checks that need no chain state. Returns the inner claim
+/// and whether it is refunded (`Instruction::Relayed`, which must name this relay's payer).
+pub fn decode(bytes: &[u8], bridge: AccountId, payer: AccountId, max_gas: u64, max_fee: u128) -> std::result::Result<(PublicTransaction, AccountId, Instruction, bool), Refusal> {
+    let (tx, claimer) = half_signed_with(bytes, payer, max_gas, max_fee, "claimer", true)?;
     let m = tx.message();
     if m.execution.root.to != Actor::new(claimer, bridge) {
         return refuse("the transaction does not call the claimer's actor of this bridge");
@@ -399,12 +431,24 @@ pub fn decode(bytes: &[u8], bridge: AccountId, payer: AccountId, max_gas: u64, m
     let Ok(BridgeMessage::Instruction(ins)) = borsh::from_slice::<BridgeMessage>(&m.execution.root.message) else {
         return refuse("the root message is not a bridge instruction (strict decode failed)");
     };
+    let (ins, refunded) = match ins {
+        Instruction::Relayed { refund_to, claim } => {
+            if refund_to != payer {
+                return refuse("the claim names another account for the relay refund, not this relay's payer");
+            }
+            (*claim, true)
+        }
+        other => (other, false),
+    };
     match &ins {
         Instruction::Claim { recipient_opening: None, .. } => {}
         Instruction::Claim { .. } => return refuse("a one-time recipient is a private claim; the relay takes public claims only"),
         _ => return refuse("the instruction is not a claim"),
     }
-    Ok((tx, claimer, ins))
+    if !refunded && m.public_context.actors.iter().any(|a| a.account_id == payer) {
+        return refuse("the transaction declares an actor of the relay's payer");
+    }
+    Ok((tx, claimer, ins, refunded))
 }
 
 /// A relayed public burn as decoded: the burner, the definition, the amount, the exit commitment.
@@ -554,8 +598,9 @@ pub async fn cosign(
     max_gas: u64,
     max_fee: u128,
     submit: bool,
+    require_refund: bool,
 ) -> std::result::Result<Value, Refusal> {
-    let (tx, claimer, ins) = decode(bytes, bridge, payer, max_gas, max_fee)?;
+    let (tx, claimer, ins, refunded) = decode(bytes, bridge, payer, max_gas, max_fee)?;
     let Instruction::Claim { eth_token, denom_index, denom, root, leaf_index, path, secret, cfg_id, .. } = ins else { unreachable!() };
     let m = tx.message().clone();
     let fee = m.execution.fee.expect("checked");
@@ -572,8 +617,24 @@ pub async fn cosign(
         return refuse("relay misconfigured: its payer holds a bridge role; use a dedicated payer account");
     }
     let Some(token) = config.tokens.iter().find(|t| t.eth_token == eth_token) else { return refuse("token not registered") };
+    // The refund: this relay asks for it (or not), the bridge pays it, and its float covers it
+    // now (a float drained before inclusion fails the claim, which then costs this relay its fee).
+    if require_refund && (!refunded || config.relay_refund == 0) {
+        return refuse(if refunded {
+            "this relay co-signs only refunded claims, and this bridge pays no relay refund"
+        } else {
+            "this relay co-signs only claims that name its payer for the bridge's relay refund"
+        });
+    }
+    let float = crate::public_state(wallet, config_address(&bridge), lee_core::native_token::NATIVE_TOKEN_PROGRAM_ID)
+        .await
+        .map_err(internal)
+        .and_then(|s| lee_core::native_token::decode_balance(&s).map_err(|e| internal(anyhow!("{e}"))))?;
+    if refunded && float < config.relay_refund {
+        return refuse(format!("the bridge's float holds {float}, less than its relay refund {}: the claim would fail", config.relay_refund));
+    }
     let nullifier = bc::claim_nullifier(&secret, &claimer, &eth_token, denom);
-    let expected: BTreeSet<Actor> = [
+    let mut expected: BTreeSet<Actor> = [
         Actor::new(claimer, bridge),
         Actor::new(bc::root_address(&bridge, &root), bridge),
         Actor::new(bc::nullifier_address(&bridge, &nullifier), bridge),
@@ -583,6 +644,10 @@ pub async fn cosign(
     ]
     .into_iter()
     .collect();
+    if refunded {
+        expected.insert(Actor::native_balance(config_address(&bridge)));
+        expected.insert(Actor::native_balance(payer));
+    }
     if m.public_context.actors != expected {
         return refuse("the declared accounts are not exactly a public claim's");
     }
@@ -655,6 +720,8 @@ pub async fn cosign(
         "claimer_nonce": chain[0].0.to_string(),
         "payer_nonce": chain[1].0.to_string(),
         "bytes": bytes.len(),
+        "refund": if refunded { config.relay_refund.to_string() } else { "0".to_owned() },
+        "float": float.to_string(),
     });
     if !submit {
         return Ok(summary);
@@ -718,6 +785,7 @@ pub async fn run_cosign(
     max_fee: u128,
     submit: bool,
     burn: bool,
+    require_refund: bool,
 ) -> Result<()> {
     let text = std::fs::read_to_string(tx_file).with_context(|| format!("reading {}", tx_file.display()))?;
     let out = match unhex(&text) {
@@ -725,7 +793,7 @@ pub async fn run_cosign(
         Ok(bytes) => match if burn {
             cosign_burn(wallet, sequencer, &bytes, bridge, token_program, payer, max_gas, max_fee, submit).await
         } else {
-            cosign(wallet, sequencer, &bytes, bridge, token_program, payer, max_gas, max_fee, submit).await
+            cosign(wallet, sequencer, &bytes, bridge, token_program, payer, max_gas, max_fee, submit, require_refund).await
         } {
             Ok(mut v) => {
                 v["ok"] = json!(true);
@@ -770,6 +838,69 @@ mod tests {
         assert!(decode(&vec![0u8; MAX_TX_BYTES + 1], b, p, 1, 1).unwrap_err().reason.contains("bytes"));
         assert_eq!(unhex("0x0aff").unwrap(), vec![10, 255]);
         assert!(unhex("0xzz").is_err());
+    }
+
+    #[test]
+    fn relays_are_a_list_from_the_flag_or_the_client_config() {
+        let two = allowed_relays("http://127.0.0.1:3492/relay,http://127.0.0.1:3493/relay", DEMO).unwrap();
+        assert_eq!(two.len(), 2);
+        assert_eq!(allowed_relays("auto,auto", DEMO).unwrap(), vec![Relay::Rpc(DEMO.parse().unwrap())], "duplicates dropped");
+        assert!(allowed_relays("http://127.0.0.1:3492/relay,https://evil.example/relay", DEMO).is_err(), "every entry is checked");
+        // `config`: the list in LEZ_BRIDGE_RELAYS (set only inside this test's process).
+        // SAFETY: a single-threaded read right after; no other test reads this variable.
+        unsafe { std::env::set_var("LEZ_BRIDGE_RELAYS", "http://127.0.0.1:3493/relay, http://127.0.0.1:3492/relay") };
+        let cfg = allowed_relays("config", DEMO).unwrap();
+        assert_eq!(cfg[0], allowed_relay("http://127.0.0.1:3493/relay", DEMO).unwrap(), "the configured order");
+    }
+
+    /// A refunded claim (`Relayed`): the message as `claim --relay` builds it when the bridge pays a
+    /// relay refund, with the float's and the payer's native actors declared.
+    fn refunded_message(claimer: AccountId, payer: AccountId, bridge: AccountId, refund_to: AccountId, extra_actor: Option<Actor>) -> Message {
+        let claim = Instruction::Claim {
+            eth_token: [0; 20],
+            denom_index: 0,
+            denom: 1,
+            root: [0; 32],
+            leaf_index: 0,
+            path: vec![],
+            secret: [7; 32],
+            cfg_id: [0; 32],
+            recipient_opening: None,
+        };
+        let ins = BridgeMessage::Instruction(Instruction::Relayed { refund_to, claim: Box::new(claim) });
+        let mut actors = vec![Actor::new(claimer, bridge), Actor::native_balance(config_address(&bridge)), Actor::native_balance(refund_to)];
+        actors.extend(extra_actor);
+        let nonces: BTreeMap<_, _> = [(claimer, Default::default()), (payer, Default::default())].into_iter().collect();
+        Message::new(Actor::new(claimer, bridge), borsh::to_vec(&ins).unwrap(), actors, nonces, Some(FeeDeclaration::new(payer, 100, 0, 1000)), Vec::new())
+    }
+
+    #[test]
+    fn a_refunded_claim_must_name_this_relay_s_payer_and_nothing_else_of_it() {
+        let (ck, c) = keyed(3);
+        let (_, p) = keyed(4);
+        let (_, other) = keyed(6);
+        let b = AccountId::new([9; 32]);
+        let ok = signed(refunded_message(c, p, b, p, None), &[&ck]);
+        let (_, claimer, ins, refunded) = decode(&ok, b, p, 100, 1000).unwrap();
+        assert!(refunded && claimer == c && matches!(ins, Instruction::Claim { .. }));
+        let why = |bytes: &[u8]| decode(bytes, b, p, 100, 1000).unwrap_err().reason;
+        // A refund to anyone but this relay's payer (the claimer or another relay).
+        assert!(why(&signed(refunded_message(c, p, b, other, None), &[&ck])).contains("another account for the relay refund"));
+        // Any actor of the payer beyond its native balance: its token actor, its bridge actor.
+        for extra in [Actor::new(p, AccountId::new([0x70; 32])), Actor::new(p, b)] {
+            assert!(why(&signed(refunded_message(c, p, b, p, Some(extra)), &[&ck])).contains("payer"));
+        }
+        // The claimer's signature covers the payee: a relay that rewrites it breaks the signature.
+        let mut m = refunded_message(c, p, b, p, None);
+        let honest = signed(m.clone(), &[&ck]);
+        let tx: PublicTransaction = borsh::from_slice(&honest).unwrap();
+        let ins = BridgeMessage::Instruction(Instruction::Relayed {
+            refund_to: other,
+            claim: Box::new(Instruction::Claim { eth_token: [0; 20], denom_index: 0, denom: 1, root: [0; 32], leaf_index: 0, path: vec![], secret: [7; 32], cfg_id: [0; 32], recipient_opening: None }),
+        });
+        m.execution.root.message = borsh::to_vec(&ins).unwrap();
+        let forged = borsh::to_vec(&PublicTransaction::new(m, WitnessSet::from_raw_parts(tx.witness_set().signatures_and_public_keys().to_vec()))).unwrap();
+        assert!(why(&forged).contains("signature does not verify"));
     }
 
     fn keyed(seed: u8) -> (lee::PrivateKey, AccountId) {

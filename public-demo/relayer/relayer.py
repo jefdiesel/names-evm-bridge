@@ -99,6 +99,14 @@ secret, the instruction bytes and the transaction hex are never logged or stored
 handed to the CLI in a mode-600 temporary file deleted at once); free-text reasons are logged with
 long hex runs blanked. Errors returned to clients are fixed texts; details go to the log (L7).
 
+Open relay (branch open-relay, 2026-11-17): nothing here is registered anywhere. Anyone may run
+another instance beside this one with its own payer key, wallet, port, state and log
+(RELAY_WALLET, PAYER, RELAY_LISTEN, RELAY_STATE, RELAY_LOG; `--bind-payer` once); claimers pick a
+relay per claim (`claim --relay URL`, or a list tried in order). On a bridge that pays a relay
+refund (`Instruction::Relayed`, `set-relay-refund`) the claimer names this relay's payer for it and
+the bridge pays it from its float inside the claim; REQUIRE_REFUND=1 makes this instance co-sign
+only such claims (relay-cosign --require-refund also checks that the float covers the refund).
+
 Loopback only. Stdlib only (/usr/bin/python3 3.9). DRY_RUN=1: never runs --submit.
 """
 import base64, hashlib, hmac, http.server, ipaddress, json, os, re, secrets, socketserver, subprocess, sys, tempfile, threading, time
@@ -133,6 +141,7 @@ RECONCILE_EVERY = float(E("RECONCILE_EVERY", "3"))
 BURN_DAILY_MAX = int(E("BURN_DAILY_MAX", "50"))                # relayed burns per rolling 24 h
 IP_DAILY_BURNS = int(E("IP_DAILY_BURNS", "5"))                 # relayed burns per client per 24 h
 RELAY_QUEUE = int(E("RELAY_QUEUE", "2"))                       # requests waiting behind the running one
+REQUIRE_REFUND = E("REQUIRE_REFUND", "0") == "1"                # co-sign only claims that name this payer for the bridge's relay refund
 WINDOW = 86400
 MAX_BODY = 20000
 CLI_TIMEOUT = int(E("CLI_TIMEOUT", "180"))
@@ -449,7 +458,8 @@ def run_cli(tx_hex, submit, kind="claim"):
             f.write(tx_hex)
         args = [CLI, "relay-cosign", "--tx-file", path, "--bridge", BRIDGE, "--token-program", TOKEN_PROGRAM,
                 "--payer", PAYER, "--max-gas", str(MAX_GAS), "--max-fee", str(MAX_FEE)] + (["--submit"] if submit else []) \
-            + (["--kind", "burn"] if kind == "burn" else [])
+            + (["--kind", "burn"] if kind == "burn" else []) \
+            + (["--require-refund"] if REQUIRE_REFUND and kind != "burn" else [])
         env = dict(os.environ, LEE_WALLET_HOME_DIR=WALLET, LEE_WALLET_PASSWORD="", LEZ_BRIDGE_SEQUENCER=SEQUENCER)
         r = subprocess.run(args, env=env, capture_output=True, text=True, timeout=CLI_TIMEOUT)
         for line in r.stdout.splitlines():
@@ -812,7 +822,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.rstrip("/") in ("/relay/info", "/info"):
-            return self.reply(200, {"payer": PAYER, "bridge": BRIDGE, "max_gas": MAX_GAS, "max_fee": str(MAX_FEE), "burns": True})
+            return self.reply(200, {"payer": PAYER, "bridge": BRIDGE, "max_gas": MAX_GAS, "max_fee": str(MAX_FEE), "burns": True,
+                                    "refund_required": REQUIRE_REFUND})
         self.reply(404, {"ok": False, "reason": "not found"})
 
     def do_POST(self):
@@ -894,7 +905,7 @@ def main():
     save_state(s)
     log("start", listen=LISTEN, payer=PAYER, bridge=BRIDGE, token_program=TOKEN_PROGRAM, max_gas=MAX_GAS, max_fee=MAX_FEE,
         daily_max=DAILY_MAX, ip_daily_max=IP_DAILY_MAX, burn_daily_max=BURN_DAILY_MAX, ip_daily_burns=IP_DAILY_BURNS, floor=MIN_PAYER_BALANCE, desk_only=bool(DESK_STATE), dry_run=DRY,
-        proxy_auth=bool(AUTH), queue=RELAY_QUEUE)
+        proxy_auth=bool(AUTH), queue=RELAY_QUEUE, require_refund=REQUIRE_REFUND)
     Server((host, int(port)), Handler).serve_forever()
 
 

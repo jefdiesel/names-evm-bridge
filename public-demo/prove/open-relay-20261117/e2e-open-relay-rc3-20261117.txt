@@ -1,0 +1,235 @@
+setup done: operator 22c7wXn9FHTHSzjoT9vZXRDbF44Px2kFRT988q3kh647
+started pid 78274, height {"jsonrpc":"2.0","id":1,"result":1}
+  listens TCP 127.0.0.1:3491
+  listens TCP 127.0.0.1:3490
+sequencer environment: RISC0_DEV_MODE=1
+
+== accounts: deployer, two relay payers (own wallets), never-used claimers X Q Y Z (public), V (private) 17:05:16
+[fund-d] exit 0
+Transaction hash is 8e485a562fea502885c8f00927bf679bc6f5291f8d16fefb94a68198aef3ebee
+Transaction is included in block 2
+[fund-p1] exit 0
+Transaction hash is cccaa1f78e5d7d3728813df67a0114fd921a2496e841565019b38e29eda8ea07
+Transaction is included in block 3
+[fund-p2] exit 0
+Transaction hash is 130704a6fa2665e60d54ddf402e519814d0021d861cbfd9924964d4f1083265e
+Transaction is included in block 4
+deployer 3TAvzNK9YKSAqK1SSMasuX8g9WofabWtnjZEo6fVzGMP | relay payers P1 8tUzC3AFiGpVkDHgZpTNSCQPttYVh7AFjxQN6Eigh4LL, P2 C1uYnmPZgaDLChGwGYr78rH7S1ShbPFaghTtBDrVPGS6 | claimers X 9UCvofvty9xtYDYheez2CiGWMLGxzwquxGeoSscmAZ9u Q H7KwvDmKdH6NHQDDdiYaR7gUcybRfZmnKHuTV9Av1b8C Y 5WjhrKNoGbkgxehBwK3vAj2hoL4uv4REpLeub2shTeu7 Z 4XxNXyBj6DTBJDa7tpa16Y5atBksqRM5u1HCft6csLze | private V 731AaC5rVUerUL8qedXJB1o8PALPUwszgdDadTa65ukh
+
+== programs (this branch's guests, embedded in the CLI), vault on anvil, Initialize by the header key 17:06:06
+[dep-tok] exit 0
+Transaction hash is 61802b357af4f255a19000519950f606c8ee3b5ca9406139165624d81add723c
+Transaction is included in block 9
+immutable
+program 9ZpBtTgUyd9HH8CNVPowRPmF8oWrr2B89w3ez2jp5HEs
+[dep-br] exit 0
+Transaction hash is d78aac95b3e6e1a518b5b17dcf01685b2d2fb72bcb6e65c25afcf9cf0bf5f5ae
+Transaction is included in block 16
+immutable
+program 84LwT6SYufyhYXev2byCiFoGC8vDv1tHMerXjqzujCTY
+[wrap] exit 0
+definition account 523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN
+tx 9f616f29d25502fe90bffe519e7fed32b04d25135d1b6bc3f5dec07ef70b46f3
+applied in block 17
+token 523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN
+bridge 84LwT6SYufyhYXev2byCiFoGC8vDv1tHMerXjqzujCTY image 156a9825a036976786981f415542298beed8e0f2835bf07b36902283fe52a7f8 | token 9ZpBtTgUyd9HH8CNVPowRPmF8oWrr2B89w3ez2jp5HEs image bf8fca153711b8fbfdfa9d052ef24e2c1868e9d84ae2b94014e5e1f58dce8369 | wrapped 523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN
+[init] exit 0
+zone id (root source) 0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb
+cfg_id the bridge will derive 0x7d0cb10df1389857ba3ed8bd5060ae1862fab7e8a18b402c410a4f7fd334cf9b
+tx bb1dd8228af7212b1404c387bc70cf2987f5b4d9cd66d569c739c6aea125463b
+applied in block 18
+[reg] exit 0
+submitted in 48.8ms
+tx 815d3ec4b33b53b542673716558dc142825ed2c34164dc7d21a50131155d46ac
+applied in block 19
+vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 usdc 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 cfg 0x7d0cb10df1389857ba3ed8bd5060ae1862fab7e8a18b402c410a4f7fd334cf9b
+
+== float and amounts: claim sponsor 25,000,000; relay refund 1,300,000 (cap 2_500_000); burn sponsor 6,500,000 (cap); claims' float 1,000,000,000; burn float 100,000,000 (its own account) 17:09:45
+[sponsor] exit 0
+submitted in 49.4ms
+tx 3d1c4bfe711fa91df4b0decd3e8457d5a0c56afbae70c79a0508470c842ade67
+applied in block 20
+[refund] exit 0
+submitted in 52.4ms
+tx 1a3eb7a7cb87cfccb316a088ddfc271f845b3652ad210c1a27144fcf93d9d9b7
+applied in block 21
+[bsponsor] exit 0
+submitted in 62.6ms
+tx 0b22d3a710516a30c6f5a8f171ea1db3c1ff24e5c7d9b4033031a6e4dd3cea2b
+applied in block 22
+[float] exit 0
+submitted in 1.2ms
+tx 4056c794782c08a69b376ed45a4c5f5c9a21f6dc2e35da02513637e87d2ad9ca
+applied in block 23
+float 1000000000
+[bfloat] exit 0
+submitted in 1.3ms
+tx 3c5afcaf94d27100eb92da291053ea57f3deb198889947154c98c81da0cea2e0
+applied in block 24
+burn float 100000000
+sponsor_amount 25000000
+relay_refund 1300000
+burn_sponsor 6500000
+sponsored_burns 0
+float 1000000000
+burn_float 100000000
+[refund-over] exit 5
+tx 0b4c5f18d5209a8d9769a710a3832439368ad8a85ecc9b5ed735d192aa3e96b7
+Error: 0b4c5f18d5209a8d9769a710a3832439368ad8a85ecc9b5ed735d192aa3e96b7 was included in block 25 but reverted
+a refund above the program's cap: included and reverted
+
+== Ethereum: one 100 USDC deposit each for X, Q, Y, Z (public) and V (private); one attested root 17:11:22
+5 vault leaves, root 0xa9cb37b0c84624e242bbff092f559bbd1c8a83bcf108b1e0ee838ef226ce78a5
+[attest] exit 0
+submitted in 51.5ms
+tx 07df951b1c05d23646b9c3cd90366337eebaf6f88f81e7b92efbbca1006d7176
+applied in block 26
+
+== two independent relays: own payer, wallet, port, state, log; REQUIRE_REFUND=1; nothing registered 17:11:36
+bound 8tUzC3AFiGpVkDHgZpTNSCQPttYVh7AFjxQN6Eigh4LL to this chain ($M/e2e5/wallets/relay1/relay-chain.json)
+relay 1: {"payer": "8tUzC3AFiGpVkDHgZpTNSCQPttYVh7AFjxQN6Eigh4LL", "bridge": "84LwT6SYufyhYXev2byCiFoGC8vDv1tHMerXjqzujCTY", "max_gas": 250000, "max_fee": "2500000", "burns": true, "refund_required": true}
+bound C1uYnmPZgaDLChGwGYr78rH7S1ShbPFaghTtBDrVPGS6 to this chain ($M/e2e5/wallets/relay2/relay-chain.json)
+relay 2: {"payer": "C1uYnmPZgaDLChGwGYr78rH7S1ShbPFaghTtBDrVPGS6", "bridge": "84LwT6SYufyhYXev2byCiFoGC8vDv1tHMerXjqzujCTY", "max_gas": 250000, "max_fee": "2500000", "burns": true, "refund_required": true}
+
+== A1: X (never used: absent) claims through relay 2; the bridge refunds relay 2's payer 17:11:41
+[a1] exit 0
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+this bridge refunds 1300000 native LEZ to a relayed claim's payer, from its float
+relay http://127.0.0.1:3493/relay: fee payer C1uYnmPZgaDLChGwGYr78rH7S1ShbPFaghTtBDrVPGS6, caps gas 250000, max_fee 2500000
+relayed claim: declared gas 229433, max_fee 2500000 (measured 183546 cycles), signed by the sender
+relayed and submitted in 279.6ms
+tx 8b74db7c69a33846ee8f649df751d76142602a565c219255d0aa2998594d2529
+applied in block 27
+
+== A2: Q claims through relay 1 17:11:54
+[a2] exit 0
+relay http://127.0.0.1:3492/relay: fee payer 8tUzC3AFiGpVkDHgZpTNSCQPttYVh7AFjxQN6Eigh4LL, caps gas 250000, max_fee 2500000
+relayed claim: declared gas 229432, max_fee 2500000 (measured 183545 cycles), signed by the sender
+relayed and submitted in 277.9ms
+tx 9bdc87325a3f489d9cc5523670e16a861f4d12a559078fd6e53d5bb6014d7172
+applied in block 28
+
+== A3: relay 1 stopped; Y's client uses its configured list (relay 1, then relay 2) 17:12:08
+[a3] exit 0
+pre-check passed: attested root, unspent nullifier, minting open, denomination 0 = 100000000
+this bridge refunds 1300000 native LEZ to a relayed claim's payer, from its float
+relay 1 of 2 (http://127.0.0.1:3492/relay): unreachable (the relay: error sending request for url (http://127.0.0.1:3492/relay/info): client error (Connect): tcp connect error: Connection refused (os error 61)); trying the next relay
+relay http://127.0.0.1:3493/relay: fee payer C1uYnmPZgaDLChGwGYr78rH7S1ShbPFaghTtBDrVPGS6, caps gas 250000, max_fee 2500000
+relayed claim: declared gas 229432, max_fee 2500000 (measured 183545 cycles), signed by the sender
+relayed and submitted in 319.6ms
+tx ce3114fc271fbd5716be12103dac4f0e8380d0485417787f107d90f66b14e7cb
+applied in block 29
+the client fell over from relay 1 to relay 2
+
+== A4: Z's relayed claim lands in the same block as a mint freeze sent just before it: included, reverted, no refund 17:12:22
+[a4] exit 5
+this bridge refunds 1300000 native LEZ to a relayed claim's payer, from its float
+relay http://127.0.0.1:3493/relay: fee payer C1uYnmPZgaDLChGwGYr78rH7S1ShbPFaghTtBDrVPGS6, caps gas 250000, max_fee 2500000
+relayed claim: declared gas 229430, max_fee 2500000 (measured 183544 cycles), signed by the sender
+relayed and submitted in 306.1ms
+tx 5f3a260d2ea97929e0fe8e03611535e5430b9ea2740657ab3e65661082b8c0fa
+Error: 5f3a260d2ea97929e0fe8e03611535e5430b9ea2740657ab3e65661082b8c0fa was included in block 31 but reverted
+tx 05817219c5f18b840ac1006cfce563dff1233b4fda964120642c3a4885dbd29a
+applied in block 31
+Z's relayed claim was included and reverted
+[a4-unfreeze] exit 0
+submitted in 47.8ms
+tx 591744278813e164c930d3dabaac83c172ca2d0eb9cabe6bc87c405601d40c39
+applied in block 32
+
+== A5: the repeat of X's claim: refused by the CLI, and by relay 2 itself (--no-precheck) 17:13:06
+[a5] exit 1
+recipient 9UCvofvty9xtYDYheez2CiGWMLGxzwquxGeoSscmAZ9u (public claimer)
+Error: deposit already claimed: its nullifier is spent; nothing sent
+[a5-relay] exit 1
+relay 1 of 1 (http://127.0.0.1:3493/relay): refused: deposit already claimed: its nullifier is spent; nothing sent
+Error: no relay took the claim: http://127.0.0.1:3493/relay: refused: deposit already claimed: its nullifier is spent; nothing sent; nothing sent
+
+== B0: a PUBLIC burner (X, given 30,000,000 native to pay its own fee) names a public account's bridge actor (Q's) as notify: refused 17:13:06
+[b0-fund] exit 0
+Transaction hash is 07c3b3749c64c9e9d0d0fcd00a0b681728df787b0e2335b671dfd2f997402f0a
+Transaction is included in block 33
+[b0-sim] the wallet's simulation refused it with the program's text
+tx fd28c4ca4874eb7099a6e6ef8876690a157663f11826dc0354788452fa2285a3
+Error: fd28c4ca4874eb7099a6e6ef8876690a157663f11826dc0354788452fa2285a3 was included in block 34 but reverted
+included and reverted on chain; float 996100000 -> 996100000
+
+== B: V claims privately (one-time recipient, sponsored by the float), DEV MODE 17:13:31
+[b1] exit 0
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+proved and submitted in 203.5ms
+tx 43beeafbc1023d976236163cda8288d5a38f6e9f914fe76764e48f8871234e2b
+applied in block 35
+guard: exit=0 wall=25s peak_footprint=10MB peak_rss=69MB
+Latest block is 35
+Syncing to block 35. Blocks to sync: 31
+Synced to block 35 in 736.632166ms
+Public/5WjhrKNoGbkgxehBwK3vAj2hoL4uv4REpLeub2shTeu7  523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN  100000000
+Public/9UCvofvty9xtYDYheez2CiGWMLGxzwquxGeoSscmAZ9u  523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN  100000000
+Public/H7KwvDmKdH6NHQDDdiYaR7gUcybRfZmnKHuTV9Av1b8C  523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN  100000000
+Private/731AaC5rVUerUL8qedXJB1o8PALPUwszgdDadTa65ukh  523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN  100000000
+V's native LEZ after its sponsored claim (sponsor minus the claim's fee): 19370496
+
+== B2: V burns 100 with --sponsored, DEV MODE: a fresh one-time account takes the burn sponsor and pays the fee 17:13:57
+[b2] exit 0
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+proved and submitted in 177.9ms
+tx 49ec7954c07992c7df26c6b04abfec73b7d00ff45088cfe780e9893e680b6cf6
+applied in block 36
+guard: exit=0 wall=12s peak_footprint=12MB peak_rss=70MB
+V's native LEZ before the burn 19370496, after 19370496 (unchanged: V paid no fee); one-time W after: 1066352 (burn sponsor minus the burn's fee)
+the burn float paid exactly 6,500,000; the claims' float did not move in B2
+Latest block is 36
+Public/5WjhrKNoGbkgxehBwK3vAj2hoL4uv4REpLeub2shTeu7  523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN  100000000
+Public/9UCvofvty9xtYDYheez2CiGWMLGxzwquxGeoSscmAZ9u  523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN  100000000
+Public/H7KwvDmKdH6NHQDDdiYaR7gUcybRfZmnKHuTV9Av1b8C  523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN  100000000
+
+== B3: the burn block 36: the burner V must be absent, the one-time account present 17:14:10
+block bytes 29700
+burner V        731AaC5r… absent
+one-time W      4vgpvNBR… PRESENT
+relay payer P1  8tUzC3AF… absent
+relay payer P2  C1uYnmPZ… absent
+deployer        3TAvzNK9… absent
+
+== bridge state 17:14:10
+sponsor_amount 25000000
+relay_refund 1300000
+burn_sponsor 6500000
+sponsored_burns 1
+float 971100000
+burn_float 93500000
+token 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512 def 523fVRNrmDrR1ira253HPkywtJgKtaNesXzBbF4GUQsN denoms [100000000, 1000000000] claims [4, 0] burns [1, 0] claimed_value 400000000 burned_value 100000000 registered true mint_frozen false burn_frozen false
+
+== balances (native LEZ) 17:14:10
+step                             claims float  burn float  P1         P2         claimer native                                  block
+start                            1000000000    100000000   100000000  100000000  -                                               -
+A1 X via relay 2                 998700000     100000000   100000000  99813792   0                                               27
+A2 Q via relay 1                 997400000     100000000   99813800   99813792   0                                               28
+A3 Y, relay 1 down, via relay 2  996100000     100000000   99813800   99627592   0                                               29
+A4 Z reverted (freeze)           996100000     100000000   99813800   97774312   0                                               31
+A5 repeats refused               996100000     100000000   99813800   97774312   -                                               -
+B0 public forwarder refused      996100000     100000000   99813800   97774312   X 13994120                                      34
+B1 V private claim (dev)         971100000     100000000   99813800   97774312   -                                               35
+B2 V sponsored burn (dev)        971100000     93500000    99813800   97774312   W 4vgpvNBRysm7sidwSYanDTXZ7VMSR3DqrZQUdU4snERM  36
+
+== relay logs 17:14:10
+-- relay 1
+{"at": "2026-11-17 17:11:36", "channel": "52b9cab08de91098c52f3b0455945c429e6f94e74aa91f93cc584fb8250ea632", "event": "bound", "genesis": "bf9d1d8f11f670b0659cfe1f2bc7c3b0c16a83edddc554618acc7fba10708ef9", "payer": "8tUzC3AFiGpVkDHgZpTNSCQPttYVh7AFjxQN6Eigh4LL"}
+{"at": "2026-11-17 17:11:36", "bridge": "84LwT6SYufyhYXev2byCiFoGC8vDv1tHMerXjqzujCTY", "burn_daily_max": 50, "daily_max": 100, "desk_only": false, "dry_run": false, "event": "start", "floor": 10000000, "ip_daily_burns": 5, "ip_daily_max": 5, "listen": "127.0.0.1:3492", "max_fee": 2500000, "max_gas"
+{"at": "2026-11-17 17:11:54", "claimer": "H7KwvDmKdH6NHQDDdiYaR7gUcybRfZmnKHuTV9Av1b8C", "commitment": "0xb81cd7c1c0ebb8ab11e0c04256af304e5d3e818679bdc0432076f3b2535cdf10", "cycles": 183545, "event": "SENT", "gas": 229432, "ip": "7ad37b7074a2de4b992d", "max_fee": "2500000", "nullifier": "0x9409badf1
+-- relay 2
+{"at": "2026-11-17 17:11:39", "bridge": "84LwT6SYufyhYXev2byCiFoGC8vDv1tHMerXjqzujCTY", "burn_daily_max": 50, "daily_max": 100, "desk_only": false, "dry_run": false, "event": "start", "floor": 10000000, "ip_daily_burns": 5, "ip_daily_max": 5, "listen": "127.0.0.1:3493", "max_fee": 2500000, "max_gas"
+{"at": "2026-11-17 17:11:41", "claimer": "9UCvofvty9xtYDYheez2CiGWMLGxzwquxGeoSscmAZ9u", "commitment": "0x965aa70ecafd62e61e190b31a2fd41da32da7acd97bc6681ffec0dc3ed8ca9fb", "cycles": 183546, "event": "SENT", "gas": 229433, "ip": "eb8e18e8a1db7097eb1f", "max_fee": "2500000", "nullifier": "0x1a561b897
+{"at": "2026-11-17 17:12:09", "block": 27, "event": "INCLUDED", "nullifier": "0x1a561b8977a717990964d9453fe436bc329ccc1519c05e26aa33cb7840976d29", "tx": "8b74db7c69a33846ee8f649df751d76142602a565c219255d0aa2998594d2529"}
+{"at": "2026-11-17 17:12:09", "claimer": "5WjhrKNoGbkgxehBwK3vAj2hoL4uv4REpLeub2shTeu7", "commitment": "0x6efa7e30d79ab92d325f82ff55e06e032770c2cdd74bdc0dbb43a2e8a1965f7c", "cycles": 183545, "event": "SENT", "gas": 229432, "ip": "eb8e18e8a1db7097eb1f", "max_fee": "2500000", "nullifier": "0x9dd91c87e
+{"at": "2026-11-17 17:12:29", "block": 29, "event": "INCLUDED", "nullifier": "0x9dd91c87e06607ba7aced4d96f5f47ea07d8b79438f42670b3f46495d0182116", "tx": "ce3114fc271fbd5716be12103dac4f0e8380d0485417787f107d90f66b14e7cb"}
+{"at": "2026-11-17 17:12:29", "claimer": "4XxNXyBj6DTBJDa7tpa16Y5atBksqRM5u1HCft6csLze", "commitment": "0x0c3f75d5347642074c5ef44c984677341696e406e123b958872a6c50abdfed12", "cycles": 183544, "event": "SENT", "gas": 229430, "ip": "eb8e18e8a1db7097eb1f", "max_fee": "2500000", "nullifier": "0x54a093397
+{"at": "2026-11-17 17:13:06", "block": 31, "event": "INCLUDED", "nullifier": "0x54a093397100f32f7978e66ff5309aecaf188c428c4b1a88c89ac505c4c6ad0c", "tx": "5f3a260d2ea97929e0fe8e03611535e5430b9ea2740657ab3e65661082b8c0fa"}
+{"at": "2026-11-17 17:13:06", "detail": "", "event": "refused", "ip": "eb8e18e8a1db7097eb1f", "reason": "deposit already claimed: its nullifier is spent; nothing sent", "stage": "check"}
+
+== done: 0 unexpected result(s). Stop: R=$M/e2e5 ... $M/src/lez-bridge/scripts/e2e-open-relay.sh stop; then delete $M/e2e5 17:14:10

@@ -336,7 +336,11 @@ enum Command {
         /// never used) signs the claim and the relay co-signs as its fee payer, so the claimer
         /// needs no native LEZ. With no value (or `auto`): the relay behind `--sequencer`'s own
         /// endpoint (the demo chain serves it as JSON-RPC methods); or a loopback
-        /// `http://…/relay`. With `--dry-run` the relay only checks it.
+        /// `http://…/relay`; or several, comma-separated, tried in order (the next one when a relay
+        /// is unreachable or refuses before submitting); or `config`: the list in the client's
+        /// configuration, `LEZ_BRIDGE_RELAYS`. Any relay works: none is registered anywhere. When
+        /// the bridge refunds relays (`set-relay-refund`), the claim names the chosen relay's payer
+        /// for the refund. With `--dry-run` the relay only checks it.
         #[arg(long, value_name = "URL", num_args = 0..=1, default_missing_value = "auto", conflicts_with = "emit_call")]
         relay: Option<String>,
     },
@@ -362,6 +366,10 @@ enum Command {
         /// `burn`: a relayed public burn to this bridge (`BurnWithNotice`), not a claim.
         #[arg(long, default_value = "claim", value_parser = ["claim", "burn"])]
         kind: String,
+        /// Co-sign only claims that name this relay's payer for the bridge's relay refund
+        /// (`Relayed`); without it, plain claims are taken too (paid by the relay, unrefunded).
+        #[arg(long)]
+        require_refund: bool,
     },
     /// Initialise the bridge with roots from an RFP-021 attestation instance
     /// (`InitializeAttested`): signed by the bridge's header account, as `init`.
@@ -447,6 +455,26 @@ enum Command {
         #[arg(long)]
         amount: Balance,
     },
+    /// Set the native LEZ the bridge refunds from its float to the payer a relayed public claim
+    /// names (`Relayed`; 0 turns refunds off, at most the program's cap); admin only.
+    SetRelayRefund {
+        #[arg(long)]
+        bridge: AccountId,
+        #[arg(long)]
+        admin: AccountId,
+        #[arg(long)]
+        amount: Balance,
+    },
+    /// Set the native LEZ the bridge pays from its float to the one-time account of a sponsored
+    /// burn (`burn --sponsored`; 0 turns it off, at most the program's cap); admin only.
+    SetBurnSponsor {
+        #[arg(long)]
+        bridge: AccountId,
+        #[arg(long)]
+        admin: AccountId,
+        #[arg(long)]
+        amount: Balance,
+    },
     /// Top up the bridge's float: a native transfer from `--from` (public) to the config account.
     /// Anyone may.
     FundFloat {
@@ -456,6 +484,10 @@ enum Command {
         from: AccountId,
         #[arg(long)]
         amount: Balance,
+        /// Fund the burn float (sponsored burns; its own account, opened by `set-burn-sponsor`)
+        /// instead of the claims' float.
+        #[arg(long)]
+        burns: bool,
     },
     /// Fund a private account from a public one for fees when the bridge does not sponsor: the
     /// credit goes to a fresh one-time address of `--to` (random opening, kept only in the
@@ -504,6 +536,13 @@ enum Command {
         /// `http://…/relay`. With `--dry-run` the relay only checks it (check_only).
         #[arg(long, value_name = "URL", num_args = 0..=1, default_missing_value = "auto", conflicts_with = "emit_call")]
         relay: Option<String>,
+        /// A sponsored private burn: `--from` (a private account, no native LEZ needed) burns, and
+        /// a fresh one-time private account of this wallet receives the bridge's burn sponsor from
+        /// the float inside the proof and pays the fee (`notify` = that account's actor of the
+        /// bridge, which forwards the notice; `set-burn-sponsor`). Publishes the one-time account,
+        /// never `--from`.
+        #[arg(long, conflicts_with_all = ["relay", "emit_call"])]
+        sponsored: bool,
     },
     /// The next deposit commitment of `--from` (derived from its key) and a deposit request for
     /// the Ethereum side (format v1 of web/deposit). Scans the vault first; prints no secret.
@@ -558,6 +597,8 @@ impl Command {
                 | Self::Claim { .. }
                 | Self::ClaimAttested { .. }
                 | Self::SetSponsor { .. }
+                | Self::SetRelayRefund { .. }
+                | Self::SetBurnSponsor { .. }
                 | Self::FundFloat { .. }
                 | Self::Shield { .. }
                 | Self::Burn { .. }
@@ -1032,7 +1073,18 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
             let accounts = vec![signer(wallet, admin, bridge), pda(bridge, config_seed())];
             send(wallet, &[bridge], accounts, &borsh::to_vec(&message)?, None).await
         }
-        Command::FundFloat { bridge, from, amount } => {
+        Command::SetRelayRefund { bridge, admin, amount } => {
+            let message = BridgeMessage::Instruction(Instruction::Admin(AdminOp::SetRelayRefund { amount }));
+            let accounts = vec![signer(wallet, admin, bridge), pda(bridge, config_seed())];
+            send(wallet, &[bridge], accounts, &borsh::to_vec(&message)?, None).await
+        }
+        Command::SetBurnSponsor { bridge, admin, amount } => {
+            let message = BridgeMessage::Instruction(Instruction::Admin(AdminOp::SetBurnSponsor { amount }));
+            // The config also opens the burn float (its PDA, by seed).
+            let accounts = vec![signer(wallet, admin, bridge), pda(bridge, config_seed()), pda(bridge, bc::burn_float_seed())];
+            send(wallet, &[bridge], accounts, &borsh::to_vec(&message)?, None).await
+        }
+        Command::FundFloat { bridge, from, amount, burns } => {
             let config = config_address(&bridge);
             if public_state(wallet, config, bridge).await?.is_empty() {
                 bail!("{bridge} has no bridge config");
@@ -1040,14 +1092,19 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
             if identity(wallet, from).is_private() {
                 bail!("fund the float from a public account");
             }
-            println!("float before {}", float(wallet, &bridge).await?);
-            let message = native_token::Message::Transfer { to: config, amount };
+            let to = if burns { bc::burn_float_address(&bridge) } else { config };
+            if burns && public_state(wallet, to, bridge).await?.is_empty() {
+                bail!("the burn float is not open yet: the admin's set-burn-sponsor opens it");
+            }
+            let what = if burns { "burn float" } else { "float" };
+            println!("{what} before {}", native_of(wallet, to).await?);
+            let message = native_token::Message::Transfer { to, amount };
             let accounts = vec![
                 AccountIdentity::Public(from).balance(),
-                AccountIdentity::PublicNoSign(config).balance(),
+                AccountIdentity::PublicNoSign(to).balance(),
             ];
             send(wallet, &[], accounts, &borsh::to_vec(&message)?, None).await?;
-            println!("float {}", float(wallet, &bridge).await?);
+            println!("{what} {}", native_of(wallet, to).await?);
             Ok(())
         }
         Command::Shield { from, to, amount } => {
@@ -1069,7 +1126,7 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
         }
         Command::Claim { bridge, token_program, from, eth_token, denom_index, denom, source, chain, cfg_id, leaves, index, privacy, emit, relay } => {
             let sequencer = SEQUENCER.get().cloned().unwrap_or_default();
-            let relay = relay.map(|r| relay::allowed_relay(&r, &sequencer)).transpose()?;
+            let relay = relay.map(|r| relay::allowed_relays(&r, &sequencer)).transpose()?;
             if relay.is_some() && !matches!(identity(wallet, from), AccountIdentity::Public(_)) {
                 bail!("--relay takes a public account of this wallet as --from (a private claim is sponsored by the float instead)");
             }
@@ -1096,17 +1153,31 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
                 return emit_claim(&plan, path, &[bridge, token_program], bridge, token_program, proof, &borsh::to_vec(&message)?, emit.max_fee);
             }
             let accounts = plan.mentions(wallet, bridge, token_program, pda(bridge, bc::root_seed(&plan.root)));
-            if let Some(relay) = relay {
-                return relayed_send(wallet, &relay, accounts, borsh::to_vec(&message)?, "claim").await.map(drop);
+            if let Some(relays) = relay {
+                // With a relay refund on the bridge, the claim names the chosen relay's payer for it;
+                // the claimer's signature covers that name (and the fee payer).
+                let refund = plan.config.relay_refund;
+                if refund > 0 {
+                    println!("this bridge refunds {refund} native LEZ to a relayed claim's payer, from its float");
+                }
+                let BridgeMessage::Instruction(claim) = message else { unreachable!() };
+                let build = move |payer: AccountId| -> Result<(Vec<AccountMention>, Vec<u8>)> {
+                    if refund == 0 {
+                        return Ok((accounts.clone(), borsh::to_vec(&BridgeMessage::Instruction(claim.clone()))?));
+                    }
+                    let m = BridgeMessage::Instruction(Instruction::Relayed { refund_to: payer, claim: Box::new(claim.clone()) });
+                    Ok((refunded_mentions(&accounts, bridge, payer), borsh::to_vec(&m)?))
+                };
+                return relayed_send_any(wallet, &relays, build, "claim").await.map(drop);
             }
             send(wallet, &[bridge, token_program], accounts, &borsh::to_vec(&message)?, plan.fee_payer()).await
         }
-        Command::RelayCosign { tx_file, bridge, token_program, payer, max_gas, max_fee, submit, kind } => {
+        Command::RelayCosign { tx_file, bridge, token_program, payer, max_gas, max_fee, submit, kind, require_refund } => {
             if NO_PRECHECK.load(std::sync::atomic::Ordering::Relaxed) || DRY_RUN.load(std::sync::atomic::Ordering::Relaxed) {
                 bail!("relay-cosign takes neither --no-precheck nor --dry-run (leave out --submit to only check)");
             }
             let sequencer = SEQUENCER.get().cloned().unwrap_or_default();
-            relay::run_cosign(wallet, &sequencer, &tx_file, bridge, token_program, payer, max_gas, max_fee, submit, kind == "burn").await
+            relay::run_cosign(wallet, &sequencer, &tx_file, bridge, token_program, payer, max_gas, max_fee, submit, kind == "burn", require_refund).await
         }
         Command::ClaimAttested {
             bridge,
@@ -1177,10 +1248,13 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
             );
             send(wallet, &[bridge, token_program, attest_program], accounts, &borsh::to_vec(&message)?, plan.fee_payer()).await
         }
-        Command::Burn { bridge, token_program, from, definition, amount, exit, eth_dest, max_relay_fee, key_index, chain, emit, relay } => {
-            let relay = relay.map(|r| relay::allowed_relay(&r, &SEQUENCER.get().cloned().unwrap_or_default())).transpose()?;
+        Command::Burn { bridge, token_program, from, definition, amount, exit, eth_dest, max_relay_fee, key_index, chain, emit, relay, sponsored } => {
+            let relay = relay.map(|r| relay::allowed_relays(&r, &SEQUENCER.get().cloned().unwrap_or_default())).transpose()?;
             if relay.is_some() && !matches!(identity(wallet, from), AccountIdentity::Public(_)) {
                 bail!("--relay takes a public account of this wallet as --from");
+            }
+            if sponsored && !identity(wallet, from).is_private() {
+                bail!("--sponsored is for a private burner (a public burner uses --relay)");
             }
             let (memo, derived) = match exit {
                 Some(e) if emit.emit_call.is_some() => {
@@ -1206,6 +1280,9 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
                     (e, Some((key, j)))
                 }
             };
+            if sponsored {
+                return sponsored_burn(wallet, bridge, token_program, from, definition, amount, memo, derived).await;
+            }
             let message = TokenMessage::BurnWithNotice { definition, amount, notify: Actor::new(config_address(&bridge), bridge), memo };
             if let Some(path) = &emit.emit_call {
                 return emit_burn(wallet, bridge, token_program, definition, amount, &memo, &borsh::to_vec(&message)?, path, emit.max_fee).await;
@@ -1215,9 +1292,10 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
                 AccountIdentity::PublicNoSign(definition).select_program_actor_state(token_program),
                 pda(bridge, config_seed()),
             ];
-            if let Some(relay) = relay {
+            if let Some(relays) = relay {
                 println!("exit commitment 0x{}", to_hex(&memo));
-                let landed = relayed_send(wallet, &relay, accounts, borsh::to_vec(&message)?, "burn").await?;
+                let msg = borsh::to_vec(&message)?;
+                let landed = relayed_send_any(wallet, &relays, move |_| Ok((accounts.clone(), msg.clone())), "burn").await?;
                 if let (Some((key, j)), Some(_)) = (derived, landed) {
                     recover::record_exit(&recover::bridge_config(wallet, bridge).await?.cfg_id, &key, j)?;
                 }
@@ -1283,7 +1361,11 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
                 ),
             }
             let float_now = float(wallet, &bridge).await?;
-            println!("sponsor_amount {}\nfloat {}", c.sponsor_amount, float_now);
+            let burn_float = decode_balance(&public_state(wallet, bc::burn_float_address(&bridge), NATIVE_TOKEN_PROGRAM_ID).await?).unwrap_or(0);
+            println!(
+                "sponsor_amount {}\nrelay_refund {}\nburn_sponsor {}\nsponsored_burns {}\nfloat {}\nburn_float {}",
+                c.sponsor_amount, c.relay_refund, c.burn_sponsor, c.sponsored_burns, float_now, burn_float
+            );
             out::doc(&show_json(&c, float_now));
             for t in c.tokens {
                 println!(
@@ -1336,7 +1418,8 @@ fn show_json(c: &Config, float_now: Balance) -> serde_json::Value {
         "lez_chain_id": hx(&c.lez_chain_id), "zone_id": hx(&c.zone_id), "token_program": c.token_program.to_string(),
         "admin": c.admin.to_string(), "pending_admin": c.pending_admin.map(|a| a.to_string()), "freezer": c.freezer.to_string(),
         "attestor": c.attestor.to_string(), "mint_frozen": c.mint_frozen, "burn_frozen": c.burn_frozen,
-        "root_source": source, "sponsor_amount": c.sponsor_amount.to_string(), "float": float_now.to_string(),
+        "root_source": source, "sponsor_amount": c.sponsor_amount.to_string(), "relay_refund": c.relay_refund.to_string(),
+        "burn_sponsor": c.burn_sponsor.to_string(), "sponsored_burns": c.sponsored_burns, "float": float_now.to_string(),
         "tokens": c.tokens.iter().map(|t| json!({
             "eth_token": hx(&t.eth_token), "definition": t.definition.to_string(), "decimals": t.decimals,
             "denoms": t.denoms.iter().map(ToString::to_string).collect::<Vec<_>>(), "claims": t.claims, "burns": t.burns,
@@ -1476,6 +1559,10 @@ fn header_signs(wallet: &WalletCore<SequencerClient>, bridge: AccountId) -> Resu
 }
 
 /// The bridge's float: the config account's native balance.
+async fn native_of(wallet: &WalletCore<SequencerClient>, account: AccountId) -> Result<Balance> {
+    decode_balance(&public_state(wallet, account, NATIVE_TOKEN_PROGRAM_ID).await?).map_err(|e| anyhow!("{account}'s native balance: {e}"))
+}
+
 async fn float(wallet: &WalletCore<SequencerClient>, bridge: &AccountId) -> Result<Balance> {
     let state = public_state(wallet, config_address(bridge), NATIVE_TOKEN_PROGRAM_ID).await?;
     decode_balance(&state).map_err(|e| anyhow!("the float: {e}"))
@@ -1923,12 +2010,109 @@ const RELAY_TRIES: u32 = 6;
 /// `what`: "claim" or "burn" (`bridge_relayBurn`). The block it landed in, or `None` for a dry run.
 /// `--no-precheck` (tests and the relay's refusal probes only): built on the relay's caps without
 /// measuring, so a call that would revert reaches the relay, whose own simulation refuses it.
-async fn relayed_send(wallet: &mut WalletCore<SequencerClient>, relay: &relay::Relay, accounts: Vec<AccountMention>, message: Vec<u8>, what: &str) -> Result<Option<u64>> {
+/// `burn --sponsored`: a private burn whose fee the bridge's float pays. A fresh one-time private
+/// account `W` of this wallet is the burn's `notify` (its actor of the bridge forwards the notice
+/// to the config, `Effect::SponsoredBurn`); the config pays its burn sponsor to `W` inside the
+/// proof, and `W` pays the fee. Published: `W` and the sponsor amount; never `from`.
+#[expect(clippy::too_many_arguments, reason = "the burn's parts")]
+async fn sponsored_burn(
+    wallet: &mut WalletCore<SequencerClient>,
+    bridge: AccountId,
+    token_program: AccountId,
+    from: AccountId,
+    definition: AccountId,
+    amount: Balance,
+    memo: [u8; 32],
+    derived: Option<(String, u64)>,
+) -> Result<()> {
+    let config = recover::bridge_config(wallet, bridge).await?;
+    if config.burn_sponsor == 0 {
+        bail!("this bridge sponsors no burn (burn_sponsor is 0); nothing sent");
+    }
+    let float = decode_balance(&public_state(wallet, bc::burn_float_address(&bridge), NATIVE_TOKEN_PROGRAM_ID).await?).map_err(|e| anyhow!("{e}"))?;
+    if float < config.burn_sponsor {
+        bail!("the bridge's burn float holds {float}, less than its burn sponsor {}: the burn would fail; nothing sent", config.burn_sponsor);
+    }
+    let claims: u64 = config.tokens.iter().flat_map(|t| t.claims.iter()).sum();
+    if config.sponsored_burns >= claims {
+        bail!("no burn sponsor left on this bridge ({} sponsored burns, {claims} claims: at most one per claim); burn without --sponsored; nothing sent", config.sponsored_burns);
+    }
+    let (one_time, _) = wallet.create_new_account_private(None);
+    wallet.store_persistent_data()?;
+    println!("one-time fee account {one_time} (fresh private account of this wallet; it alone is published)");
+    println!("burn sponsor {} native LEZ from the burn float, burn float {float}", config.burn_sponsor);
+    // The sponsor is about one burn's fee (the program caps it), so price the in-proof reserve one
+    // block of base-fee climb ahead instead of the wallet's default five.
+    wallet.set_fee_headroom_blocks(1);
+    let w = identity(wallet, one_time);
+    let message = TokenMessage::BurnWithNotice { definition, amount, notify: Actor::new(one_time, bridge), memo };
+    let accounts = vec![
+        signer(wallet, from, token_program),
+        AccountIdentity::PublicNoSign(definition).select_program_actor_state(token_program),
+        w.clone().select_program_actor_state(bridge),
+        pda(bridge, config_seed()),
+        AccountIdentity::PublicNoSign(bc::burn_float_address(&bridge)).select_program_actor_state(NATIVE_TOKEN_PROGRAM_ID),
+        w.select_program_actor_state(NATIVE_TOKEN_PROGRAM_ID),
+    ];
+    let applied = send_tx(wallet, &[token_program, bridge], accounts, &borsh::to_vec(&message)?, Some(one_time)).await?;
+    if let (Some((key, j)), Some(_)) = (derived, applied) {
+        recover::record_exit(&config.cfg_id, &key, j)?;
+    }
+    Ok(())
+}
+
+/// The claim's mentions plus what a relay refund touches: the float (the config's native actor)
+/// and the payer's native actor, which only receives the refund's credit.
+fn refunded_mentions(accounts: &[AccountMention], bridge: AccountId, payer: AccountId) -> Vec<AccountMention> {
+    let mut out = accounts.to_vec();
+    out.push(AccountIdentity::PublicNoSign(config_address(&bridge)).select_program_actor_state(NATIVE_TOKEN_PROGRAM_ID));
+    out.push(AccountIdentity::PublicNoSign(payer).select_program_actor_state(NATIVE_TOKEN_PROGRAM_ID));
+    out
+}
+
+/// What [`relayed_send_any`] makes of one relay's attempt.
+enum RelayOutcome {
+    /// Checked (dry run, `None`) or submitted and landed in this block.
+    Done(Option<u64>),
+    /// This relay did not submit it (unreachable, refused, caps too low): the next one may.
+    Next(String),
+}
+
+/// [`relayed_send`] over a list of relays, in order (RFP-022 Privacy Preservation #6: the user
+/// picks the relay per claim, or names several). A relay that is unreachable or refuses before
+/// submitting hands over to the next. Safe whatever the first one did: every attempt carries the
+/// sender's same nonce, so at most one of them can apply, and a later one is refused for free
+/// (a nonce mismatch charges nothing). `build(payer)` makes the accounts and message for a relay
+/// whose fee payer is `payer`.
+async fn relayed_send_any(
+    wallet: &mut WalletCore<SequencerClient>,
+    relays: &[relay::Relay],
+    build: impl Fn(AccountId) -> Result<(Vec<AccountMention>, Vec<u8>)>,
+    what: &str,
+) -> Result<Option<u64>> {
+    let mut why = Vec::new();
+    for (i, r) in relays.iter().enumerate() {
+        match relayed_send(wallet, r, &build, what).await? {
+            RelayOutcome::Done(block) => return Ok(block),
+            RelayOutcome::Next(reason) => {
+                println!("relay {} of {} ({r}): {reason}{}", i + 1, relays.len(), if i + 1 < relays.len() { "; trying the next relay" } else { "" });
+                why.push(format!("{r}: {reason}"));
+            }
+        }
+    }
+    bail!("no relay took the {what}: {}; nothing sent", why.join(" | "))
+}
+
+async fn relayed_send(wallet: &mut WalletCore<SequencerClient>, relay: &relay::Relay, build: &impl Fn(AccountId) -> Result<(Vec<AccountMention>, Vec<u8>)>, what: &str) -> Result<RelayOutcome> {
     let dry_run = DRY_RUN.load(std::sync::atomic::Ordering::Relaxed);
     let unmeasured = NO_PRECHECK.load(std::sync::atomic::Ordering::Relaxed);
     let burn = what == "burn";
-    let (payer, max_gas, max_fee) = relay::info(relay).await?;
+    let (payer, max_gas, max_fee) = match relay::info(relay).await {
+        Ok(v) => v,
+        Err(e) => return Ok(RelayOutcome::Next(format!("unreachable ({e:#})"))),
+    };
     println!("relay {relay}: fee payer {payer}, caps gas {max_gas}, max_fee {max_fee}");
+    let (accounts, message) = build(payer)?;
     let started = std::time::Instant::now();
     for attempt in 1..=RELAY_TRIES {
         let half = if unmeasured {
@@ -1938,24 +2122,28 @@ async fn relayed_send(wallet: &mut WalletCore<SequencerClient>, relay: &relay::R
         };
         println!("relayed {what}: declared gas {}, max_fee {} (measured {} cycles), signed by the sender", half.gas, half.max_fee, half.cycles);
         if half.gas > max_gas || half.max_fee > max_fee {
-            bail!("this {what} needs gas {} / max_fee {}, above the relay's caps {max_gas} / {max_fee}; nothing sent", half.gas, half.max_fee);
+            return Ok(RelayOutcome::Next(format!("this {what} needs gas {} / max_fee {}, above the relay's caps {max_gas} / {max_fee}", half.gas, half.max_fee)));
         }
         out::phase("relay", serde_json::json!({ "relay": relay.to_string(), "attempt": attempt }));
-        match relay::post(relay, &half.tx, dry_run, burn).await? {
+        let answer = match relay::post(relay, &half.tx, dry_run, burn).await {
+            Ok(a) => a,
+            Err(e) => return Ok(RelayOutcome::Next(format!("no answer ({e:#})"))),
+        };
+        match answer {
             Ok(None) => {
                 println!("dry run: the relay checked the {what} and would co-sign it; nothing signed by the relay or sent");
                 out::set_result(serde_json::json!({ "dry_run": true, "relay": true }));
-                return Ok(None);
+                return Ok(RelayOutcome::Done(None));
             }
             Ok(Some(hash)) => {
                 println!("relayed and submitted in {:.1?}", started.elapsed());
                 out::event("submitted", serde_json::json!({ "tx": hash.to_string(), "relay": true }));
                 let landed = finish_tx(wallet, hash).await?;
                 out::set_result(serde_json::json!({ "block": landed.1, "elapsed_s": started.elapsed().as_secs_f64(), "dry_run": false, "relay": true }));
-                return Ok(Some(landed.1));
+                return Ok(RelayOutcome::Done(Some(landed.1)));
             }
             Err((reason, true)) if attempt < RELAY_TRIES => println!("relay: {reason} (try {attempt} of {RELAY_TRIES})"),
-            Err((reason, _)) => bail!("the relay refused the {what}: {reason}; nothing sent"),
+            Err((reason, _)) => return Ok(RelayOutcome::Next(format!("refused: {reason}"))),
         }
     }
     unreachable!("the last attempt returns")

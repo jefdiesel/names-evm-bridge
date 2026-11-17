@@ -68,14 +68,56 @@
 //! root (stand-in) or the anchor (RFP-021) used, the nullifier, the one-time address `A`, and the
 //! fixed sponsor amount paid to `A`.
 //!
+//! # Open claim relay (relay refund)
+//!
+//! A public claim's fee payer must sign it and hold the fee reserve before it runs, so a claimer
+//! with no native LEZ needs a co-signing payer (a relay). Anyone may be that payer: there is no
+//! list of relays. [`Instruction::Relayed`] wraps a public claim ([`Instruction::Claim`] or
+//! [`Instruction::ClaimAttested`] without a one-time recipient) and names `refund_to`; after the
+//! claim's own three messages the claimer's actor sends [`Effect::Refund`], and the config pays
+//! exactly [`Config::relay_refund`] (admin-set, at most [`MAX_RELAY_REFUND`]) from the float to
+//! `refund_to`, in the same transaction. So:
+//! - the refund is paid only when the claim applies (a failing claim reverts the refund with it),
+//!   at most once per deposit (the claim nullifier), and never more than the configured amount
+//!   (the instruction carries no amount);
+//! - it is one value for every refunded claim, so it singles out none;
+//! - LEZ gives a program no view of the fee declaration (`ReceiveInput` has no payer), so the
+//!   program refunds the account the claimer's signed instruction names. The claimer's signature
+//!   covers the whole message, payer included, so nobody can change `refund_to` or the payer
+//!   after signing. A relay co-signs only a claim that names its own payer; a self-paying claimer
+//!   may name itself (a fee rebate, bounded by the nullifier like any refund);
+//! - a refund with `relay_refund == 0` pays nothing and the claim still applies; a float holding
+//!   less than the refund fails the native transfer and the whole claim (nothing minted, nullifier
+//!   unspent), so relays check the float before co-signing;
+//! - a one-time recipient (a private claim) is refused here: it already draws the sponsor amount.
+//!
+//! # Sponsored burn
+//!
+//! A private burner pays its fee inside its proof, from a private account that holds native LEZ
+//! (LEZ 0.4 has no third-party payer for a private fee). A burn may name as `notify` not the
+//! config but this program's actor of a fresh, one-time account `W` of the burner's wallet: that
+//! actor forwards the token program's [`BurnNotice`] to the config as [`Effect::SponsoredBurn`],
+//! with `to = W` (its own resolved id). The config records the burn exactly as a direct notice
+//! (freeze, denomination, `burned <= claimed`, [`Exited`]) and then pays
+//! [`Config::burn_sponsor`] (admin-set, at most [`MAX_BURN_SPONSOR`], about one burn's fee) from the
+//! burn float ([`burn_float_address`], a PDA of its own, so draining it never touches the claims'
+//! float and the reverse) to `W` in the same transaction; the wallet takes it inside the proof and
+//! pays the fee from `W`. At most one sponsored burn per claim ([`Config::sponsored_burns`]), so
+//! splitting one claim into many smallest-denomination burns draws one sponsor. The config
+//! refuses a forward whose sender is not presented under an alias (a public `W`; a public burner
+//! naming a private `W` is paid, and pays the private fee from it). Published:
+//! `W` (fresh, never used before or after) and the fixed sponsor amount; the burner's account is
+//! not. The config pays only for a notice whose sending program is its token program, which sends
+//! one only after debiting the burner, so every payment stands on one destroyed denomination.
+//!
 //! # Outbound: burn
 //!
 //! A holder burns exactly one denomination with the token program's `BurnWithNotice`, naming
 //! this program's config as `notify` and the exit commitment
 //! `E = SHA256("RFP022/exit" | k' | ethDest | token | denom | maxRelayFee | cfgId)` as memo.
 //! The config checks the token and amount, counts the burn, and emits an [`Exited`] event. The
-//! outbound state proof (G2) reads `E` from that transaction. Burns are not sponsored: the burner
-//! pays its own fee (see the README for why).
+//! outbound state proof (G2) reads `E` from that transaction. A direct burn's burner pays its own
+//! fee; a burn may instead be sponsored from the float (see "Sponsored burn" below).
 //!
 //! The burn bound is by value, per token: the total value burned can never exceed the total
 //! value claimed. Wrapped tokens are fungible, so a holder of ten 100s can exit even if the only
@@ -231,6 +273,15 @@ pub const SOURCE_DOMAIN: &[u8] = b"RFP022/source/v1";
 /// today's prices (a private claim cost about 9.1M on the local sequencer; the demo sets 25M).
 /// Fixed in the program, so one claim can never draw more than this from the float (review M2).
 pub const MAX_SPONSOR_AMOUNT: Balance = 50_000_000;
+/// The most [`AdminOp::SetRelayRefund`] may set: a relayed public claim's measured fee on rc3 was
+/// 1,206,752 to 1,233,528 native LEZ and the demo relay's `max_fee` cap is 2,500,000. A refund above
+/// the fee a claim actually pays lets a self-paying claimer keep the difference, once per deposit.
+pub const MAX_RELAY_REFUND: Balance = 2_500_000;
+/// The most [`AdminOp::SetBurnSponsor`] may set: about one private burn's fee. A sponsored burn
+/// cost 5,425,752 native LEZ on a local rc3 chain in LEZ dev mode (dev receipts; a proved burn's
+/// fee is not measured); the burner's wallet must also hold the fee reserve, which the CLI prices
+/// one block of fee climb ahead (about 6.1M), so the cap leaves about 1.1M above the charged fee.
+pub const MAX_BURN_SPONSOR: Balance = 6_500_000;
 pub const EXIT_DOMAIN: &[u8] = b"RFP022/exit";
 pub const NFR_DOMAIN: &[u8] = b"RFP022/nfr";
 /// Domain of the clients' default one-time recipient opening ([`recipient_opening`]).
@@ -246,6 +297,9 @@ pub const VAULT_DEPOSIT_ROOT_SLOT: u64 = 83;
 const CONFIG_SEED: [u8; 32] = *b"/RFP022/bridge/config/v1/000000/";
 const ROOT_SEED_DOMAIN: &[u8] = b"/RFP022/bridge/root/v1";
 const NULLIFIER_SEED_DOMAIN: &[u8] = b"/RFP022/bridge/claim-nullifier/v1";
+/// The burn float's PDA seed: a second native-LEZ account of this program, apart from the config's
+/// (claims' float), so neither kind of sponsorship can drain the other's.
+const BURN_FLOAT_SEED: [u8; 32] = *b"/RFP022/bridge/burn-float/v1/00/";
 
 const fn hex32(s: &str) -> [u8; 32] {
     let b = s.as_bytes();
@@ -529,6 +583,18 @@ pub fn nullifier_seed(nullifier: &[u8; 32]) -> PdaSeed {
 }
 
 #[must_use]
+pub const fn burn_float_seed() -> PdaSeed {
+    PdaSeed::new(BURN_FLOAT_SEED)
+}
+
+/// The burn float: the native-LEZ account sponsored burns are paid from (anyone tops it up with a
+/// plain transfer once [`AdminOp::SetBurnSponsor`] has opened it). Claims never draw on it.
+#[must_use]
+pub fn burn_float_address(program: &AccountId) -> AccountId {
+    AccountId::for_public_pda(program, &burn_float_seed())
+}
+
+#[must_use]
 pub fn config_address(program: &AccountId) -> AccountId {
     AccountId::for_public_pda(program, &config_seed())
 }
@@ -600,6 +666,17 @@ pub struct Config {
     /// Native LEZ the config pays from its own balance (the float) to the one-time recipient of
     /// every claim that has one, in the claim's transaction. 0: no sponsoring. Admin sets it.
     pub sponsor_amount: Balance,
+    /// Native LEZ the config pays from the float to the `refund_to` of every
+    /// [`Instruction::Relayed`] claim, in the claim's transaction. 0: no refund. Admin sets it,
+    /// at most [`MAX_RELAY_REFUND`].
+    pub relay_refund: Balance,
+    /// Native LEZ the config pays from the float to the one-time account of every
+    /// [`Effect::SponsoredBurn`], from the burn float ([`burn_float_address`]), never the claims'
+    /// float. 0: none. Admin sets it, at most [`MAX_BURN_SPONSOR`].
+    pub burn_sponsor: Balance,
+    /// Sponsored burns recorded so far. A burn is sponsored only while this stays below the
+    /// number of claims (all tokens): at most one sponsored burn per claim.
+    pub sponsored_burns: u64,
 }
 
 /// The attestation source a config trusts for vault deposit roots.
@@ -659,6 +736,14 @@ pub const BURN_FROZEN: &str = "redemption is frozen";
 const STAND_IN_OFF: &str = "this bridge takes roots from an RFP-021 attestation, not the stand-in";
 /// An attested claim whose source, vault or chain differs from the config's.
 const WRONG_SOURCE: &str = "claim for another attestation source";
+/// [`Instruction::Relayed`] around anything but a claim.
+pub const RELAYED_NOT_A_CLAIM: &str = "a relayed instruction is a claim";
+/// [`Instruction::Relayed`] around a claim to a one-time recipient.
+pub const RELAYED_ONE_TIME: &str = "a relay refund is for a public claim, not a one-time recipient";
+/// [`Effect::SponsoredBurn`] forwarded by a public account's actor (its sender is not an alias).
+pub const SPONSORED_BURN_PRIVATE: &str = "a sponsored burn pays a private one-time account only";
+/// A sponsored burn past one per claim.
+pub const NO_BURN_SPONSOR_LEFT: &str = "no burn sponsor left: at most one sponsored burn per claim";
 /// `Initialize` signed by anyone but this program's header account.
 pub const INIT_BY_HEADER: &str = "only this program's header account initialises the bridge";
 /// The retired first-come `Init` / `InitAttested`.
@@ -767,6 +852,12 @@ pub enum Instruction {
         freezer: AccountId,
         source: AttestSource,
     },
+    /// A public claim ([`Instruction::Claim`] or [`Instruction::ClaimAttested`], no one-time
+    /// recipient) whose config pays [`Config::relay_refund`] from the float to `refund_to` in the
+    /// same transaction (see "Open claim relay" in the crate docs). `refund_to` is normally the
+    /// transaction's fee payer, a relay's co-signing account; the program cannot see the payer,
+    /// the claimer's signature fixes it.
+    Relayed { refund_to: AccountId, claim: Box<Instruction> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
@@ -792,6 +883,10 @@ pub enum AdminOp {
     AcceptAdmin,
     /// Set [`Config::sponsor_amount`] (0 turns sponsoring off). Admin only.
     SetSponsor { amount: Balance },
+    /// Set [`Config::relay_refund`] (0 turns refunds off), at most [`MAX_RELAY_REFUND`]. Admin only.
+    SetRelayRefund { amount: Balance },
+    /// Set [`Config::burn_sponsor`] (0 turns it off), at most [`MAX_BURN_SPONSOR`]. Admin only.
+    SetBurnSponsor { amount: Balance },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
@@ -831,6 +926,16 @@ pub enum Effect {
         evm_chain_id: u64,
         one_time: bool,
     },
+    /// To the config PDA, from a claimer's actor right after its claim's `Effect::Claim` /
+    /// `ClaimAttested` ([`Instruction::Relayed`]): pay [`Config::relay_refund`] to `to`.
+    Refund { to: AccountId },
+    /// To the config PDA, from this program's actor of the account `to` that a burn named as
+    /// `notify`: the token program's notice, forwarded. Recorded as a direct notice, then
+    /// [`Config::burn_sponsor`] is paid to `to`.
+    SponsoredBurn { token_program: AccountId, notice: BurnNotice, to: AccountId },
+    /// To the burn float PDA, from the config when the admin sets the burn sponsor: puts the
+    /// account in state, so plain native transfers can fund it.
+    OpenBurnFloat,
 }
 
 /// Emitted by the config for every recorded burn. G2 also reads `E` from the transaction itself.
@@ -884,7 +989,11 @@ pub fn handle(input: &ReceiveInput) -> Response {
             let Ok(notice) = borsh::from_slice::<BurnNotice>(&input.message) else {
                 panic!("a burn notice must decode")
             };
-            burn_notice(input, from, notice)
+            if input.receiver.account_id == config_address(&input.receiver.program_account_id) {
+                burn_notice(input, from, notice)
+            } else {
+                forward_sponsored_burn(input, from, notice)
+            }
         }
         _ => {
             let Ok(message) = borsh::from_slice::<Message>(&input.message) else {
@@ -1007,6 +1116,17 @@ pub fn instruct(input: &ReceiveInput, instruction: Instruction) -> Response {
                     },
                 ))
         }
+        Instruction::Relayed { refund_to, claim } => {
+            let one_time = match claim.as_ref() {
+                Instruction::Claim { recipient_opening, .. } | Instruction::ClaimAttested { recipient_opening, .. } => {
+                    recipient_opening.is_some()
+                }
+                _ => panic!("{RELAYED_NOT_A_CLAIM}"),
+            };
+            assert!(!one_time, "{RELAYED_ONE_TIME}");
+            // The claim's own three messages first, then the refund: it is paid only if they apply.
+            instruct(input, *claim).send(effect(config, &program, Effect::Refund { to: refund_to }))
+        }
     }
 }
 
@@ -1050,6 +1170,9 @@ fn new_config(
         tokens: Vec::new(),
         root_source,
         sponsor_amount: 0,
+        relay_refund: 0,
+        burn_sponsor: 0,
+        sponsored_burns: 0,
     }
 }
 
@@ -1065,8 +1188,22 @@ fn apply(input: &ReceiveInput, e: Effect) -> Response {
         Effect::Admin { by, op } => {
             assert!(here == config_address(&program), "admin goes to the config");
             let mut c = Config::decode(&input.pre_state);
+            let opens_burn_float = matches!(op, AdminOp::SetBurnSponsor { .. });
             admin(&mut c, by, op);
-            Response::set_state(c.encode())
+            let response = Response::set_state(c.encode());
+            if opens_burn_float {
+                response.send(effect(burn_float_seed(), &program, Effect::OpenBurnFloat))
+            } else {
+                response
+            }
+        }
+        Effect::OpenBurnFloat => {
+            assert!(here == burn_float_address(&program), "the burn float is its own PDA");
+            if input.pre_state.is_empty() {
+                Response::set_state(ActorState::from(MARK.to_vec()))
+            } else {
+                Response::keep_state()
+            }
         }
         Effect::AttestRoot { by, root } => {
             assert!(here == config_address(&program), "attestation goes to the config");
@@ -1123,6 +1260,39 @@ fn apply(input: &ReceiveInput, e: Effect) -> Response {
                 "{WRONG_SOURCE}"
             );
             mint_claim(c, here, eth_token, denom_index, denom, to, one_time)
+        }
+        Effect::Refund { to } => {
+            assert!(here == config_address(&program), "a refund goes to the config");
+            let c = Config::decode(&input.pre_state);
+            // The fixed configured amount, never one the instruction names; 0 pays nothing.
+            if c.relay_refund > 0 {
+                Response::keep_state().send(custody_transfer(here, config_seed(), to, c.relay_refund))
+            } else {
+                Response::keep_state()
+            }
+        }
+        Effect::SponsoredBurn { token_program, notice, to } => {
+            assert!(here == config_address(&program), "burn notices go to the config");
+            // Only a private forwarding account: LEZ presents a private sender to a public
+            // receiver under a blinded alias, never its own id, and a public sender always under
+            // its own id (`execution_state.rs` `sender`), so `from == to` is a public account,
+            // whose burner pays a public fee and must not collect a sponsor meant for a private one.
+            assert!(input.from.is_some_and(|f| f.account_id != to), "{SPONSORED_BURN_PRIVATE}");
+            let mut c = Config::decode(&input.pre_state);
+            let ev = record_burn(&mut c, token_program, &notice);
+            // At most one sponsored burn per claim: a holder who splits one large claim into
+            // many smallest-denomination burns draws one sponsor, not one per burn.
+            let claims: u64 = c.tokens.iter().flat_map(|t| t.claims.iter()).fold(0u64, |a, n| a.saturating_add(*n));
+            assert!(c.sponsored_burns < claims, "{NO_BURN_SPONSOR_LEFT}");
+            c.sponsored_burns += 1;
+            let sponsor = c.burn_sponsor;
+            let response = Response::set_state(c.encode()).event(event("Exited", &ev));
+            if sponsor > 0 {
+                // From the burn float, never the claims' float.
+                response.send(custody_transfer(burn_float_address(&program), burn_float_seed(), to, sponsor))
+            } else {
+                response
+            }
         }
     }
 }
@@ -1231,6 +1401,14 @@ fn admin(c: &mut Config, by: AccountId, op: AdminOp) {
             assert!(amount <= MAX_SPONSOR_AMOUNT, "sponsor amount above the program's cap");
             c.sponsor_amount = amount;
         }
+        AdminOp::SetRelayRefund { amount } => {
+            assert!(amount <= MAX_RELAY_REFUND, "relay refund above the program's cap");
+            c.relay_refund = amount;
+        }
+        AdminOp::SetBurnSponsor { amount } => {
+            assert!(amount <= MAX_BURN_SPONSOR, "burn sponsor above the program's cap");
+            c.burn_sponsor = amount;
+        }
         AdminOp::Freeze { .. } | AdminOp::AcceptAdmin => unreachable!(),
     }
 }
@@ -1260,7 +1438,27 @@ fn burn_notice(input: &ReceiveInput, from: Actor, notice: BurnNotice) -> Respons
     // Fixed texts only: none names the exit commitment (the memo), the burner or an amount.
     assert!(input.receiver.account_id == config_address(&program), "burn notices go to the config");
     let mut c = Config::decode(&input.pre_state);
-    assert!(from.program_account_id == c.token_program, "a burn notice comes from the token program");
+    let ev = record_burn(&mut c, from.program_account_id, &notice);
+    Response::set_state(c.encode()).event(event("Exited", &ev))
+}
+
+/// A burn that named this program's actor of an account `W` (not the config) as `notify`: forward
+/// the token program's notice to the config, which records it and pays the burn sponsor to `W`
+/// (see "Sponsored burn" in the crate docs). The sending program travels with it; the config
+/// refuses any but its token program.
+fn forward_sponsored_burn(input: &ReceiveInput, from: Actor, notice: BurnNotice) -> Response {
+    let program = input.receiver.program_account_id;
+    let to = input.receiver.account_id;
+    Response::keep_state().send(effect(
+        config_seed(),
+        &program,
+        Effect::SponsoredBurn { token_program: from.program_account_id, notice, to },
+    ))
+}
+
+/// Records a burn of `notice` sent by `token_program` on `c`: checks, counters, the exit event.
+fn record_burn(c: &mut Config, token_program: AccountId, notice: &BurnNotice) -> Exited {
+    assert!(token_program == c.token_program, "a burn notice comes from the token program");
     assert!(!c.burn_frozen, "{BURN_FROZEN}");
     let t = c
         .tokens
@@ -1278,10 +1476,9 @@ fn burn_notice(input: &ReceiveInput, from: Actor, notice: BurnNotice) -> Respons
     // may exit as long as the token's total burned value stays within its total claimed value.
     t.burned_value = t.burned_value.checked_add(notice.amount).unwrap_or_else(|| panic!("burned value overflow"));
     assert!(t.burned_value <= t.claimed_value, "burns exceed claims");
-    let ev = Exited {
+    Exited {
         eth_token: t.eth_token,
         denom_index: u32::try_from(i).unwrap_or_else(|_| unreachable!()),
         exit_commitment: notice.memo,
-    };
-    Response::set_state(c.encode()).event(event("Exited", &ev))
+    }
 }

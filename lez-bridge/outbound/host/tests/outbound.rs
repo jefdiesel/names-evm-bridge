@@ -349,7 +349,8 @@ fn applied_transactions_the_bridge_would_refuse_stop_the_update() {
     assert!(matches!(run(&mut v, &burn(50_000_000)), Err(G2Error::Inconsistent { what, .. }) if what.contains("one denomination")));
     // above the claimed value (nothing claimed yet at 2899)
     assert!(matches!(run(&mut v, &burn(100_000_000)), Err(G2Error::Inconsistent { what, .. }) if what.contains("burns exceed claims")));
-    // a burn notifying another actor is not ours
+    // a burn notifying another actor is not counted from its root call (a sponsored burn's
+    // forwarder is private and is counted from its boundary effect; a public one is refused)
     let mut other = burn(100_000_000);
     other.message = borsh::to_vec(&bridge_token_core::Message::BurnWithNotice {
         definition: def,
@@ -856,4 +857,65 @@ fn the_segment_size_changes_segments_not_the_journal() {
     assert!(b.segments >= a.segments, "{} vs {}", b.segments, a.segments);
     println!("public9 2893..2899: {} segments at po2 20, {} at po2 19", a.segments, b.segments);
     assert!(execute_guest(&g, &p, Some(30)).is_err());
+}
+
+/// Branch open-relay: the walker reads a refunded public claim (`Instruction::Relayed` as the root
+/// call) and a private execution whose boundary carries the claim's `Effect::Refund` shape and a
+/// `Effect::SponsoredBurn` from a private forwarder (presented under an alias), and extracts the
+/// claim (counted, nullifier spent) and the burn (counted, its exit) exactly once each.
+/// Extraction level (an `Extractor` over a root call and a `ProvenExecution`), not a stored block:
+/// no chain fixture of this branch's programs is recorded.
+#[test]
+fn a_relayed_claim_a_refund_and_a_sponsored_burn_extract() {
+    use bridge_core::{Effect, Instruction, Message};
+    use bridge_token_core::BurnNotice;
+    use lee_core::{ProvenExecution, execution_state::{BoundaryStep, Delivery}, program::MessageEnvelope};
+    let bridge = AccountId::new([0xB0; 32]);
+    let tp = AccountId::new([0x70; 32]);
+    let def = AccountId::new([0xDE; 32]);
+    let usdc = [0xAA; 20];
+    let config = bridge_core::config_address(&bridge);
+    let mut v = BridgeView {
+        initialized: true,
+        cfg_id: [1; 32],
+        token_program: *tp.value(),
+        stand_in: true,
+        tokens: vec![TokenView { eth_token: usdc, definition: *def.value(), denoms: vec![100], claims: vec![0], burns: vec![0], claimed_value: 0, burned_value: 0 }],
+    };
+    let at = At { block_id: 1, tx: 0 };
+    let claimer = AccountId::new([0xA1; 32]);
+    let claim = Instruction::Claim { eth_token: usdc, denom_index: 0, denom: 100, root: [2; 32], leaf_index: 0, path: vec![], secret: [3; 32], cfg_id: [1; 32], recipient_opening: None };
+    let relayed = Message::Instruction(Instruction::Relayed { refund_to: AccountId::new([0x91; 32]), claim: Box::new(claim) });
+    let root = RootCall { to: Actor::new(claimer, bridge), message: borsh::to_vec(&relayed).unwrap() };
+    let mut out = BatchOut::default();
+    Extractor::new(bridge, &mut v, &mut out).root(at, &root).unwrap();
+    let nf = nullifier_address(&bridge, &claim_nullifier(&[3; 32], &claimer, &usdc, 100));
+    assert_eq!(out.nullifiers, vec![*nf.value()], "the relayed claim's nullifier");
+    assert_eq!((v.tokens[0].claims.clone(), v.tokens[0].claimed_value), (vec![1], 100), "the relayed claim counted once");
+
+    let w = AccountId::new([0x77; 32]);
+    let delivery = |e: Effect| {
+        BoundaryStep::PrivateToPublic(Delivery {
+            envelope: MessageEnvelope { from: Actor::new(w.blinded(&[9; 32]), bridge), to: Actor::new(config, bridge), message: borsh::to_vec(&Message::Effect(e)).unwrap() },
+            inherited_authorizations: Default::default(),
+            inherits_entry_authorizations: false,
+            pda_seeds: Default::default(),
+        })
+    };
+    let notice = BurnNotice { definition: def, amount: 100, memo: [5; 32] };
+    let ex = ProvenExecution {
+        boundary: vec![delivery(Effect::Refund { to: AccountId::new([0x91; 32]) }), delivery(Effect::SponsoredBurn { token_program: tp, notice, to: w })],
+        ..ProvenExecution::default()
+    };
+    let mut out2 = BatchOut::default();
+    Extractor::new(bridge, &mut v, &mut out2).private(at, &ex).unwrap();
+    assert_eq!(out2.exits, vec![Exit { token: usdc, denom_index: 0, commitment: [5; 32] }], "the sponsored burn's exit, once");
+    assert_eq!((v.tokens[0].burns.clone(), v.tokens[0].burned_value), (vec![1], 100));
+    assert!(out2.nullifiers.is_empty());
+    // A sponsored burn from a foreign program is refused, as the bridge refuses it.
+    let bad = ProvenExecution {
+        boundary: vec![delivery(Effect::SponsoredBurn { token_program: AccountId::new([0x55; 32]), notice: BurnNotice { definition: def, amount: 100, memo: [6; 32] }, to: w })],
+        ..ProvenExecution::default()
+    };
+    assert!(Extractor::new(bridge, &mut v, &mut BatchOut::default()).private(at, &bad).is_err());
 }

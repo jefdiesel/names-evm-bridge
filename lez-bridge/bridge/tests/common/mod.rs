@@ -149,7 +149,14 @@ pub struct World {
     /// runs publicly in it, or a credit the prover promotes: `execution_state.rs` 1372-1398 at
     /// v0.4.0-rc1). An unpromoted message waits in LEZ's mailbox instead, which is not modelled.
     pub atomic_asyncs: bool,
+    /// Accounts this world treats as private for one thing only: their actors' messages are
+    /// presented to the receiver under a blinded alias, as LEZ presents a private sender
+    /// (`execution_state.rs` `sender`). Empty by default (every sender canonical).
+    pub private: BTreeSet<AccountId>,
 }
+
+/// The presentation factor the simulator uses for a private sender's alias.
+pub const PRESENTATION: [u8; 32] = [0x9E; 32];
 
 impl Default for World {
     fn default() -> Self {
@@ -161,6 +168,7 @@ impl Default for World {
             emitted: Vec::new(),
             programs: BTreeMap::from([(TOKEN, Prog::Token), (BRIDGE, Prog::Bridge), (ATTEST, Prog::Attest), (YES, Prog::Yes)]),
             atomic_asyncs: false,
+            private: BTreeSet::new(),
         }
     }
 }
@@ -228,11 +236,16 @@ impl World {
             self.emitted.push((receiver, ev.clone()));
         }
         self.events.extend(response.events);
+        let from = if self.private.contains(&receiver.account_id) {
+            Actor::new(receiver.account_id.blinded(&PRESENTATION), receiver.program_account_id)
+        } else {
+            receiver
+        };
         for m in response.sync_messages {
-            self.deliver(Some(receiver), m.to, m.message, m.pda_seeds, signer, asyncs)?;
+            self.deliver(Some(from), m.to, m.message, m.pda_seeds, signer, asyncs)?;
         }
         for m in response.async_messages {
-            asyncs.push_back((receiver, m.to, m.message));
+            asyncs.push_back((from, m.to, m.message));
         }
         Ok(())
     }

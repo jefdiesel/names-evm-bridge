@@ -577,6 +577,32 @@ class Queue(unittest.TestCase):
         self.assertTrue(all(o["retry"] and "waiting" in o["reason"] for o in busy))
 
 
+
+class OpenRelay(unittest.TestCase):
+    """Branch open-relay: REQUIRE_REFUND asks relay-cosign to take only refunded claims (never for a
+    burn), and the info answer says so; nothing in the relay is registered anywhere."""
+
+    def setUp(self):
+        self.seen, self.saved = [], (rl.subprocess.run, rl.REQUIRE_REFUND)
+
+        def fake_run(args, **kw):
+            self.seen.append(args)
+            return types.SimpleNamespace(stdout='RELAY {"ok": true}\n', stderr="", returncode=0)
+        rl.subprocess.run = fake_run
+
+    def tearDown(self):
+        rl.subprocess.run, rl.REQUIRE_REFUND = self.saved
+
+    def test_require_refund_reaches_the_cli_for_claims_only(self):
+        rl.REQUIRE_REFUND = True
+        self.assertEqual(rl.run_cli(TX, False), {"ok": True})
+        rl.run_cli(TX, True, kind="burn")
+        self.assertIn("--require-refund", self.seen[0])
+        self.assertNotIn("--require-refund", self.seen[1])
+        rl.REQUIRE_REFUND = False
+        rl.run_cli(TX, False)
+        self.assertNotIn("--require-refund", self.seen[2])
+
 if __name__ == "__main__":
     try:
         unittest.main()

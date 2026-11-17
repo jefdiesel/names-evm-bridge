@@ -444,6 +444,9 @@ fn bridge(r: &mut Vec<Row>) -> Result<()> {
         }],
         root_source,
         sponsor_amount: 0,
+        relay_refund: 0,
+        burn_sponsor: 0,
+        sponsored_burns: 0,
     };
     let claim_cfg = |root_source, e: BEffect| ReceiveInput {
         receiver: Actor::new(bridge_config_address(&BRIDGE), BRIDGE),

@@ -162,6 +162,9 @@ impl<'v> Extractor<'v> {
             return None;
         }
         match borsh::from_slice::<TokenMessage>(&root.message) {
+            // To the config. A burn notifying another actor of the bridge is a sponsored burn: the
+            // bridge refuses it unless that actor is private (`Effect::SponsoredBurn`), and it is
+            // counted from that actor's boundary effect below, never from the root call.
             Ok(TokenMessage::BurnWithNotice { definition, amount, notify, memo }) if notify == self.config_actor() => {
                 Some((definition, amount, memo))
             }
@@ -235,6 +238,13 @@ impl<'v> Extractor<'v> {
                 let nf = bridge_core::claim_nullifier(&secret, &signer, &eth_token, denom);
                 self.spend(at, bridge_core::nullifier_address(&self.bridge, &nf))
             }
+            // A refunded public claim: the claim as above; the refund moves native LEZ only.
+            Instruction::Relayed { claim, .. } => match *claim {
+                c @ (Instruction::Claim { recipient_opening: None, .. } | Instruction::ClaimAttested { recipient_opening: None, .. }) => {
+                    self.instruction(at, signer, c)
+                }
+                _ => Err(at.bad("a relayed instruction the bridge refuses")),
+            },
         }
     }
 
@@ -294,7 +304,9 @@ impl<'v> Extractor<'v> {
             | AdminOp::SetAttestor { .. }
             | AdminOp::ProposeAdmin { .. }
             | AdminOp::AcceptAdmin
-            | AdminOp::SetSponsor { .. } => {}
+            | AdminOp::SetSponsor { .. }
+            | AdminOp::SetRelayRefund { .. }
+            | AdminOp::SetBurnSponsor { .. } => {}
         }
         Ok(())
     }
@@ -364,8 +376,10 @@ impl<'v> Extractor<'v> {
                 continue;
             }
             if env.from.program_account_id != self.bridge {
-                // The bridge accepts a foreign message only as the token program's burn notice
-                // to the config (`handle`, `burn_notice`); anything else panics there.
+                // The bridge accepts a foreign message across the boundary only as the token
+                // program's burn notice to the config (`handle`, `burn_notice`); one to a public
+                // actor of the bridge is a sponsored burn the config refuses (its forwarder is not
+                // private); anything else panics there.
                 let tp = self.token_program();
                 if env.to.account_id != self.config || tp != Some(env.from.program_account_id) {
                     return Err(at.bad("a foreign program's message to the bridge"));
@@ -413,6 +427,16 @@ impl<'v> Extractor<'v> {
                     spends += 1;
                 }
                 Effect::AssertRoot | Effect::RecordRoot if !to_config => {}
+                // A refunded claim's refund: native LEZ from the float, not tracked.
+                Effect::Refund { .. } if to_config => {}
+                // A sponsored burn forwarded by a private actor of the bridge (the only way it is
+                // counted: its root call notifies that actor, not the config).
+                Effect::SponsoredBurn { token_program, notice, .. } if to_config => {
+                    if self.token_program() != Some(token_program) {
+                        return Err(at.bad("a sponsored burn from a foreign program"));
+                    }
+                    self.burn(at, &notice.definition, notice.amount, notice.memo)?;
+                }
                 _ => return Err(at.bad("an effect the bridge refuses at that account")),
             }
         }

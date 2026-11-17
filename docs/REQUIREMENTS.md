@@ -97,7 +97,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | PP3 | no destination revealed "over full event and state diffs for a complete round trip" | In; round trip Cond | 7 | LOC inbound; round trip NS |
 | PP4 | linking information "must never leave the user's control" | In | 1, 5 | LOC (demo "we claim for you" path is an exception until M5) |
 | PP5 | rejected, repeat and cap rejection "indistinguishable" | In | 1 | LOC; TST |
-| PP6 | "document precisely what that party learns"; switch per operation | In | 5 | DES; per-claim relay choice exists |
+| PP6 | "document precisely what that party learns"; switch per operation | In | 5 | DES; per-claim relay choice exists; branch `open-relay`: a relay list with failover, two independent relays and the refund run on a local chain, what a relay learns written down (`public-demo/prove/open-relay-20261117/README.md`) |
 | PP7 | "The default configuration must be the private one" | In | 1, 5 | LOC one-time recipient; rest DES |
 | Soft1 | "Committed amounts"; "document the intended migration path" | In: path only | 7 | NS |
 | Soft2 | "viewing keys" | Desc: not offered | — | NS |
