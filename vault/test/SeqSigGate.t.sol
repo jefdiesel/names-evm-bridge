@@ -90,6 +90,21 @@ contract SeqSigGateTest is Test {
         );
     }
 
+    /// Expects the gate's constructor to revert with `err`. (A vm.expectRevert before an internal
+    /// helper that creates the gate is not portable across Foundry versions: newer ones end the test
+    /// at that revert, silently skipping the rest.)
+    function makeGate(bytes32[] memory k, uint256 t, uint64 window, bool testOnly) external returns (SeqSigGate) {
+        return _gate(k, t, window, testOnly);
+    }
+
+    function _gateReverts(bytes32[] memory k, uint256 t, uint64 window, bool testOnly, bytes memory err) internal {
+        try this.makeGate(k, t, window, testOnly) {
+            fail();
+        } catch (bytes memory r) {
+            assertEq(r, err);
+        }
+    }
+
     /// A gate bound to the vault deployed right after it (the predicted CREATE address), and that
     /// vault with the gate as its verifier: the deploy order of script/SeqSigDeploy.s.sol.
     function _deploy(bytes32[] memory k, uint256 t, uint64 window, bool testOnly)
@@ -240,25 +255,19 @@ contract SeqSigGateTest is Test {
         vm.expectRevert(SeqSigGate.BadImmutable.selector);
         new SeqSigGate(mv, ISeqSigVault(address(v)), LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID, UPDATE_ID, EVIDENCE_ID, bytes32(0), keys, T, WINDOW, false);
         // threshold must be a strict majority of the keys passed, and at most n
-        vm.expectRevert(SeqSigGate.BadThreshold.selector);
-        _gate(keys, 2, WINDOW, false);
-        vm.expectRevert(SeqSigGate.BadThreshold.selector);
-        _gate(keys, 5, WINDOW, false);
+        _gateReverts(keys, 2, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadThreshold.selector));
+        _gateReverts(keys, 5, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadThreshold.selector));
         // a window under the minimum only behind the visible test-only flag
-        vm.expectRevert(SeqSigGate.WindowTooShort.selector);
-        _gate(keys, T, WINDOW - 1, false);
+        _gateReverts(keys, T, WINDOW - 1, false, abi.encodeWithSelector(SeqSigGate.WindowTooShort.selector));
         assertTrue(_gate(keys, T, 0, true).TEST_ONLY_SHORT_WINDOW());
         // keys: sorted, distinct, no empty set
         bytes32[] memory k = _keys(4);
         (k[0], k[1]) = (k[1], k[0]);
-        vm.expectRevert(SeqSigGate.BadSignerSet.selector);
-        _gate(k, T, WINDOW, false);
+        _gateReverts(k, T, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadSignerSet.selector));
         k = _keys(4);
         k[1] = k[0];
-        vm.expectRevert(SeqSigGate.BadSignerSet.selector);
-        _gate(k, T, WINDOW, false);
-        vm.expectRevert(SeqSigGate.BadSignerSet.selector);
-        _gate(new bytes32[](0), 1, WINDOW, false);
+        _gateReverts(k, T, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadSignerSet.selector));
+        _gateReverts(new bytes32[](0), 1, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadSignerSet.selector));
     }
 
     /// Small-order points (identity, order 2, order 4, both order-8 y values, either sign bit) and
@@ -280,8 +289,7 @@ contract SeqSigGateTest is Test {
             assertFalse(gate.keyOk(bad[i]), "bad key accepted");
             bytes32[] memory one = new bytes32[](1);
             one[0] = bad[i];
-            vm.expectRevert(abi.encodeWithSelector(SeqSigGate.BadKey.selector, 0));
-            _gate(one, 1, WINDOW, false);
+            _gateReverts(one, 1, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadKey.selector, 0));
         }
         for (uint256 i; i < 4; ++i) assertTrue(gate.keyOk(keys[i]));
     }
@@ -303,28 +311,24 @@ contract SeqSigGateTest is Test {
         bytes32[] memory k64 = _keys(64);
         assertEq(_gate(k64, 63, WINDOW, false).THRESHOLD(), 63);
         assertEq(_gate(k64, 33, WINDOW, false).THRESHOLD(), 33);
-        vm.expectRevert(SeqSigGate.BadThreshold.selector);
-        _gate(k64, 64, WINDOW, false);
+        _gateReverts(k64, 64, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadThreshold.selector));
         assertEq(_gate(k64, 64, WINDOW, true).SIGNERS(), 64);
-        vm.expectRevert(SeqSigGate.BadThreshold.selector);
-        _gate(k64, 32, WINDOW, false);
-        vm.expectRevert(SeqSigGate.BadSignerSet.selector);
-        _gate(_keys(65), 33, WINDOW, false);
+        _gateReverts(k64, 32, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadThreshold.selector));
+        _gateReverts(_keys(65), 33, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadSignerSet.selector));
         bytes32[] memory k3 = _keys(3);
         assertEq(_gate(k3, 2, WINDOW, false).THRESHOLD(), 2);
-        vm.expectRevert(SeqSigGate.BadThreshold.selector);
-        _gate(k3, 3, WINDOW, false);
+        _gateReverts(k3, 3, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadThreshold.selector));
         bytes32[] memory k2 = _keys(2);
-        vm.expectRevert(SeqSigGate.BadThreshold.selector);
-        _gate(k2, 2, WINDOW, false); // n = 2 has no T with n/2 < T <= n - 1
-        vm.expectRevert(SeqSigGate.BadThreshold.selector);
-        _gate(k2, 1, WINDOW, false);
+        _gateReverts(k2, 2, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadThreshold.selector)); // n = 2 has no T with n/2 < T <= n - 1
+        _gateReverts(k2, 1, WINDOW, false, abi.encodeWithSelector(SeqSigGate.BadThreshold.selector));
         // T = n = 4 (test flag): an update needs every key; one equivocation kills the gate
-        (SeqSigGate g, BridgeVault w) = _deploy(keys, 4, 0, true);
+        (SeqSigGate g, BridgeVault w) = _deploy(keys, 4, 1, true); // window 1 s: contests in the same block
         _register(w);
         w.deposit(address(usdc), 0, keccak256("C-w"));
+        w.deposit(address(usdc), 0, keccak256("C-w2")); // two updates below, one claim each
         (bytes memory vj, bytes memory full) = _goodFor(g, w, 0xf);
         _submitTo(g, w, anyone, full);
+        vm.warp(block.timestamp + 1);
         g.finalize(vj);
         (, full) = _goodFor(g, w, 0x7);
         bytes memory s = _seal(UPDATE_ID, full);
