@@ -833,7 +833,7 @@ update was signed in (LEZ intersects every message's window into the transaction
 per block). Each applied update moves the deadline forward with the store. Tests:
 `e04_an_instance_past_the_weak_subjectivity_bound_refuses_updates`,
 `the_clock_ends_every_update_s_window_at_the_store_s_deadline`
-(`lez-bridge/attest/program/tests/error_codes.rs`). Record: `public-demo/prove/weak-subjectivity-20261117/`.
+(`lez-bridge/attest/program/tests/error_codes.rs`). Record: `public-demo/prove/cli-ws-20261117/`.
 
 **Replacement and consumer migration.** An instance past its bound is frozen, not broken: its
 anchors stay recorded and `AssertAnchor` keeps answering for them, so a claim made under an old

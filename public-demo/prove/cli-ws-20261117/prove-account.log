@@ -1,0 +1,9 @@
+header RLP rebuilt from eth_getBlockByHash (684 bytes), hashes to the anchor
+saved the header and proof in $W/run-cli/acct
+statement verified natively: account 0x8c8b2664de28e5287158db4db65d448638871b74 balance = 0x00000000000000000000000000000000000000000000000003311fc80a570000
+STATEMENT_ID=0x6787adea831df8a2398b73c1503cc57ab3d646d5bc642966c81a8910b9549b94
+submitted in 308.8ms
+tx 2ae535c571799cadfa6d1bb1654671370666cb821864d78f42d96ff0390b49bd
+applied in block 246
+charged: fee 2005108 (payer balance 99998612240790 -> 99998610235682); wire bytes 5150; base fees exec 9 / stor 8 at height 245 (after: 8 / 8 at 246); so execution gas = (fee - bytes x stor) / exec = 218212 in block 246
+  (a block charges at its opening fee state, the quote before; the head moved after it. If another block came in between, the figure is approximate; the dry run's metered cycles are exact)

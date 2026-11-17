@@ -32,7 +32,7 @@ case "${1:-public}" in
     export CARGO_TARGET_DIR=$W/target-cli RISC0_SKIP_BUILD=1
     cd "$W/src/lez-bridge"
     $LOCK nice -n 19 cargo build --release -j 4 -p lez_bridge_cli > "$W/logs/cli-$T.log" 2>&1
-    rc=$?; grep -E "^(error|warning: unused)" -A6 "$W/logs/cli-$T.log" | head -40; tail -3 "$W/logs/cli-$T.log"
+    rc=$?; grep -E "^(error|warning: unused)" -A6 "$W/logs/cli-$T.log" | sed -n 1,40p; tail -3 "$W/logs/cli-$T.log"
     echo "cli rc=$rc ($W/logs/cli-$T.log)"; echo "disk free $(free_gb) GB"; exit $rc ;;
 esac
 export CARGO_TARGET_DIR=$W/target-cycles

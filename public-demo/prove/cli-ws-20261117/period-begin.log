@@ -1,0 +1,15 @@
+store now:
+  instance 0x3d3dcc90f7a348d71c71d5f61244d2715dfacf9632bcc58f862404331ac5422a  chain 11155111  updates 1
+  finalized beacon slot 11600800 (period 1416, epoch 362525)  root 0x90ecbbc58455fb669928ad7e3e0cc522bbfa53dd169a879fb1125c4c66c0e3ba
+    proposer 1907  parent 0x9c04ce1665b1b626de7383d844581a235517667d6991e017d5621d7f82c857c5  state 0xc7ca775e4b46eca57a79751b1eaf9db2d391b9c3922d6720241ce3504421e8c1  body 0x35956b69a5f231b342defa656f9965c88c411c2711de5fe07f1c8722e70b46bd
+  execution block hash 0x3e0b50a7645941849631fb56dc4b139d45b263ec7b4d6ddd89fda9496a3b8ab9  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+period update: signature slot 11599939 (period 1416), attested slot 11599938, finalized slot 11599872, participation 506/512, carries the next committee
+signed by the store's current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891
+506/512 signers, 7 key witnesses
+verified natively (both steps); JOB_ID=0x6a83cf65c279a54b5dba8dd2fc2c0c8db3fca4e42d6f1eceefbed8f09bb491ae JOB_PDA=3UPa5jESZaPYZnc5TndNXydg2bRgibp4Ss7WZhHPeXbu
+Begin: message 26907 bytes; public transaction from HH6Mk2iz8VkqNj5kJRsw5fXmCiUaP53WKKA2HV293yZo
+submitted in 253.8ms
+tx 1583c4fd723328826d92c385f315562f67fbe88540bc27bfbafa6b6d0678910c
+applied in block 248
+charged: fee 25769688 (payer balance 99998609505170 -> 99998583735482); wire bytes 27433; base fees exec 8 / stor 8 at height 247 (after: 8 / 8 at 248); so execution gas = (fee - bytes x stor) / exec = 3193778 in block 248

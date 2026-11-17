@@ -1,0 +1,22 @@
+store now:
+  instance 0x3d3dcc90f7a348d71c71d5f61244d2715dfacf9632bcc58f862404331ac5422a  chain 11155111  updates 1
+  finalized beacon slot 11600800 (period 1416, epoch 362525)  root 0x90ecbbc58455fb669928ad7e3e0cc522bbfa53dd169a879fb1125c4c66c0e3ba
+    proposer 1907  parent 0x9c04ce1665b1b626de7383d844581a235517667d6991e017d5621d7f82c857c5  state 0xc7ca775e4b46eca57a79751b1eaf9db2d391b9c3922d6720241ce3504421e8c1  body 0x35956b69a5f231b342defa656f9965c88c411c2711de5fe07f1c8722e70b46bd
+  execution block hash 0x3e0b50a7645941849631fb56dc4b139d45b263ec7b4d6ddd89fda9496a3b8ab9  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee unknown
+period update: signature slot 11599939 (period 1416), attested slot 11599938, finalized slot 11599872, participation 506/512, carries the next committee
+signed by the store's current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891
+506/512 signers, 7 key witnesses
+verified natively (both steps); JOB_ID=0x6a83cf65c279a54b5dba8dd2fc2c0c8db3fca4e42d6f1eceefbed8f09bb491ae JOB_PDA=3UPa5jESZaPYZnc5TndNXydg2bRgibp4Ss7WZhHPeXbu
+Finish: message 26140 bytes; public transaction from HH6Mk2iz8VkqNj5kJRsw5fXmCiUaP53WKKA2HV293yZo
+submitted in 398.4ms
+tx f1f557e02c3678dcbc09b7ffc9873cc794201df062c594b0a1f8f9a80d02959f
+applied in block 249
+charged: fee 74918096 (payer balance 99998583735482 -> 99998508817386); wire bytes 26666; base fees exec 8 / stor 8 at height 248 (after: 9 / 8 at 249); so execution gas = (fee - bytes x stor) / exec = 9338096 in block 249
+  (a block charges at its opening fee state, the quote before; the head moved after it. If another block came in between, the figure is approximate; the dry run's metered cycles are exact)
+store on chain now:
+  instance 0x3d3dcc90f7a348d71c71d5f61244d2715dfacf9632bcc58f862404331ac5422a  chain 11155111  updates 2
+  finalized beacon slot 11600800 (period 1416, epoch 362525)  root 0x90ecbbc58455fb669928ad7e3e0cc522bbfa53dd169a879fb1125c4c66c0e3ba
+    proposer 1907  parent 0x9c04ce1665b1b626de7383d844581a235517667d6991e017d5621d7f82c857c5  state 0xc7ca775e4b46eca57a79751b1eaf9db2d391b9c3922d6720241ce3504421e8c1  body 0x35956b69a5f231b342defa656f9965c88c411c2711de5fe07f1c8722e70b46bd
+  execution block hash 0x3e0b50a7645941849631fb56dc4b139d45b263ec7b4d6ddd89fda9496a3b8ab9  state root - (Gloas header: block hash only)  number -
+  current committee 0x8fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891  next committee 0x1f920a6725e14e46957a0db0c53e25e03d0d78ec3548e286e3ae6d38c2f4a0cc

@@ -1,0 +1,8 @@
+header RLP rebuilt from eth_getBlockByHash (684 bytes), hashes to the anchor
+block 12156430: 97 receipts, receipts root matches the header
+log 0 of tx 0: address 0x42ed97b6b3f0249db3222ff44f42ce1ae7af8dd3, 1 topics, 32 data bytes
+STATEMENT_ID=0xfe2bbd8a8d7a71f01f65c9e71b393735f43edd3cbd691a4e56147c291fb441df
+submitted in 289.4ms
+tx 2ab74fc9ee5a8329cf8707bb834f7b2a9602985ac5922c0e1582e6bdbb9fe593
+applied in block 247
+charged: fee 730512 (payer balance 99998610235682 -> 99998609505170); wire bytes 2384; base fees exec 8 / stor 8 at height 246 (after: 8 / 8 at 247); so execution gas = (fee - bytes x stor) / exec = 88930 in block 247
