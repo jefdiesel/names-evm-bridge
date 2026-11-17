@@ -1,0 +1,16 @@
+# The "sequencer signatures" withdrawal route (branch seq-sig): signed LEZ checkpoints (core), the
+# attestor and executor-only driver `seqsig` (host). Its own workspace, like outbound/ and release/:
+# the existing G2-lite guests, the outbound host and their locks are not touched. The host depends
+# on outbound_host (path) for blocks, state and the native G2 run; it embeds two new guests,
+# methods/outbound_guest_seqsig (the TrustedTip statement + a threshold of Ed25519 checkpoint
+# signatures) and methods/seqsig_evidence_guest (one signature of a conflicting checkpoint).
+# Executor only: nothing here proves.
+[workspace]
+resolver = "3"
+members = ["core", "host"]
+
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
+
+[profile.release]
+opt-level = 3

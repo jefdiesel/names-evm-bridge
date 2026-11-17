@@ -1,0 +1,13 @@
+[package]
+name = "seqsig_core"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# Checkpoint message, signer-set hash, threshold check, evidence journal. Pure Rust, no risc0:
+# shared by the two seq-sig guests and the host.
+[dependencies]
+ed25519-dalek = { version = "=2.2.0", default-features = false }
+curve25519-dalek = { version = "=4.1.3", default-features = false }
+sha2 = { version = "0.10.9", default-features = false }
+borsh = { version = "1.5.7", features = ["derive"] }

@@ -451,6 +451,20 @@ image = "release_image"
 path = "lez-bridge/outbound"
 roles = ["eth_provers"]
 
+# Branch seq-sig (2026-11-17): the sequencer-signature route, local and executor only. New guests and
+# their own workspace; no deployment pins their images.
+[[workspace]]
+path = "lez-bridge/methods/outbound_guest_seqsig"
+roles = ["eth_guests"]
+
+[[workspace]]
+path = "lez-bridge/methods/seqsig_evidence_guest"
+roles = ["eth_guests"]
+
+[[workspace]]
+path = "lez-bridge/outbound-seqsig"
+roles = ["eth_provers"]
+
 [[workspace]]
 path = "lez-bridge/release"
 roles = ["eth_provers"]
