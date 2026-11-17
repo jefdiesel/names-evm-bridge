@@ -157,7 +157,7 @@ it cannot walk would stall withdrawals on v5 for good. So the walker was checked
   update and the statement. That is about 40 extra po2-18 segments, about 50 minutes of proving on the updater's
   proving host at 77 s a segment, once (123 segments for the 686 blocks against about 83 for an empty stretch). Each later update block adds about 81k cycles, about 3.9M a day at 48 a day, about 3.5% of an
   empty chain-day.
-- **The updater's own cycle over these blocks:** <<UPDATER>>
+- **The updater's own cycle over these blocks:** the bridge's updater proved LEZ blocks 21442..21921, which contain the first of these transactions, in 7,925.9 s on an 8 GB desktop, and the vault accepted it (Sepolia transaction `0x099f47c1e9a42d99cd2c5aea8b431612897c49de583cf8523bdc96d44eefecd4`, block 12157050). The next range, 21922..22415, was proved on a second machine in 2,412.6 s and accepted in block 12157228.
 
 ## Not done, and limits
 
