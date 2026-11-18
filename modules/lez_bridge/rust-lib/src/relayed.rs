@@ -418,6 +418,15 @@ impl Bridge {
         self.lez_rpc_for(&d)
     }
 
+    /// The LEZ endpoint of a claim job: its own deployment's (kept in its meta), so choosing
+    /// another bridge never moves a claim in flight; older jobs without one use the current one.
+    fn job_rpc(&self, job: &Value) -> Result<Arc<dyn LezRpc + Send + Sync>, Refusal> {
+        match job["meta"]["deployment"].as_str().and_then(|n| self.deployment_named(n)) {
+            Some(d) => self.lez_rpc_for(&d),
+            None => self.lez_rpc(),
+        }
+    }
+
     /// [`Self::lez_rpc`] of deployment `d` (a deposit or claim read on the deployment it is for).
     pub(crate) fn lez_rpc_for(&self, d: &Deployment) -> Result<Arc<dyn LezRpc + Send + Sync>, Refusal> {
         if let Some(r) = &self.relayed.rpc_override {
@@ -533,8 +542,8 @@ impl Bridge {
         }
     }
 
-    /// The deployment a claim file is for: the current one, else the built-in one whose chain and
-    /// vault the file names (a v3 file after v4 became the default). Unknown: the current one, whose
+    /// The deployment a claim file is for: the current one, else the built-in or added one whose
+    /// chain and vault the file names (a v3 file after v4 became the default). Unknown: the current one, whose
     /// checks then say which vault the file is for.
     fn claim_file_deployment(&self, text: &str) -> Deployment {
         let cur = self.deployment().clone();
@@ -544,11 +553,7 @@ impl Bridge {
         if cur.vault == vault {
             return cur;
         }
-        crate::config::builtin_names()
-            .into_iter()
-            .filter_map(|n| crate::config::builtin(&n))
-            .find(|d| d.vault == vault && chain.is_none_or(|c| c == d.chain_id))
-            .unwrap_or(cur)
+        self.known_deployments().into_iter().find(|d| d.vault == vault && chain.is_none_or(|c| c == d.chain_id)).unwrap_or(cur)
     }
 
     fn relayed_check_inner(&mut self, source: &str, wallet_hint: bool) -> Result<Value, Refusal> {
@@ -1098,7 +1103,7 @@ impl Bridge {
     }
 
     fn note_payer_nonce(&self, job: &mut Value) {
-        let Ok(rpc) = self.lez_rpc() else { return };
+        let Ok(rpc) = self.job_rpc(job) else { return };
         let payer = job["meta"]["payer"].as_str().unwrap_or_default().to_owned();
         let acct = job["account"].as_str().unwrap_or_default().trim_start_matches("Public/").to_owned();
         if let Ok(n) = lez::nonces(rpc.as_ref(), &[acct, payer]) {
@@ -1158,7 +1163,7 @@ impl Bridge {
                 };
                 job["posted_at"] = json!(now_ms());
                 job["note"] = json!("The bridge's relay is checking the claim, then sends it and pays the fee.");
-                let rpc = match self.lez_rpc() {
+                let rpc = match self.job_rpc(job) {
                     Ok(r) => r,
                     Err(r) => {
                         Self::fail(job, r.code, &r.message);
@@ -1253,7 +1258,7 @@ impl Bridge {
     /// While the relay's payer has another claim in flight: re-sign once the chain shows its
     /// nonce moved. True when the job may post again now.
     fn payer_moved(&mut self, job: &mut Value, id: &str) -> bool {
-        let Ok(rpc) = self.lez_rpc() else { return false };
+        let Ok(rpc) = self.job_rpc(job) else { return false };
         let payer = job["meta"]["payer"].as_str().unwrap_or_default().to_owned();
         let acct = job["account"].as_str().unwrap_or_default().trim_start_matches("Public/").to_owned();
         let Ok(n) = lez::nonces(rpc.as_ref(), &[acct, payer]) else { return false };
@@ -1368,7 +1373,7 @@ impl Bridge {
     }
 
     fn confirm_step(&mut self, job: &mut Value, id: &str) {
-        let Ok(rpc) = self.lez_rpc() else { return };
+        let Ok(rpc) = self.job_rpc(job) else { return };
         let hash = job["tx"].as_str().unwrap_or_default().to_owned();
         // The bridge the claim was checked on (kept in the job; older jobs: the current one).
         let bridge = util::lez_account(job["meta"]["bridge"].as_str().unwrap_or(&self.deployment().bridge_program)).unwrap_or([0; 32]);

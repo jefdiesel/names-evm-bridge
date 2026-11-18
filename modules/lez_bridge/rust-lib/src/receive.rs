@@ -34,7 +34,7 @@ impl Bridge {
         let vault = hex0x(&d.vault);
         let cached = self.relayed.log_cache.clone().filter(|(v, _, _)| *v == vault);
         let (events, latest, finalized, calls, count) = {
-            let eth = self.eth()?;
+            let eth = self.eth_for(d.chain_id)?;
             let latest = eth.block("latest")?;
             let finalized = eth.block("finalized")?;
             let count = eth::Words(&eth.call(&d.vault, &eth::calldata("depositCount()", &[]))?).u64(0)?;
@@ -122,7 +122,7 @@ impl Bridge {
         // The amount in words from the deployment the deposit was made on (this one, or a built-in
         // one by name); none when that deployment doesn't list the token.
         let name = row["deployment"].as_str().unwrap_or_default();
-        let dep = if self.deployment().name == name { Some(self.deployment().clone()) } else { crate::config::builtin(name) };
+        let dep = self.deployment_named(name);
         let t = dep.as_ref().and_then(|d| d.tokens.iter().find(|k| k.eth_token == token && d.vault == vault));
         let symbol = row["symbol"].as_str().unwrap_or_default();
         let (denom_text, amount_text) = match t {

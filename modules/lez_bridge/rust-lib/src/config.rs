@@ -42,6 +42,9 @@ pub struct Token {
     pub symbol: String,
     pub decimals: u8,
     pub definition: String,
+    /// The denominations, when the deployment lists them (needed for its bridge code); empty
+    /// otherwise (the registry reads them from the chains).
+    pub denoms: Vec<u128>,
 }
 
 #[derive(Clone, Debug)]
@@ -76,6 +79,11 @@ pub struct Deployment {
     /// detail behind it (empty: the generic placeholder-image words).
     pub release_note: String,
     pub release_detail: String,
+    /// The bridge code's other fields (`bridge_code.rs`): `{label, gate, lez_chain_id, zone_id,
+    /// config_account, min_release_delay, genesis_lez_block, genesis_g2_state, update_image,
+    /// release_image, settle}`; `added: true` for a deployment added from a code. Null for a
+    /// deployment without a code (v3, v2).
+    pub bridge: Value,
 }
 
 /// The deployments this module knows, from ONE file (`rust-lib/deployments.json`): the bridge and
@@ -136,10 +144,15 @@ impl Deployment {
             "release": self.release,
             "release_note": self.release_note,
             "release_detail": self.release_detail,
-            "tokens": self.tokens.iter().map(|t| json!({
-                "eth_token": crate::eth::addr_hex(&t.eth_token),
-                "symbol": t.symbol, "decimals": t.decimals, "definition": t.definition })).collect::<Vec<_>>(),
+            "tokens": self.tokens.iter().map(|t| {
+                let mut x = json!({ "eth_token": crate::eth::addr_hex(&t.eth_token), "symbol": t.symbol, "decimals": t.decimals, "definition": t.definition });
+                if !t.denoms.is_empty() {
+                    x["denoms"] = json!(t.denoms.iter().map(|d| d.to_string()).collect::<Vec<_>>());
+                }
+                x
+            }).collect::<Vec<_>>(),
             "notes": self.notes,
+            "bridge": self.bridge,
         })
     }
 
@@ -156,6 +169,10 @@ impl Deployment {
                     symbol: t["symbol"].as_str().unwrap_or("?").chars().take(16).collect(),
                     decimals: t["decimals"].as_u64().filter(|d| *d <= 36).ok_or("a token without decimals")? as u8,
                     definition: t["definition"].as_str().unwrap_or_default().to_owned(),
+                    denoms: match t["denoms"].as_array() {
+                        Some(l) => l.iter().map(|x| x.as_str().ok_or("a denomination is text").and_then(|x| x.parse::<u128>().map_err(|_| "a denomination is a number"))).collect::<Result<Vec<_>, _>>()?,
+                        None => Vec::new(),
+                    },
                 })
             })
             .collect::<Result<Vec<_>, String>>()?;
@@ -180,6 +197,7 @@ impl Deployment {
             release: v["release"].as_str().unwrap_or("proof").trim().to_owned(),
             release_note: v["release_note"].as_str().unwrap_or_default().trim().to_owned(),
             release_detail: v["release_detail"].as_str().unwrap_or_default().trim().to_owned(),
+            bridge: if v["bridge"].is_object() { v["bridge"].clone() } else { Value::Null },
         };
         for id in [&d.bridge_program, &d.token_program] {
             lez_account(id)?;

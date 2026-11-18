@@ -136,6 +136,10 @@ struct EthState {
     eth_burns: u64,
     verify_ok: bool,
     verified: Vec<Vec<u8>>,
+    /// Every address read (calls and logs), to tell which vault a send-back was read on.
+    seen: Vec<[u8; 20]>,
+    /// What `history` answers (transactions sent, balance); None: the read fails.
+    history: Option<(u64, u128)>,
 }
 
 struct FakeEth(Arc<Mutex<EthState>>);
@@ -149,6 +153,7 @@ impl eth::EthSource for FakeEth {
     }
     fn call(&self, to: &[u8; 20], data: &[u8]) -> Result<Vec<u8>, String> {
         let mut s = self.0.lock().unwrap();
+        s.seen.push(*to);
         let sel = |sig: &str| util::selector(sig) == data[..4];
         if to == &GATE {
             assert!(sel("verify(bytes,bytes32,bytes32)"));
@@ -179,8 +184,9 @@ impl eth::EthSource for FakeEth {
     fn block_by_hash(&self, _: &str) -> Result<Option<eth::BlockInfo>, String> {
         Ok(None)
     }
-    fn logs(&self, _: &[u8; 20], t: &[u8; 32], from: u64, to: u64) -> Result<Vec<Value>, String> {
-        let s = self.0.lock().unwrap();
+    fn logs(&self, address: &[u8; 20], t: &[u8; 32], from: u64, to: u64) -> Result<Vec<Value>, String> {
+        let mut s = self.0.lock().unwrap();
+        s.seen.push(*address);
         Ok(s.logs.iter().filter(|l| l["topics"][0].as_str() == Some(hex0x(t).as_str()))
             .filter(|l| { let b = u64::from_str_radix(l["blockNumber"].as_str().unwrap().trim_start_matches("0x"), 16).unwrap(); b >= from && b <= to })
             .cloned().collect())
@@ -190,6 +196,9 @@ impl eth::EthSource for FakeEth {
     }
     fn chain_id(&self) -> Result<u64, String> {
         Ok(11_155_111)
+    }
+    fn history(&self, _: &[u8; 20]) -> Result<(u64, u128), String> {
+        self.0.lock().unwrap().history.ok_or_else(|| "rpc down".to_owned())
     }
 }
 
@@ -686,4 +695,106 @@ fn a_wallet_with_the_helper_never_sends_its_secret() {
     assert_eq!(r["success"], false);
     assert!(r["error"].as_str().unwrap().contains("make the proof here first"), "{r}");
     assert!(w.net.0.lock().unwrap().settled.is_empty());
+}
+
+
+/// Choosing another bridge (Settings → Bridge) moves nothing in flight: a send-back planned on v4
+/// is read, proved and released on v4's vault after v5 is chosen, and a new one goes on v5.
+#[test]
+fn a_send_back_keeps_its_bridge_when_another_is_chosen() {
+    let mut w = world("keeps", "bridge-test-network-v4");
+    let v4 = config::builtin("bridge-test-network-v4").unwrap();
+    let v5 = config::builtin("bridge-test-network-v5").unwrap();
+    let plan = ok(&w.b.send_back_plan("ETH".into(), "0".into(), format!("Public/{}", w.acct), w.code.clone()));
+    let id = plan["id"].as_str().unwrap().to_owned();
+    assert_eq!(plan["deployment"]["id"], v4.name);
+    ok(&w.b.send_back_submit(id.clone(), "0xabcd".into()));
+    w.net.0.lock().unwrap().tx_blocks.insert("cd".repeat(32), 10_400);
+
+    // The person chooses v5 for new receives and send-backs.
+    let chosen = ok(&w.b.bridge_use(v5.name.clone()));
+    assert_eq!(chosen["active"], v5.name);
+    assert_eq!(w.b.cfg.deployment.name, v5.name);
+
+    let cfg = util::hex32(&v4.cfg_id).unwrap();
+    let e = util::hex32(plan["exit_commitment"].as_str().unwrap()).unwrap();
+    let leaf = exit_leaf(&cfg, &[0; 20], DENOM, &e);
+    {
+        let mut x = w.eth.lock().unwrap();
+        x.logs.push(update_log(0, &[leaf], &[leaf], BASE + 30));
+        x.leaves = vec![leaf];
+        x.releasable_at = 1;
+        x.seen.clear();
+    }
+    let s = ok(&w.b.send_back_status(id.clone()));
+    assert_eq!(s["stage"], "recorded", "{s}");
+    assert_eq!(s["deployment"]["id"], v4.name, "still v4's");
+    assert_eq!(s["deployment"]["current"], false);
+    let seen = w.eth.lock().unwrap().seen.clone();
+    assert!(!seen.is_empty() && seen.iter().all(|a| *a == v4.vault), "only v4's vault was read: {seen:?}");
+    let built = ok(&w.b.send_back_build(id.clone()));
+    assert!(built["call"]["accounts"][1]["of"] == v4.bridge_program.as_str(), "the burn still notifies v4's bridge: {built}");
+    assert_eq!(built["deployment"], v4.name);
+    let seal = hex0x(&[withdraw::SELECTOR.to_vec(), vec![9u8; 256]].concat());
+    ok(&w.b.send_back_seal(id.clone(), seal));
+    let rc = ok(&w.b.send_back_release_code(id.clone()));
+    assert_eq!(decode_release(rc["release_code"].as_str().unwrap()).unwrap().vault, v4.vault, "released from v4's vault");
+
+    // A new send-back goes on v5 (its own vault in the withdraw-to code).
+    let code5 = WithdrawTo { chain_id: v5.chain_id, vault: v5.vault, recipient: w.recipient, fee_choice: 0 }.encode();
+    assert_eq!(ok(&w.b.send_back_check(w.code.clone()))["error"]["code"], "other_vault", "a v4 code is not for new ones now");
+    assert_eq!(ok(&w.b.send_back_check(code5))["ok"], true);
+}
+
+
+/// A pasted Ethereum address (no bridge page) makes the page's own code for this vault: the same
+/// words and exit; after the burn is handed over, the address is offered first next time, and can be
+/// forgotten. Untyped (unchecksummed) addresses are refused.
+#[test]
+fn a_pasted_address_is_the_page_s_code_and_is_remembered_after_the_burn() {
+    let mut w = world("address", "bridge-test-network-v5");
+    // A recipient with letters in it (the world's 0x1111… has none, so no case to check).
+    let d = w.b.cfg.deployment.clone();
+    w.recipient = [0xab; 20];
+    w.code = WithdrawTo { chain_id: d.chain_id, vault: d.vault, recipient: w.recipient, fee_choice: 0 }.encode();
+    let addr = util::checksum_address(&w.recipient);
+    assert!(addr.chars().any(|c| c.is_ascii_uppercase()) && addr[2..].chars().any(|c| c.is_ascii_lowercase()));
+    let by_code = ok(&w.b.send_back_check(w.code.clone()));
+    let by_addr = ok(&w.b.send_back_check(format!(" {addr}\n")));
+    assert_eq!(by_addr["ok"], true, "{by_addr}");
+    assert_eq!((by_addr["route"].as_str(), by_code["route"].as_str()), (Some("address"), Some("code")));
+    assert_eq!(by_addr["code"], w.code.as_str(), "the page's code for this address on this vault");
+    assert_eq!(by_addr["words_text"], by_code["words_text"]);
+    assert_eq!(by_addr["recipient_halves"], json!([&addr[..22], &addr[22..]]));
+    assert_eq!(by_addr["address_warning"], "Withdrawals to a wrong address can't be recovered.");
+    // Its history, through this module's Sepolia: none read yet (the stand-in fails), then
+    // nothing sent and nothing held, then sent from, then holding something. Never a refusal.
+    assert_eq!(by_addr["history"], json!({ "checked": false }));
+    assert_eq!(by_code["history"], Value::Null, "the code route was checked on the page");
+    for (h, sent, bal) in [((0u64, 0u128), 0, "0"), ((3, 0), 3, "0"), ((0, 5_000_000_000_000_000), 0, "5000000000000000")] {
+        w.eth.lock().unwrap().history = Some(h);
+        let v = ok(&w.b.send_back_check(addr.clone()));
+        assert_eq!((v["ok"].as_bool(), v["history"]["checked"].as_bool(), v["history"]["sent"].as_u64(), v["history"]["balance"].as_str()), (Some(true), Some(true), Some(sent), Some(bal)), "{v}");
+    }
+    assert_eq!(ok(&w.b.send_back_check(addr.clone()))["history"]["balance_text"], "0.005 ETH");
+    w.eth.lock().unwrap().history = None;
+    let lower = ok(&w.b.send_back_check(addr.to_lowercase()));
+    assert_eq!(lower["error"]["code"], "bad_address:no_checksum", "{lower}");
+    assert!(lower["error"]["message"].as_str().unwrap().contains("don't type it"));
+
+    assert_eq!(ok(&w.b.send_back_recipients(String::new()))["recipients"], json!([]));
+    let plan = ok(&w.b.send_back_plan("ETH".into(), "0".into(), format!("Public/{}", w.acct), addr.clone()));
+    assert_eq!(plan["recipient"], addr.as_str(), "{plan}");
+    assert_eq!(ok(&w.b.send_back_recipients(w.acct.clone()))["recipients"], json!([]), "not before the burn is handed over");
+    let id = plan["id"].as_str().unwrap().to_owned();
+    ok(&w.b.send_back_submit(id, "0xabcd".into()));
+    let mine = ok(&w.b.send_back_recipients(w.acct.clone()));
+    assert_eq!(mine["recipients"][0]["address"], addr.as_str(), "{mine}");
+    assert_eq!(mine["recipients"][0]["short"], format!("{}…{}", &addr[..6], &addr[38..]));
+    assert_eq!(ok(&w.b.send_back_recipients("someone-else".into()))["recipients"], json!([]));
+    // Kept beside an added bridge list, never over it.
+    let store: Value = serde_json::from_str(&std::fs::read_to_string(w.b.data.join("bridges.json")).unwrap()).unwrap();
+    assert!(store["recipients"].is_array());
+    let left = ok(&w.b.send_back_forget(String::new(), addr.clone()));
+    assert_eq!(left["recipients"], json!([]));
 }

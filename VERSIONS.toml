@@ -895,3 +895,125 @@ file = "public-demo/v4/BUILD-outbound.txt"
 re = 'previous canonical release guest .*\(sha256 ([0-9a-f]{64})\)'
 value = "deployments.v3.release_image.elf_sha256"
 private = true
+
+# The bridge code (logosbr1…, modules/NAMES-SEND-BACK.md §9): the copies of the gate, the starting state and the
+# image ids in deployments.json, deployments.js and the shared vectors (bridge-code-v1.json).
+[[pin]]
+file = "modules/lez_bridge/rust-lib/deployments.json"
+json = "deployments.0.bridge.gate"
+value = "deployments.v5.gate.address"
+
+[[pin]]
+file = "web/deposit/test/vectors/bridge-code-v1.json"
+json = "valid.0.fields.gate"
+value = "deployments.v5.gate.address"
+
+[[pin]]
+file = "modules/lez_bridge/rust-lib/deployments.json"
+json = "deployments.0.bridge.genesis_g2_state"
+value = "deployments.v5.genesis_g2_state"
+
+[[pin]]
+file = "web/deposit/test/vectors/bridge-code-v1.json"
+json = "valid.0.fields.genesis_g2_state"
+value = "deployments.v5.genesis_g2_state"
+
+[[pin]]
+file = "modules/lez_bridge/rust-lib/deployments.json"
+json = "deployments.0.bridge.update_image"
+value = "deployments.v5.update_image"
+
+[[pin]]
+file = "web/deposit/test/vectors/bridge-code-v1.json"
+json = "valid.0.fields.update_image"
+value = "deployments.v5.update_image"
+
+[[pin]]
+file = "modules/lez_bridge/rust-lib/deployments.json"
+json = "deployments.0.bridge.release_image"
+value = "deployments.v5.release_image"
+
+[[pin]]
+file = "web/deposit/test/vectors/bridge-code-v1.json"
+json = "valid.0.fields.release_image"
+value = "deployments.v5.release_image"
+
+[[pin]]
+file = "web/deposit/src/lib/deployments.js"
+re = "label: 'bridge v5',[\\s\\S]*?gate: '([^']+)'"
+value = "deployments.v5.gate.address"
+
+[[pin]]
+file = "web/deposit/src/lib/deployments.js"
+re = "label: 'bridge v5',[\\s\\S]*?genesisG2State: '([^']+)'"
+value = "deployments.v5.genesis_g2_state"
+
+[[pin]]
+file = "web/deposit/src/lib/deployments.js"
+re = "label: 'bridge v5',[\\s\\S]*?updateImage: '([^']+)'"
+value = "deployments.v5.update_image"
+
+[[pin]]
+file = "web/deposit/src/lib/deployments.js"
+re = "label: 'bridge v5',[\\s\\S]*?releaseImage: '([^']+)'"
+value = "deployments.v5.release_image"
+
+[[pin]]
+file = "modules/lez_bridge/rust-lib/deployments.json"
+json = "deployments.1.bridge.gate"
+value = "deployments.v4.gate.address"
+
+[[pin]]
+file = "web/deposit/test/vectors/bridge-code-v1.json"
+json = "valid.1.fields.gate"
+value = "deployments.v4.gate.address"
+
+[[pin]]
+file = "modules/lez_bridge/rust-lib/deployments.json"
+json = "deployments.1.bridge.genesis_g2_state"
+value = "deployments.v4.genesis_g2_state"
+
+[[pin]]
+file = "web/deposit/test/vectors/bridge-code-v1.json"
+json = "valid.1.fields.genesis_g2_state"
+value = "deployments.v4.genesis_g2_state"
+
+[[pin]]
+file = "modules/lez_bridge/rust-lib/deployments.json"
+json = "deployments.1.bridge.update_image"
+value = "deployments.v4.update_image"
+
+[[pin]]
+file = "web/deposit/test/vectors/bridge-code-v1.json"
+json = "valid.1.fields.update_image"
+value = "deployments.v4.update_image"
+
+[[pin]]
+file = "modules/lez_bridge/rust-lib/deployments.json"
+json = "deployments.1.bridge.release_image"
+value = "deployments.v4.release_image"
+
+[[pin]]
+file = "web/deposit/test/vectors/bridge-code-v1.json"
+json = "valid.1.fields.release_image"
+value = "deployments.v4.release_image"
+
+[[pin]]
+file = "web/deposit/src/lib/deployments.js"
+re = "label: 'bridge v4',[\\s\\S]*?gate: '([^']+)'"
+value = "deployments.v4.gate.address"
+
+[[pin]]
+file = "web/deposit/src/lib/deployments.js"
+re = "label: 'bridge v4',[\\s\\S]*?genesisG2State: '([^']+)'"
+value = "deployments.v4.genesis_g2_state"
+
+[[pin]]
+file = "web/deposit/src/lib/deployments.js"
+re = "label: 'bridge v4',[\\s\\S]*?updateImage: '([^']+)'"
+value = "deployments.v4.update_image"
+
+[[pin]]
+file = "web/deposit/src/lib/deployments.js"
+re = "label: 'bridge v4',[\\s\\S]*?releaseImage: '([^']+)'"
+value = "deployments.v4.release_image"

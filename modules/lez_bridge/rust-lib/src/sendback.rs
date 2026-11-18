@@ -16,6 +16,7 @@
 //! No reply carries `k'`. It is in memory only while `E` is computed, and on a prover's stdin, or
 //! (the stand-in `send_back_witness`) in a mode-600 file the owner hands to his own prover run.
 
+use crate::config::Deployment;
 use crate::eth::{self, Words};
 use crate::jobs::Spec;
 use crate::lez;
@@ -177,6 +178,10 @@ fn stage_text(stage: &str) -> &'static str {
     }
 }
 
+/// Said with an address pasted instead of the page's code (the page proves the wallet controls the
+/// address; a pasted one can't).
+pub const ADDRESS_WARNING: &str = "Withdrawals to a wrong address can't be recovered.";
+
 impl Bridge {
     fn sb_dir(&self, id: &str) -> PathBuf {
         self.data.join("send-back").join(id)
@@ -204,8 +209,20 @@ impl Bridge {
         s.save(&all)
     }
 
-    fn sb_ready(&self) -> Result<(), String> {
-        let d = self.deployment();
+    /// The deployment a send-back was planned on (kept with it): every later step reads that
+    /// vault and that bridge, whichever bridge is chosen for new ones now. A record from before
+    /// deployments were kept with it is read on the current one.
+    pub(crate) fn sb_dep(&self, r: &Value) -> Result<Deployment, String> {
+        let name = r["deployment"].as_str().unwrap_or_default();
+        if name.is_empty() {
+            return Ok(self.deployment().clone());
+        }
+        self.deployment_named(name).ok_or_else(|| {
+            format!("This send-back was made on \"{name}\", a bridge this app doesn't list any more (Settings → Bridge), so it can't be read. Nothing was read; add that bridge again from its code.")
+        })
+    }
+
+    fn sb_ready(&self, d: &Deployment) -> Result<(), String> {
         if d.release != "proof" {
             return Err(format!(
                 "{} can't pay out on Ethereum, so a burn here would destroy the tokens: sending back is off for this bridge. {}",
@@ -218,13 +235,17 @@ impl Bridge {
     /// `send_back_link()`: the page link the wallet copies, and whether this bridge can send back.
     pub(crate) fn send_back_link_now(&self) -> Value {
         let d = self.deployment();
-        let ready = self.sb_ready();
+        let ready = self.sb_ready(d);
         json!({ "link": PAGE_LINK, "deployment": d.name, "vault": util::checksum_address(&d.vault), "chain_id": d.chain_id,
                 "available": ready.is_ok(), "why": ready.err() })
     }
 
-    fn sb_decode(&self, code: &str) -> Result<WithdrawTo, Value> {
-        let d = self.deployment();
+    /// A withdraw-to code, or a plain Ethereum address (EIP-55 checksummed), which becomes the code
+    /// the page would make for it on this deployment's chain and vault (relay-fee choice 0).
+    fn sb_decode(&self, code: &str, d: &Deployment) -> Result<WithdrawTo, Value> {
+        if withdraw::looks_like_address(code) {
+            return withdraw::withdraw_to_for_address(d.chain_id, &d.vault, code).map_err(|e| json!({ "code": format!("bad_address:{}", e.code), "message": e.message }));
+        }
         let w = withdraw::decode_withdraw_to(&withdraw::from_input(code)).map_err(|e| json!({ "code": format!("bad_code:{}", e.code), "message": e.message }))?;
         if w.chain_id != d.chain_id {
             return Err(json!({ "code": "other_chain", "message": format!("This code is for chain {}, not {} (this bridge's).", w.chain_id, d.chain_id) }));
@@ -235,28 +256,45 @@ impl Bridge {
         Ok(w)
     }
 
-    /// `send_back_check(code)`: what a withdraw-to code says, with the four words. No wallet call.
+    /// `send_back_check(code)`: what a withdraw-to code (or a pasted Ethereum address) says, with
+    /// the four words. No wallet call.
     pub(crate) fn send_back_check_now(&self, code: &str) -> Value {
-        let w = match self.sb_decode(code) {
+        let w = match self.sb_decode(code, self.deployment()) {
             Ok(w) => w,
             Err(e) => return json!({ "ok": false, "error": e }),
         };
         let mut warnings = Vec::new();
-        if let Ok(eth) = self.eth() {
+        if let Ok(eth) = self.eth_for(w.chain_id) {
             if eth.code_len(&w.recipient).is_ok_and(|n| n > 0) {
                 warnings.push("This address is a contract. It must be able to receive the token: the recipient is fixed when you send back.");
             }
         }
         let addr = util::checksum_address(&w.recipient);
+        let by_address = withdraw::looks_like_address(code);
+        // A pasted (or remembered) address: what it shows of its past, through this module's own
+        // Sepolia RPC (owner, 2026-11-16: a warning, never a block). Only transactions SENT from it
+        // and its balance: one that only received and was emptied by someone else looks the same
+        // as an unused one. The page's code route checks the same through the connected wallet.
+        let history = if !by_address {
+            Value::Null
+        } else {
+            match self.eth_for(w.chain_id).and_then(|e| e.history(&w.recipient)) {
+                Ok((sent, bal)) => json!({ "checked": true, "sent": sent, "balance": bal.to_string(), "balance_text": format!("{} ETH", format_amount(bal, 18)) }),
+                Err(_) => json!({ "checked": false }),
+            }
+        };
         json!({ "ok": true, "recipient": addr, "recipient_short": format!("{}…{}", &addr[..6], &addr[addr.len() - 4..]),
+                // The address in two halves, to read back; the route it came by; the code it is
+                // (the page's code for this address: what the plan, the burn and the release use).
+                "recipient_halves": [&addr[..22], &addr[22..]], "route": if by_address { "address" } else { "code" }, "code": w.encode(),
+                "address_warning": if by_address { Value::from(ADDRESS_WARNING) } else { Value::Null }, "history": history,
                 "words": crate::compare::words(&w.digest()), "words_text": crate::compare::words_text(&w.digest()),
                 "fee_choice": w.fee_choice, "chain_id": w.chain_id, "vault": util::checksum_address(&w.vault), "warnings": warnings })
     }
 
     /// The vault's exit tree and its updates (logs since the vault's creation, checked complete).
-    fn sb_updates(&self) -> Result<(Vec<Update>, Vec<[u8; 32]>), String> {
-        let d = self.deployment().clone();
-        let eth = self.eth()?;
+    fn sb_updates(&self, d: &Deployment) -> Result<(Vec<Update>, Vec<[u8; 32]>), String> {
+        let eth = self.eth_for(d.chain_id)?;
         let latest = eth.block("latest")?.number;
         let count = Words(&eth.call(&d.vault, &eth::calldata("exitCount()", &[]))?).u64(0)?;
         let root = Words(&eth.call(&d.vault, &eth::calldata("exitRoot()", &[]))?).word(0)?;
@@ -283,8 +321,10 @@ impl Bridge {
 
     /// `send_back_plan(token, denom_index, account, code)`.
     pub(crate) fn send_back_plan_now(&mut self, token: &str, denom_index: &str, account: &str, code: &str) -> Result<Value, String> {
-        self.sb_ready()?;
-        let w = match self.sb_decode(code) {
+        // A new send-back goes on the bridge chosen now; it keeps that bridge for good.
+        let d = self.deployment().clone();
+        self.sb_ready(&d)?;
+        let w = match self.sb_decode(code, &d) {
             Ok(w) => w,
             Err(e) => return Ok(json!({ "ok": false, "error": e })),
         };
@@ -305,10 +345,9 @@ impl Bridge {
             Ok(x) => x,
             Err(needs) => return Ok(needs),
         };
-        let d = self.deployment().clone();
         let cfg = hex32(&d.cfg_id)?;
         let definition = util::lez_account(&t.definition)?;
-        let rpc = self.lez_rpc().map_err(|r| r.message)?;
+        let rpc = self.lez_rpc_for(&d).map_err(|r| r.message)?;
         let bridge = util::lez_account(&d.bridge_program)?;
         let show = lez::show_json(rpc.as_ref(), &bridge)?;
         let entry = show["tokens"].as_array().and_then(|l| l.iter().find(|x| x["definition"] == t.definition.as_str()).cloned()).ok_or("the bridge doesn't list this token")?;
@@ -330,7 +369,7 @@ impl Bridge {
                 // No record here (a new install or a restore): find the used indexes from Ethereum,
                 // and refuse while LEZ counts burns of this amount that Ethereum hasn't recorded.
                 let lez_burns = entry["burns"].get(i).and_then(Value::as_u64).unwrap_or(0);
-                let eth = self.eth()?;
+                let eth = self.eth_for(d.chain_id)?;
                 let c = eth.call(&d.vault, &eth::calldata("counters(address,uint256)", &[eth::word_address(&t.eth_token), eth::word_u64(i as u64)]))?;
                 let eth_burns = Words(&c).u64(2)?;
                 if lez_burns > eth_burns {
@@ -340,7 +379,7 @@ impl Bridge {
                     Values::Pending(req) => return Self::secret_needs_exit(&req),
                     Values::Granted(v) => v,
                 };
-                let (_, leaves) = self.sb_updates()?;
+                let (_, leaves) = self.sb_updates(&d)?;
                 let used = values.iter().rposition(|k| leaves.contains(&exit_leaf(&cfg, &t.eth_token, denom, &wallet::exit_commitment(k, &w.recipient, &t.eth_token, denom, fee, &cfg))));
                 used.map_or(0, |u| u as u64 + 1)
             }
@@ -365,15 +404,15 @@ impl Bridge {
         });
         self.sb_put(&rec)?;
         let mut v = self.sb_view(&rec);
-        v["burn"] = self.burn_signable();
-        v["settle_offer"] = self.settle_offer();
+        v["burn"] = self.burn_signable(&d);
+        v["settle_offer"] = self.settle_offer(&d);
         Ok(v)
     }
 
     /// The settlement service as this send-back would use it: `{available, reason, consent_needed,
     /// consent_text}` (consent is needed only without a local prover: the secret would leave).
-    fn settle_offer(&self) -> Value {
-        let info = self.settle_info_raw();
+    fn settle_offer(&self, d: &Deployment) -> Value {
+        let info = self.settle_info_raw(d);
         let local = !self.cfg.release_prover.is_empty();
         match info {
             Ok(v) => json!({ "available": v["available"] == true, "reason": v["reason"], "consent_needed": !local, "consent_text": if local { Value::Null } else { json!(SETTLE_CONSENT) },
@@ -383,16 +422,20 @@ impl Bridge {
     }
 
     /// `bridge_settleInfo`, read at most once a minute per module data folder.
-    fn settle_info_raw(&self) -> Result<Value, String> {
+    fn settle_info_raw(&self, d: &Deployment) -> Result<Value, String> {
+        // A bridge whose code says its endpoint has no settlement service is never asked.
+        if d.bridge.is_object() && d.bridge["settle"] == false {
+            return Ok(json!({ "available": false, "reason": "This bridge has no settlement service." }));
+        }
         static CACHE: std::sync::Mutex<Option<std::collections::HashMap<String, (u64, Value)>>> = std::sync::Mutex::new(None);
-        let key = format!("{}|{}", self.data.display(), self.deployment().name);
+        let key = format!("{}|{}", self.data.display(), d.name);
         let now = now_ms();
         if let Some((at, v)) = CACHE.lock().ok().and_then(|g| g.as_ref().and_then(|m| m.get(&key).cloned())) {
             if now.saturating_sub(at) < 60_000 {
                 return Ok(v);
             }
         }
-        let v = self.lez_rpc().map_err(|r| r.message)?.call("bridge_settleInfo", json!([])).map_err(|p| p.message)?;
+        let v = self.lez_rpc_for(d).map_err(|r| r.message)?.call("bridge_settleInfo", json!([])).map_err(|p| p.message)?;
         if let Ok(mut g) = CACHE.lock() {
             g.get_or_insert_with(Default::default).insert(key, (now, v.clone()));
         }
@@ -411,11 +454,11 @@ impl Bridge {
         if r["root"].is_null() {
             return Err("Ethereum hasn't recorded this burn yet: the bridge's update records it first.".into());
         }
-        let info = self.settle_info_raw()?;
+        let d = self.sb_dep(&r)?;
+        let info = self.settle_info_raw(&d)?;
         if info["available"] != true {
             return Err(info["reason"].as_str().unwrap_or("The bridge's settlement service is not available now.").to_owned());
         }
-        let d = self.deployment().clone();
         let vault = eth::addr_hex(&d.vault);
         let receipt = self.sb_receipt(&r);
         let body = if let Some(p) = receipt["path"].as_str() {
@@ -439,7 +482,7 @@ impl Bridge {
                 "max_relay_fee": inputs["max_relay_fee"], "cfg_id": inputs["cfg_id"], "index": inputs["index"],
                 "leaves": leaves.iter().map(|l| hex0x(l)).collect::<Vec<_>>() } })
         };
-        let v = self.lez_rpc().map_err(|e| e.message)?.call("bridge_settle", json!([body])).map_err(|p| p.message)?;
+        let v = self.lez_rpc_for(&d).map_err(|e| e.message)?.call("bridge_settle", json!([body])).map_err(|p| p.message)?;
         if v["ok"] != true {
             return Err(format!("{} Nothing was handed over.", v["reason"].as_str().unwrap_or("The settlement service refused it.")));
         }
@@ -453,9 +496,9 @@ impl Bridge {
 
     /// Whether a burn can be signed and paid for now: the Names Wallet lists `relayed_bridge_burn`
     /// in its public config's features, and the bridge's relay says it serves burns.
-    fn burn_signable(&self) -> Value {
+    fn burn_signable(&self, d: &Deployment) -> Value {
         let names = wallet::names_config().map(|c| c["features"].as_array().is_some_and(|f| f.iter().any(|x| x == "relayed_bridge_burn")));
-        let relay = self.relay_info_raw().map(|v| v["burns"] == true);
+        let relay = self.relay_info_raw(d).map(|v| v["burns"] == true);
         let why = match (&names, &relay) {
             (Ok(true), Ok(true)) => Value::Null,
             (Ok(false), _) => json!("Your Names Wallet can't sign a burn yet: update the Names app to a version that can send back to Ethereum."),
@@ -468,16 +511,16 @@ impl Bridge {
 
     /// The relay's `bridge_relayInfo`, read at most once a minute per module data folder (the
     /// endpoint counts it in the relay's own small bucket).
-    fn relay_info_raw(&self) -> Result<Value, String> {
+    fn relay_info_raw(&self, d: &Deployment) -> Result<Value, String> {
         static CACHE: std::sync::Mutex<Option<std::collections::HashMap<String, (u64, Value)>>> = std::sync::Mutex::new(None);
-        let key = format!("{}|{}", self.data.display(), self.deployment().name);
+        let key = format!("{}|{}", self.data.display(), d.name);
         let now = now_ms();
         if let Some((at, v)) = CACHE.lock().ok().and_then(|g| g.as_ref().and_then(|m| m.get(&key).cloned())) {
             if now.saturating_sub(at) < 60_000 {
                 return Ok(v);
             }
         }
-        let v = self.lez_rpc().map_err(|r| r.message)?.call("bridge_relayInfo", json!([])).map_err(|p| p.message)?;
+        let v = self.lez_rpc_for(d).map_err(|r| r.message)?.call("bridge_relayInfo", json!([])).map_err(|p| p.message)?;
         if let Ok(mut g) = CACHE.lock() {
             g.get_or_insert_with(Default::default).insert(key, (now, v.clone()));
         }
@@ -504,6 +547,8 @@ impl Bridge {
             "fee_payer": "The bridge's relay pays the LEZ fee: your account needs no LEZ.", "privacy": PRIVACY_LINE, "created": r["created"],
             "prover_set": !self.cfg.release_prover.is_empty(), "prove_error": r["prove_error"], "receipt": self.sb_receipt(r),
             "settle_id": r["settle_id"], "settle": r["settle"], "settle_note": r["settle_note"],
+            // The bridge this send-back was made on, which it keeps (Settings → Bridge chooses only new ones).
+            "deployment": self.sb_dep(r).ok().map(|d| self.deployment_view(&d)),
         })
     }
 
@@ -522,14 +567,11 @@ impl Bridge {
 
     /// `send_back_build(id)`: the relayed call the Names Wallet signs (pure apart from the relay's caps).
     pub(crate) fn send_back_build_now(&self, id: &str) -> Result<Value, String> {
-        self.sb_ready()?;
         let r = self.sb_get(id)?;
-        let d = self.deployment();
-        if r["deployment"] != d.name.as_str() {
-            return Err("the bridge deployment changed since this send-back was planned".into());
-        }
-        let rpc = self.lez_rpc().map_err(|e| e.message)?;
-        let info = lez::parse_relay_info(&self.relay_info_raw()?).map_err(|p| p.message)?;
+        let d = self.sb_dep(&r)?;
+        self.sb_ready(&d)?;
+        let rpc = self.lez_rpc_for(&d).map_err(|e| e.message)?;
+        let info = lez::parse_relay_info(&self.relay_info_raw(&d)?).map_err(|p| p.message)?;
         let (bridge, tp, def) = (util::lez_account(&d.bridge_program)?, util::lez_account(&d.token_program)?, util::lez_account(r["definition"].as_str().unwrap_or_default())?);
         let e = hex32(r["exit_commitment"].as_str().unwrap_or_default())?;
         let message = burn_message(&def, units(r["denom"].as_str().unwrap_or("0"))?, &bridge, &e);
@@ -553,7 +595,8 @@ impl Bridge {
         if r["burn_tx"].is_string() || r["request"].is_string() {
             return self.send_back_status_now(id);
         }
-        let can = self.burn_signable();
+        let d = self.sb_dep(&r)?;
+        let can = self.burn_signable(&d);
         if can["can_sign"] != true {
             return Ok(json!({ "needs": "names_update", "request": null, "message": can["why"] }));
         }
@@ -564,7 +607,6 @@ impl Bridge {
         }
         let built = self.send_back_build_now(id)?;
         let account = r["account"].as_str().unwrap_or_default().trim_start_matches("Public/").to_owned();
-        let d = self.deployment().clone();
         if let Some(n) = self.relayed_gates(&account, &d.bridge_program, &d.token_program, options)? {
             return Ok(n);
         }
@@ -604,7 +646,7 @@ impl Bridge {
             self.sb_put(&r)?;
             return Err(format!("This exit was burned already (block {b}): nothing was sent."));
         }
-        let rpc = self.lez_rpc().map_err(|e| e.message)?;
+        let rpc = self.lez_rpc_for(&self.sb_dep(&r)?).map_err(|e| e.message)?;
         let v = rpc.call("bridge_relayBurn", json!([tx, false])).map_err(|p| p.message)?;
         if v["ok"] != true {
             return Err(format!("The bridge's relay refused the burn: {}. Nothing was sent.", v["reason"].as_str().unwrap_or("no reason given")));
@@ -613,13 +655,17 @@ impl Bridge {
         r["burn_tx"] = json!(h);
         r["stage"] = json!("burning");
         self.sb_put(&r)?;
+        // Approved and handed over: this address is offered first next time (public data).
+        if let (Ok(d), Ok(to)) = (self.sb_dep(&r), util::eth_address(r["recipient"].as_str().unwrap_or_default())) {
+            let _ = self.remember_recipient(r["account"].as_str().unwrap_or_default(), d.chain_id, &to);
+        }
         self.send_back_status_now(id)
     }
 
     /// Reads the LEZ blocks not read yet for this exit's `E`, up to the tip (at most
     /// [`SCAN_MAX`] blocks; past that it refuses rather than guess). The block it is in, if any.
     fn sb_seen(&self, r: &mut Value) -> Result<Option<u64>, String> {
-        let rpc = self.lez_rpc().map_err(|e| e.message)?;
+        let rpc = self.lez_rpc_for(&self.sb_dep(r)?).map_err(|e| e.message)?;
         let tip = rpc.call("getLastBlockId", json!([])).map_err(|p| p.message)?.as_u64().unwrap_or(0);
         let from = r["scanned_to"].as_u64().unwrap_or(tip) + 1;
         if tip + 1 > from + SCAN_MAX {
@@ -659,7 +705,9 @@ impl Bridge {
         v["wait"] = self.sb_wait(&r);
         // The settlement service's offer, once the burn is recorded and no settlement runs.
         if matches!(r["stage"].as_str(), Some("recorded" | "proved" | "wrapped" | "releasable")) && (r["settle_id"].is_null() || r["settle_failed"] == true) {
-            v["settle_offer"] = self.settle_offer();
+            if let Ok(d) = self.sb_dep(&r) {
+                v["settle_offer"] = self.settle_offer(&d);
+            }
         }
         if let Err(e) = res {
             // A busy endpoint or a failed read is a wait, never the end of the send-back: the next
@@ -684,6 +732,7 @@ impl Bridge {
     }
 
     fn sb_advance(&mut self, r: &mut Value, reads: &mut Value) -> Result<(), String> {
+        let d = self.sb_dep(r)?;
         let bump = |reads: &mut Value, k: &str, n: u64| reads[k] = json!(reads[k].as_u64().unwrap_or(0) + n);
         // Part A: the wallet's request, then the relay.
         if r["stage"] == "approve" {
@@ -710,7 +759,7 @@ impl Bridge {
                 bump(reads, "lez", 1);
                 // Never fatal: a stopped or rolled-back service must not stop the chain reads below
                 // (the release seen on Sepolia, the manual fallbacks).
-                let v = self.lez_rpc().map_err(|e| e.message).and_then(|rpc| rpc.call("bridge_settleStatus", json!([sid])).map_err(|p| p.message));
+                let v = self.lez_rpc_for(&d).map_err(|e| e.message).and_then(|rpc| rpc.call("bridge_settleStatus", json!([sid])).map_err(|p| p.message));
                 let v = match v {
                     Ok(v) => v,
                     Err(e) => {
@@ -744,10 +793,9 @@ impl Bridge {
                 }
             }
         }
-        let d = self.deployment().clone();
         if matches!(r["stage"].as_str(), Some("planned") | Some("approve") | Some("burning")) {
             // Found by its exit commitment in the bridge test network's blocks, whoever sent it.
-            let rpc = self.lez_rpc().map_err(|e| e.message)?;
+            let rpc = self.lez_rpc_for(&d).map_err(|e| e.message)?;
             let e = hex32(r["exit_commitment"].as_str().unwrap_or_default())?;
             bump(reads, "lez", 1);
             let tip = rpc.call("getLastBlockId", json!([])).map_err(|p| p.message)?.as_u64().unwrap_or(0);
@@ -767,7 +815,7 @@ impl Bridge {
             }
         }
         if r["stage"] == "burning" {
-            let rpc = self.lez_rpc().map_err(|e| e.message)?;
+            let rpc = self.lez_rpc_for(&d).map_err(|e| e.message)?;
             bump(reads, "lez", 1);
             if let Some(b) = lez::tx_block(rpc.as_ref(), r["burn_tx"].as_str().unwrap_or_default()).map_err(|p| p.message)? {
                 // In a block. Whether it applied is settled by the vault's record of the exit.
@@ -777,7 +825,7 @@ impl Bridge {
         }
         if r["stage"] == "burned" {
             bump(reads, "sepolia", 4);
-            let (ups, _) = self.sb_updates()?;
+            let (ups, _) = self.sb_updates(&d)?;
             let leaf = hex32(r["exit_leaf"].as_str().unwrap_or_default())?;
             if let Some(u) = ups.iter().find(|u| u.leaves.contains(&leaf)) {
                 let pos = u.leaves.iter().position(|l| *l == leaf).unwrap() as u64;
@@ -785,7 +833,7 @@ impl Bridge {
                 r["root"] = json!(hex0x(&u.exit_root));
                 r["root_leaves"] = json!(u.first + u.leaves.len() as u64);
                 r["update_tx"] = json!(u.tx);
-                let eth = self.eth()?;
+                let eth = self.eth_for(d.chain_id)?;
                 let token = util::eth_address(r["eth_token"].as_str().unwrap_or_default())?;
                 let at = Words(&eth.call(&d.vault, &eth::calldata("releasableAt(address,bytes32)", &[eth::word_address(&token), u.exit_root]))?).u64(0)?;
                 r["releasable_at"] = json!(at);
@@ -811,7 +859,7 @@ impl Bridge {
             // Read again until it has passed: a lowered delay brings it forward (never later).
             let now = now_ms() / 1000;
             if r["releasable_at"].as_u64().is_none_or(|a| now < a) {
-                let eth = self.eth()?;
+                let eth = self.eth_for(d.chain_id)?;
                 let token = util::eth_address(r["eth_token"].as_str().unwrap_or_default())?;
                 let root = hex32(r["root"].as_str().unwrap_or_default())?;
                 bump(reads, "sepolia", 1);
@@ -825,7 +873,7 @@ impl Bridge {
             }
         }
         if matches!(r["stage"].as_str(), Some("recorded") | Some("proving") | Some("proved") | Some("wrapped") | Some("releasable")) {
-            let eth = self.eth()?;
+            let eth = self.eth_for(d.chain_id)?;
             let nf = hex32(r["release_nullifier"].as_str().unwrap_or_default())?;
             bump(reads, "sepolia", 1);
             if Words(&eth.call(&d.vault, &eth::calldata("releaseNullifierSpent(bytes32)", &[nf]))?).boolean(0)? {
@@ -848,7 +896,7 @@ impl Bridge {
         if r["root"].is_null() {
             return Err("Ethereum hasn't recorded this send-back yet: the release proof can be made once it has".into());
         }
-        let d = self.deployment().clone();
+        let d = self.sb_dep(r)?;
         let cfg = hex32(&d.cfg_id)?;
         let token = util::eth_address(r["eth_token"].as_str().unwrap_or_default())?;
         let recipient = util::eth_address(r["recipient"].as_str().unwrap_or_default())?;
@@ -862,7 +910,7 @@ impl Bridge {
         if hex0x(&wallet::exit_commitment(&k, &recipient, &token, denom, fee, &cfg)) != r["exit_commitment"].as_str().unwrap_or_default() {
             return Err("the Names Wallet gives another exit secret than this send-back was made with (another account or wallet?)".into());
         }
-        let (_, leaves) = self.sb_updates()?;
+        let (_, leaves) = self.sb_updates(&d)?;
         let n = r["root_leaves"].as_u64().unwrap_or(0) as usize;
         let leaves = leaves.get(..n).ok_or("the vault's exit tree is shorter than when this send-back was recorded")?.to_vec();
         if hex0x(&root_of(&leaves)) != r["root"].as_str().unwrap_or_default() {
@@ -925,8 +973,9 @@ impl Bridge {
         util::write_private(&dir.join("leaves.txt"), leaves.iter().map(|l| hex0x(l) + "\n").collect::<String>().as_bytes()).map_err(|e| e.to_string())?;
         let mut argv = self.cfg.release_prover.clone();
         let image = {
-            let eth = self.eth()?;
-            Words(&eth.call(&self.deployment().vault, &eth::calldata("releaseImageId()", &[]))?).word(0)?
+            let d = self.sb_dep(&r)?;
+            let eth = self.eth_for(d.chain_id)?;
+            Words(&eth.call(&d.vault, &eth::calldata("releaseImageId()", &[]))?).word(0)?
         };
         argv.extend(Self::release_args(&inputs, &dir.join("leaves.txt"), &dir, &hex0x(&image)));
         let mut cmd = std::process::Command::new(&argv[0]);
@@ -951,11 +1000,11 @@ impl Bridge {
         if seal.len() != withdraw::SEAL_LEN || seal[..4] != withdraw::SELECTOR {
             return Err("that is not a 260-byte seal for RISC Zero's Groth16 verifier 3.1.0 (it starts 0xe71e6620)".into());
         }
-        let d = self.deployment().clone();
+        let d = self.sb_dep(&r)?;
         let journal = self.sb_journal(&r)?;
         let digest = sha256(&[&journal]);
         {
-            let eth = self.eth()?;
+            let eth = self.eth_for(d.chain_id)?;
             let gate = Words(&eth.call(&d.vault, &eth::calldata("verifier()", &[]))?).address(0)?;
             let image = Words(&eth.call(&d.vault, &eth::calldata("releaseImageId()", &[]))?).word(0)?;
             if let Err(e) = eth.call(&gate, &verify_calldata(&seal, &image, &digest)) {
@@ -968,7 +1017,7 @@ impl Bridge {
     }
 
     fn sb_journal(&self, r: &Value) -> Result<Vec<u8>, String> {
-        let d = self.deployment();
+        let d = self.sb_dep(r)?;
         Ok(release_journal(
             &hex32(&d.cfg_id)?,
             &hex32(r["root"].as_str().unwrap_or_default())?,
@@ -985,7 +1034,7 @@ impl Bridge {
     pub(crate) fn send_back_release_code_now(&self, id: &str) -> Result<Value, String> {
         let r = self.sb_get(id)?;
         let seal = r["seal"].as_str().ok_or("there is no proof for this send-back yet")?;
-        let d = self.deployment();
+        let d = self.sb_dep(&r)?;
         let code = ReleaseCode {
             chain_id: d.chain_id,
             vault: d.vault,

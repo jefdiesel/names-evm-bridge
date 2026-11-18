@@ -56,3 +56,19 @@ test('links and pasted text are read; kinds are told apart', () => {
   assert.equal(codeKind('logosdep1qq'), 'deposit');
   assert.equal(codeKind('#withdraw'), null);
 });
+
+// "Bridge to Ethereum" by a pasted address (the bridge's NAMES-SEND-BACK.md §3.1a): the wallet turns a
+// checksummed address into a code for the vault in use. It must be exactly the code this page makes for
+// that address (relay-fee choice 0, the page's default), so the words, the burn and the release are the same.
+import { withdrawFor } from '../src/lib/send-back.js';
+const A = JSON.parse(readFileSync(new URL('./vectors/withdraw-address-v1.json', import.meta.url)));
+
+test('the page makes the same code and words as the wallet’s address route', async () => {
+  for (const v of A.valid) {
+    const w = await withdrawFor(v.address, { chainId: v.chainId, vault: v.vault });
+    assert.equal(w.code, v.code, v.name);
+    assert.equal(w.words_text, v.words_text, v.name);
+    assert.equal(decodeWithdrawTo(v.code).recipient, v.address.toLowerCase());
+  }
+  assert.ok(A.invalid.some((v) => v.code === 'no_checksum') && A.invalid.some((v) => v.code === 'bad_checksum'));
+});

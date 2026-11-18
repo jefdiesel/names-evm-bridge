@@ -1,6 +1,6 @@
 # AGENTS.md: LEZ Bridge mini-app and core module
 
-For coding agents (and people in a hurry). Last checked: 2026-11-16 (branch `settle`: `send_back_settle`, the settlement service's offer on `send_back_plan` and its stages on `send_back_status`; before that branch `v5-live`: v5 is the default deployment, no release delay; v4 an earlier vault; before that branch `v4-live-2`: each receive is read on the deployment it was made on, `deployment` on `receives`/`receive_status`, plain words when the relay no longer serves a deposit's bridge; before that `v4-live`: v4 is the default deployment, a vault that releases by proof, with its own release words; before that `receive-request`: `receive_request(id)` shows a stored deposit's code again; `compare` on `receives` and `receive_status`; v3 reads as a vault that can't pay out; before that `compare-words`).
+For coding agents (and people in a hurry). Last checked: 2026-11-17 (branch `bridge-code-merge`: the operator's steps for a new vault, `NAMES-SEND-BACK.md` §9.4, rehearsed; a light-client (attested) bridge can be added but not claimed on from the wallet; Add a bridge run on a test Basecamp, §9.7; before that branch `bridge-deployment-code`: bridge deployments as data, the bridge code `logosbr1…` (`bridge_code.rs`), the calls `bridges`, `bridge_code`, `bridge_check`, `bridge_add`, `bridge_use`, `bridge_remove` (`bridges.rs`), every send-back and claim job read on its own deployment, `NAMES-SEND-BACK.md` §9; before that branch `settle`: `send_back_settle`, the settlement service's offer on `send_back_plan` and its stages on `send_back_status`; before that branch `v5-live`: v5 is the default deployment, no release delay; v4 an earlier vault; before that branch `v4-live-2`: each receive is read on the deployment it was made on, `deployment` on `receives`/`receive_status`, plain words when the relay no longer serves a deposit's bridge; before that `v4-live`: v4 is the default deployment, a vault that releases by proof, with its own release words; before that `receive-request`: `receive_request(id)` shows a stored deposit's code again; `compare` on `receives` and `receive_status`; v3 reads as a vault that can't pay out; before that `compare-words`).
 Latest version: <!-- LATEST-URL: set when the repository is published -->
 
 Two Logos Basecamp packages for the private Ethereum ↔ LEZ bridge (RFP-022):
@@ -19,7 +19,7 @@ Full detail:
 - `CLI-CONTRACT.md` (every call; §8 is the relayed claim);
 - `NAMES-EMBED.md` (claiming from another app: Part A today, Part B one confirmation);
 - `NAMES-RECEIVE.md` (a deposit whose secret the wallet makes);
-- `NAMES-SEND-BACK.md` ("Send back to Ethereum": a public account's burn, the release proof, the release code; §7 is what Names must add);
+- `NAMES-SEND-BACK.md` ("Send back to Ethereum": a public account's burn, the release proof, the release code; §7 is what Names must add; §9 bridge deployments as data, the `logosbr1…` code; §9.4 the operator's steps for a new vault);
 - `../DESIGN.md` §1.1 (concurrency, what replies carry, busy, the freeze fix).
 
 The public copy of this repository does not carry `NAMES-EMBED.md`, `NAMES-RECEIVE.md` or
@@ -133,6 +133,8 @@ encodes it twice**: parse up to twice (`lez_bridge_ui/qml/logic.mjs` `unwrap`). 
 | `relayed_claims()` | Every claim job, newest first |
 | `send_back_link()`, `send_back_check(code)`, `send_backs()`, `send_back_status(id)`, `send_back_release_code(id)` | Send back to Ethereum (`NAMES-SEND-BACK.md` §5): the page link, a withdraw-to code's address and words, the list, the stages read from LEZ and Sepolia (60 s poll), the `logosrel1…` code. No secret in any reply. |
 | `send_back_build(id)` | The burn as the relayed call the Names Wallet signs (golden vector `lez_bridge/rust-lib/testdata/public-burn-v1.json`) |
+| `bridges()`, `bridge_code(id)` | The bridge new receives and send-backs use and the list to choose from (built in, added), each with its vault and four words; a listed bridge's `logosbr1…` code. No chain read. |
+| `bridge_check(code)` | A pasted bridge code, decoded and checked on Sepolia (this module's RPCs) and on its LEZ endpoint (`NAMES-SEND-BACK.md` §9.2): `{ok, id, builtin, label, vault, words, words_text, checks[], error}`. Stores nothing. |
 | `deposits()`, `holdings()`, `accounts()`, `jobs()`, `job(id)`, `exits()`, `admin_status()`, `privacy_report(choices)` | The mini-app's other views (`CLI-CONTRACT.md`). `holdings` and `accounts` ask the wallet for its accounts. |
 
 ### Needs a person (makes a wallet request, or starts something)
@@ -148,6 +150,8 @@ encodes it twice**: parse up to twice (`lez_bridge_ui/qml/logic.mjs` `unwrap`). 
 | `send_back_burn(id, options)` / `send_back_submit(id, tx)` | Proposes the burn to Names (`needs: "names_update"` until Names has §7) / hands a signed burn to the relay (`bridge_relayBurn`) |
 | `send_back_settle(id, options)` | Hands a recorded send-back to the bridge's settlement service, which proves, wraps and releases (`NAMES-SEND-BACK.md` §4a): the local receipt, or the exit secret only with `{"consent":true}` after the person read `settle_offer.consent_text` (on `send_back_plan` and `send_back_status`) (`needs: "consent"` otherwise); `send_back_status` then follows it |
 | `send_back_witness(id)`, `send_back_prove(id)`, `send_back_seal(id, seal)`, `set_release_prover(argv)` | The release proof's inputs (secret in a 0600 file, paths only in the reply); the helper prover as a job; the Groth16 seal (checked with a read-only `verify` on Sepolia); the helper's argv |
+| `send_back_recipients(account)` / `send_back_forget(account, address)` | Ethereum addresses this computer sent back to before (kept once a burn is handed to the relay; `NAMES-SEND-BACK.md` §3.1b) / forget one. `send_back_check` and `send_back_plan` also take a checksummed `0x…` address instead of the page's code; for one, `send_back_check` also reads its `history` (transactions sent from it, balance) through the module's Sepolia RPC (§3.1a) |
+| `bridge_add(code, options)`, `bridge_use(id)`, `bridge_remove(id)` | Checks a bridge code again and keeps it (`<data>/bridges.json`, 600; `{"use": true}` also chooses it); chooses the bridge NEW receives and send-backs use (stored deposits, send-backs and claim jobs keep their own); forgets an added bridge nothing names (§9) |
 | `relayed_claim_cancel(job)`, `relayed_claim_forget(check_id)` | Cancels a claim waiting for approval; drops a checked claim from memory |
 | `wallet_connect()`, `wallet_request(id)` | Asks for access; follows a request (poll every 2.5 s until `approved`/`done`, then repeat the call that asked) |
 | `claim(id, options)`, `redeem(plan_id, options)`, `release(exit_id, relayer)` | Private claim, burn, release (dry runs in this build unless proving is set up) |
@@ -173,7 +177,9 @@ from `tools/make-compare-words-vectors.py` (python3, independent of both).
 The Names app declares `lez_bridge` as an optional dependency, and Basecamp starts the module when
 Names opens. Names bundles only the module. The mini-app need not be installed for that.
 
-- The module needs no setup. With no settings file it uses v5.
+- The module needs no setup. With no settings file it uses v5. Settings → Bridge in the Names app
+  chooses another (`bridge_use`) or adds one from its `logosbr1…` code (`bridge_add`); nothing stored
+  moves with that choice (`NAMES-SEND-BACK.md` §9).
 - It has **no timer**. A claim job moves only while someone calls `relayed_claim_status`, and
   `receive_status` reads only when called. The host's screen polls, one call at a time.
 - The wallet keys every request to the app `lez_bridge`, whoever calls the module. A grant or
@@ -185,6 +191,8 @@ Names opens. Names bundles only the module. The mini-app need not be installed f
 |---|---|---|
 | Module unit tests | `cd modules/lez_bridge/rust-lib && cargo +1.98.1 test -j 4` | The build host, with the Logos Rust SDK staged beside `rust-lib` as logos-rust-sdk-src (see `../AGENTS.md`) |
 | Mini-app logic | `node modules/lez_bridge_ui/logic.test.mjs` | Anywhere |
+| Pasted-address vectors | `python3 -I modules/tools/make-withdraw-address-vectors.py (not published) modules/lez_bridge/rust-lib/data/bip39-english.txt > web/deposit/test/vectors/withdraw-address-v1.json`; read by `withdraw.rs` and `web/deposit/test/withdraw.test.mjs` | Anywhere |
+| Bridge code vectors | `python3 -I modules/tools/make-bridge-code-vectors.py (not published) modules/lez_bridge/rust-lib/data/bip39-english.txt > web/deposit/test/vectors/bridge-code-v1.json`; read by `bridge_code.rs`, `tests_bridges.rs` and `web/deposit/test/bridge-code.test.mjs` (the live v5 and v4 codes: both lists must encode to them) | Anywhere |
 | Compare words vectors | `python3 -I modules/tools/make-compare-words-vectors.py (not published) modules/lez_bridge/rust-lib/data/bip39-english.txt > web/deposit/test/vectors/compare-words-v1.json`; read by `compare.rs` (module tests) and `web/deposit/test/compare-words.test.mjs` | Anywhere |
 | `tests/e2e-names-relayed.sh` | "Claim a deposit" end to end | Throwaway chains on the build host (anvil, a loopback rc3 chain, its own relay), the Names module lgx and its CLI |
 | `tests/e2e-receive-public.sh` | "Receive from Ethereum" on the public network | A fresh throwaway Names wallet; someone makes the Sepolia deposit from the code it prints |

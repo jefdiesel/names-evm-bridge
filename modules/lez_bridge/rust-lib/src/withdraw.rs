@@ -164,6 +164,42 @@ pub fn decode_withdraw_to(text: &str) -> Result<WithdrawTo, CodeError> {
     Ok(w)
 }
 
+/// Whether a pasted text is an Ethereum address (`0x` and 40 hex digits) rather than a code.
+pub fn looks_like_address(text: &str) -> bool {
+    let t = from_input(text);
+    (t.starts_with("0x") || t.starts_with("0X")) && t.len() == 42 && t[2..].bytes().all(|c| c.is_ascii_hexdigit())
+}
+
+/// The recipient of a pasted Ethereum address, for the route without the bridge page (owner,
+/// 2026-11-16: a phone's Ethereum wallet can't hand the code back to Names on a Mac). Only an
+/// EIP-55 mixed-case address is taken: all lower or all upper case has no checksum, so a typo would
+/// go through.
+pub fn address_recipient(text: &str) -> Result<[u8; 20], CodeError> {
+    let t = from_input(text);
+    if !looks_like_address(&t) {
+        return err("address", "That is not an Ethereum address (0x and 40 hex digits). Copy it from your wallet, don't type it.");
+    }
+    let body = &t[2..];
+    let lower = body.bytes().any(|c| c.is_ascii_lowercase());
+    let upper = body.bytes().any(|c| c.is_ascii_uppercase());
+    let a = crate::util::eth_address(&format!("0x{body}")).map_err(|e| CodeError { code: "address", message: e })?;
+    if lower != upper {
+        return err("no_checksum", "This address is all in small (or all in capital) letters, so it has no checksum and a typo can't be caught. Copy it from your wallet, don't type it.");
+    }
+    if lower && crate::util::checksum_address(&a)[2..] != *body {
+        return err("bad_checksum", "This address's checksum doesn't match: a character is wrong. Copy it from your wallet, don't type it.");
+    }
+    Ok(a)
+}
+
+/// The withdraw-to code a page would make for `address` on this vault: the same payload, so the
+/// words, the burn, the exit commitment and the release are the code route's. The relay-fee choice
+/// is the page's default (0: no relay fee). Checked as a decoded code is.
+pub fn withdraw_to_for_address(chain_id: u64, vault: &[u8; 20], address: &str) -> Result<WithdrawTo, CodeError> {
+    let recipient = address_recipient(address)?;
+    decode_withdraw_to(&WithdrawTo { chain_id, vault: *vault, recipient, fee_choice: 0 }.encode())
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReleaseCode {
     pub chain_id: u64,
@@ -293,6 +329,30 @@ mod tests {
         for c in v["release"]["invalid"].as_array().unwrap() {
             let e = decode_release(c["string"].as_str().unwrap()).unwrap_err();
             assert_eq!(e.code, c["code"].as_str().unwrap(), "{}", c["name"]);
+        }
+    }
+
+    const ADDRESS_VECTORS: &str = include_str!("../../../../web/deposit/test/vectors/withdraw-address-v1.json");
+
+    /// A pasted address makes the very code the page makes for that address on this vault.
+    #[test]
+    fn an_address_makes_the_page_s_code_and_untyped_addresses_are_refused() {
+        let v: Value = serde_json::from_str(ADDRESS_VECTORS).unwrap();
+        for c in v["valid"].as_array().unwrap() {
+            let vault = eth_address(c["vault"].as_str().unwrap()).unwrap();
+            let w = withdraw_to_for_address(c["chainId"].as_u64().unwrap(), &vault, c["address"].as_str().unwrap()).unwrap_or_else(|e| panic!("{}: {e:?}", c["name"]));
+            assert_eq!(w.encode(), c["code"].as_str().unwrap(), "{}", c["name"]);
+            assert_eq!(to_hex(&w.payload()), c["payloadHex"].as_str().unwrap());
+            assert_eq!(crate::compare::words_text(&w.digest()), c["words_text"].as_str().unwrap());
+            assert!(looks_like_address(c["address"].as_str().unwrap()));
+        }
+        for c in v["invalid"].as_array().unwrap() {
+            let vault = eth_address(c["vault"].as_str().unwrap()).unwrap();
+            let e = withdraw_to_for_address(c["chainId"].as_u64().unwrap(), &vault, c["address"].as_str().unwrap()).unwrap_err();
+            assert_eq!(e.code, c["code"].as_str().unwrap(), "{}: {}", c["name"], e.message);
+            if e.code != "recipient" && e.code != "address" {
+                assert!(e.message.contains("Copy it from your wallet, don't type it"), "{}", e.message);
+            }
         }
     }
 

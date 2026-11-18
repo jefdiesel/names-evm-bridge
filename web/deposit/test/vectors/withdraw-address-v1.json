@@ -1,0 +1,84 @@
+{
+ "format": "Bridge to Ethereum by a pasted Ethereum address, v1",
+ "spec": "modules/NAMES-SEND-BACK.md §3.1a; generator modules/tools/make-withdraw-address-vectors.py (not published)",
+ "valid": [
+  {
+   "name": "address 0 on v5",
+   "chainId": 11155111,
+   "vault": "0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10",
+   "address": "0x68B54942A37aE5ceBA34D47eFB8d33a293d3975d",
+   "payloadHex": "010000000000aa36a7afbdf192434e9888bb23dae6f2d15eea6246ed1068b54942a37ae5ceba34d47efb8d33a293d3975d00",
+   "code": "logoswd1qyqqqqqqqz4rdfa0hhceys6wnzytkg76umedzhh2vfrw6yrgk4y59gm6uh8t5dx50mac6vazj0fewhgqd38k20",
+   "words_text": "lens · mushroom · enjoy · orient"
+  },
+  {
+   "name": "address 1 on v5",
+   "chainId": 11155111,
+   "vault": "0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10",
+   "address": "0x404FcD4a8b90515E4206240F11e85771F15367E9",
+   "payloadHex": "010000000000aa36a7afbdf192434e9888bb23dae6f2d15eea6246ed10404fcd4a8b90515e4206240f11e85771f15367e900",
+   "code": "logoswd1qyqqqqqqqz4rdfa0hhceys6wnzytkg76umedzhh2vfrw6yzqflx54zus290yyp3ypug7s4m379fk06gq9qu98u",
+   "words_text": "then · enemy · arm · unusual"
+  },
+  {
+   "name": "address 2 on v4",
+   "chainId": 11155111,
+   "vault": "0xC2c6A059eAB928966B24FA5549d441A3B17B54Ed",
+   "address": "0x7C95548651a2726e31e9fB02b0B2fE2b7d69aA83",
+   "payloadHex": "010000000000aa36a7c2c6a059eab928966b24fa5549d441a3b17b54ed7c95548651a2726e31e9fb02b0b2fe2b7d69aa8300",
+   "code": "logoswd1qyqqqqqqqz4rdf7zc6s9n64e9ztxkf8624yagsdrk9a4fmtuj42gv5dzwfhrr60mq2ct9l3t04564qcqmuqrzg",
+   "words_text": "issue · torch · beach · north"
+  }
+ ],
+ "invalid": [
+  {
+   "name": "all small letters",
+   "chainId": 11155111,
+   "vault": "0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10",
+   "address": "0x68b54942a37ae5ceba34d47efb8d33a293d3975d",
+   "code": "no_checksum"
+  },
+  {
+   "name": "all capital letters",
+   "chainId": 11155111,
+   "vault": "0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10",
+   "address": "0x68B54942A37AE5CEBA34D47EFB8D33A293D3975D",
+   "code": "no_checksum"
+  },
+  {
+   "name": "one letter in the wrong case",
+   "chainId": 11155111,
+   "vault": "0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10",
+   "address": "0x68b54942A37aE5ceBA34D47eFB8d33a293d3975d",
+   "code": "bad_checksum"
+  },
+  {
+   "name": "39 hex digits",
+   "chainId": 11155111,
+   "vault": "0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10",
+   "address": "0x68B54942A37aE5ceBA34D47eFB8d33a293d3975",
+   "code": "address"
+  },
+  {
+   "name": "not hex",
+   "chainId": 11155111,
+   "vault": "0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10",
+   "address": "0x68B54942A37aE5ceBA34D47eFB8d33a293d3975g",
+   "code": "address"
+  },
+  {
+   "name": "the zero address",
+   "chainId": 11155111,
+   "vault": "0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10",
+   "address": "0x0000000000000000000000000000000000000000",
+   "code": "recipient"
+  },
+  {
+   "name": "the vault itself",
+   "chainId": 11155111,
+   "vault": "0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10",
+   "address": "0xAFbDF192434E9888Bb23DAE6f2D15Eea6246eD10",
+   "code": "recipient"
+  }
+ ]
+}

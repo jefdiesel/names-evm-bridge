@@ -119,7 +119,29 @@ const SEPOLIA_V4 = {
     demoAccount: null,
     demoNote: 'How: RISC Zero’s verifier on Sepolia checks every update and release proof. Which bridge test network blocks count is the bridge operator’s word until a finality proof for that chain exists; the vault’s caps and a one-hour delay bound a wrong update. Test coins only.',
     demoShort: 'An earlier test vault: withdrawals work, with a one-hour wait.',
-    tokens: SEPOLIA_DEMO_V2.tokens,
+    tokens: SEPOLIA_DEMO_V2.tokens,    // The bridge code's other fields (src/lib/bridge-code.js; VERSIONS.toml [deployments.v4], read back 2026-11-16).
+    bridge: {
+      label: 'bridge v4',
+      gate: '0xe5236Bc2a03235145C0FaCF327fdc9D1c90F4967',
+      lezChainId: '0x2da7f7dfb6e51a28c942ea80391aa518253ec515e98d28cb4d83cc9e16ff5374',
+      zoneId: '0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb',
+      bridgeProgram: 'BKXe3q5JcKeiSrKv9FUBjZw3AowbvYgyHZ3SYPgDxJBf',
+      configAccount: 'HUdVSAHEKE2cQbrzzb9eBi4LSwjvQV64XqxmwH9PXsWX',
+      tokenProgram: '5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7',
+      release: 'proof',
+      minReleaseDelay: 3600,
+      genesisLezBlock: 10265,
+      genesisG2State: '0x3d1b762a529d2c0d9eed637913c64e65aabab0961a5a2fbdb1384f6b85a24155',
+      updateImage: '0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017',
+      releaseImage: '0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4',
+      endpoint: 'https://lez.nameswallet.app/',
+      relay: true,
+      settle: true,
+      definitions: {
+        '0x0000000000000000000000000000000000000000': '9tcLmjKixcGZJMnXS381Dhuzd8u9jPvQYF21F3vDhGE2',
+        '0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e': '92PJXZ2E3QPupUFuhc5f4rgsRiAZKv62TpSYfZEgLeru',
+      },
+    },
 };
 
 /**
@@ -139,7 +161,30 @@ const SEPOLIA_V5 = {
     demoAccount: null,
     demoNote: 'How: RISC Zero’s verifier on Sepolia checks every update and release proof. Which bridge test network blocks count is the bridge operator’s word until a finality proof for that chain exists; the vault’s caps bound a wrong update. Test coins only.',
     demoShort: 'Withdrawals back to Ethereum are checked by proof on Ethereum.',
-    tokens: SEPOLIA_DEMO_V2.tokens,
+    tokens: SEPOLIA_DEMO_V2.tokens,    // The bridge code's other fields (src/lib/bridge-code.js; VERSIONS.toml [deployments.v5], read back
+    // from Sepolia and the bridge test network on 2026-11-16). The Names Wallet adds a bridge from its code.
+    bridge: {
+      label: 'bridge v5',
+      gate: '0x0F3F80D37B1616C0E9B182D3A87FE4f6220715d1',
+      lezChainId: '0x2da7f7dfb6e51a28c942ea80391aa518253ec515e98d28cb4d83cc9e16ff5374',
+      zoneId: '0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb',
+      bridgeProgram: 'CuV1ctZ2qJG4wQcXP4TBudVGKzNmdoYT3DpP1veHnDMA',
+      configAccount: 'FBWWSLgMgEtMs7PUNBfTGXccZdRSAeRHtMRP4nyZsrnW',
+      tokenProgram: '5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7',
+      release: 'proof',
+      minReleaseDelay: 0,
+      genesisLezBlock: 11598,
+      genesisG2State: '0xa339efab8cc3c73264e144d6b07b093a2258334dedf1ec00cb65095270954051',
+      updateImage: '0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017',
+      releaseImage: '0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4',
+      endpoint: 'https://lez.nameswallet.app/',
+      relay: true,
+      settle: true,
+      definitions: {
+        '0x0000000000000000000000000000000000000000': 'Dx5tbzn54vKJiMYmjuYV3uuhi4eNwqnzZys7EqT3gj9z',
+        '0xac207b9bfebf3ef7c26297ea6abadeeccc4aa71e': '8ctGbFACndG9C6AjzN34gBpi6kRcDhv9guA2sxBsXomT',
+      },
+    },
 };
 
 /**

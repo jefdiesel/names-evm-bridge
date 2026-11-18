@@ -29,6 +29,8 @@
 //! rendered without a chain. The recorded replies come from this module against the real v2
 //! demo (`modules/fixtures/`).
 
+mod bridge_code;
+mod bridges;
 mod cli;
 mod compare;
 mod config;
@@ -65,10 +67,15 @@ use util::{format_amount, hex0x, now_ms, units};
 /// `receive_deployment`: `receives`/`receive_status` read each deposit on the deployment it was made
 /// on and name it (`deployment: {id, label, current, network}`).
 /// `send_back`: the `send_back_*` calls (`modules/NAMES-SEND-BACK.md`).
-pub const FEATURES: [&str; 17] = [
+/// `bridges`: bridge deployments as data: `bridges`, `bridge_code`, `bridge_check`, `bridge_add`,
+/// `bridge_use`, `bridge_remove` (`bridges.rs`, NAMES-SEND-BACK.md §9); every stored item keeps its own.
+/// `send_back_address`: `send_back_check` / `send_back_plan` also take a plain EIP-55 Ethereum address.
+/// `send_back_recipients`: the Ethereum addresses sent back to before (`send_back_recipients`, `send_back_forget`).
+/// `account_history`: `send_back_check` of a pasted address carries `history` (transactions sent, balance).
+pub const FEATURES: [&str; 21] = [
     "relayed_claim", "relayed_claim_check_with", "relayed_claim_build", "relayed_claim_submit", "account_hint",
     "receive", "deposit_code", "public_receive", "receive_status", "receives", "relayed_claim_check_deposit", "account_add", "build_id",
-    "receive_request", "receive_deployment", "send_back", "send_back_settle",
+    "receive_request", "receive_deployment", "send_back", "send_back_settle", "bridges", "send_back_address", "send_back_recipients", "account_history",
 ];
 
 pub const MODULE_VERSION: &str = "0.1.0";
@@ -106,6 +113,40 @@ pub trait LezBridgeModule: Send + 'static {
 
     /// Serve recorded replies from folder `dir` ("" turns fixture mode off).
     fn set_fixtures(&mut self, dir: String) -> String;
+
+    // ── Bridge deployments (bridges.rs, NAMES-SEND-BACK.md §9) ──────────
+
+    /// The bridge new receives and send-backs use, and the list to choose from (built in and
+    /// added): `{active, active_row, list: [{id, label, kind, current, vault, vault_short, words,
+    /// words_text, has_code, release_note, endpoint_host, items, removable}], warning}`. No chain read.
+    fn bridges(&mut self) -> String;
+
+    /// A listed bridge's code (`logosbr1…`) and its four words; `id` "" for the chosen one.
+    fn bridge_code(&mut self, id: String) -> String;
+
+    /// Reads a pasted bridge code and checks it on Sepolia (this module's own RPCs) and on its LEZ
+    /// endpoint: `{ok, id, builtin, added, label, vault, vault_short, endpoint_host, words,
+    /// words_text, checks: [{key, ok, text}], error: {code, message}, warning}`. Stores nothing.
+    fn bridge_check(&mut self, code: String) -> String;
+
+    /// Checks the code again on both chains and keeps it (mode 600); `{"use": true}` also chooses
+    /// it for new receives and send-backs. A refused code answers `{ok: false, error}`.
+    fn bridge_add(&mut self, code: String, options_json: String) -> String;
+
+    /// Chooses the bridge (a built-in or added id) that NEW receives and send-backs use. A stored
+    /// deposit, send-back or claim keeps the bridge it was made on.
+    fn bridge_use(&mut self, id: String) -> String;
+
+    /// Forgets an added bridge, when it isn't the chosen one and nothing on this computer names it.
+    fn bridge_remove(&mut self, id: String) -> String;
+
+    /// The Ethereum addresses `account` sent back to before on this bridge's chain, newest first
+    /// (`""`: every account's): `{recipients: [{account, chain_id, address, short, last_used}]}`.
+    /// Kept when a burn is signed and handed to the relay. No chain read.
+    fn send_back_recipients(&mut self, account: String) -> String;
+
+    /// Forgets a remembered Ethereum address (`account` "": for every account).
+    fn send_back_forget(&mut self, account: String, address: String) -> String;
 
     // ── Reading the bridge ──────────────────────────────────────────────
 
@@ -483,14 +524,20 @@ impl Bridge {
     }
 
     fn eth(&self) -> Result<Box<dyn EthSource + '_>, String> {
+        self.eth_for(self.cfg.deployment.chain_id)
+    }
+
+    /// Ethereum chain `chain_id` through this module's own RPC settings (never a URL from a code
+    /// or a deposit): a stored item is read on its own deployment's chain.
+    pub(crate) fn eth_for(&self, chain_id: u64) -> Result<Box<dyn EthSource + '_>, String> {
         if let Some(e) = &self.eth_override {
             return Ok(Box::new(Borrowed(e.as_ref())));
         }
         if self.cfg.eth_source == "logos_module" {
             return Ok(Box::new(LogosEthModule));
         }
-        let url = self.cfg.rpc_for(self.cfg.deployment.chain_id).ok_or_else(|| format!("no Ethereum RPC is set for chain {}; set one in Settings", self.cfg.deployment.chain_id))?;
-        let fallbacks = if self.cfg.deployment.chain_id == 11_155_111 { config::SEPOLIA_FALLBACK_RPCS.iter().map(|u| (*u).to_owned()).collect() } else { Vec::new() };
+        let url = self.cfg.rpc_for(chain_id).ok_or_else(|| format!("no Ethereum RPC is set for chain {chain_id}; set one in Settings"))?;
+        let fallbacks = if chain_id == 11_155_111 { config::SEPOLIA_FALLBACK_RPCS.iter().map(|u| (*u).to_owned()).collect() } else { Vec::new() };
         Ok(Box::new(JsonRpc::new(url).with_fallbacks(fallbacks)))
     }
 
@@ -558,14 +605,15 @@ impl Bridge {
     }
 
     /// The deployment named `name`: this install's own when the name is the current one (its
-    /// settings), else the built-in one; none for an unknown or empty name.
+    /// settings), else the built-in one, else one added from a bridge code (`bridges.rs`); none for
+    /// an unknown or empty name.
     pub(crate) fn deployment_named(&self, name: &str) -> Option<Deployment> {
         if name.is_empty() {
             None
         } else if self.deployment().name == name {
             Some(self.deployment().clone())
         } else {
-            config::builtin(name)
+            config::builtin(name).or_else(|| self.added_deployment(name))
         }
     }
 
@@ -1412,6 +1460,9 @@ impl EthSource for Borrowed<'_> {
     fn chain_id(&self) -> Result<u64, String> {
         self.0.chain_id()
     }
+    fn history(&self, a: &[u8; 20]) -> Result<(u64, u128), String> {
+        self.0.history(a)
+    }
 }
 
 fn pct(used: &str, cap: &str) -> Value {
@@ -1809,7 +1860,7 @@ impl LezBridgeModule for Bridge {
     fn use_deployment(&mut self, source: String) -> String {
         reply((|| {
             let s = source.trim();
-            let d = if let Some(d) = config::builtin(s) {
+            let d = if let Some(d) = config::builtin(s).or_else(|| self.added_deployment(s)) {
                 d
             } else if s.starts_with('{') {
                 Deployment::from_json(&serde_json::from_str(s).map_err(|e| format!("not JSON: {e}"))?)?
@@ -1821,6 +1872,38 @@ impl LezBridgeModule for Bridge {
             self.save()?;
             Ok(self.cfg.deployment.to_json())
         })())
+    }
+
+    fn bridges(&mut self) -> String {
+        reply(Ok(self.bridges_now()))
+    }
+
+    fn bridge_code(&mut self, id: String) -> String {
+        reply(self.bridge_code_now(&id))
+    }
+
+    fn bridge_check(&mut self, code: String) -> String {
+        reply(Ok(self.bridge_check_now(&code)))
+    }
+
+    fn bridge_add(&mut self, code: String, options_json: String) -> String {
+        reply(options(&options_json).and_then(|o| self.bridge_add_now(&code, &o)))
+    }
+
+    fn bridge_use(&mut self, id: String) -> String {
+        reply(self.bridge_use_now(&id))
+    }
+
+    fn bridge_remove(&mut self, id: String) -> String {
+        reply(self.bridge_remove_now(&id))
+    }
+
+    fn send_back_recipients(&mut self, account: String) -> String {
+        reply(Ok(self.send_back_recipients_now(&account)))
+    }
+
+    fn send_back_forget(&mut self, account: String, address: String) -> String {
+        reply(self.send_back_forget_now(&account, &address))
     }
 
     fn set_fixtures(&mut self, dir: String) -> String {
@@ -2328,3 +2411,5 @@ mod tests_sendback;
 mod tests_relayed;
 #[cfg(test)]
 mod tests_scaffold;
+#[cfg(test)]
+mod tests_bridges;

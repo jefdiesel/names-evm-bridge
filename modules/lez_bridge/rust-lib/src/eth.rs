@@ -48,6 +48,12 @@ pub trait EthSource {
     fn logs(&self, address: &[u8; 20], topic0: &[u8; 32], from: u64, to: u64) -> Result<Vec<Value>, String>;
     fn code_len(&self, address: &[u8; 20]) -> Result<usize, String>;
     fn chain_id(&self) -> Result<u64, String>;
+    /// What an address shows of its past: the transactions sent FROM it (`eth_getTransactionCount`
+    /// at "latest") and what it holds now (`eth_getBalance`, wei). It can't tell an account that
+    /// only ever received and was emptied by someone else from an unused one.
+    fn history(&self, _address: &[u8; 20]) -> Result<(u64, u128), String> {
+        Err("this Ethereum source can't read an account's history".to_owned())
+    }
 }
 
 pub struct JsonRpc {
@@ -200,6 +206,13 @@ impl EthSource for JsonRpc {
 
     fn chain_id(&self) -> Result<u64, String> {
         quantity(&self.request("eth_chainId", json!([]))?).ok_or_else(|| "no chain id".to_owned())
+    }
+
+    fn history(&self, address: &[u8; 20]) -> Result<(u64, u128), String> {
+        let sent = quantity(&self.request("eth_getTransactionCount", json!([hex0x(address), "latest"]))?).ok_or("no transaction count")?;
+        let b = self.request("eth_getBalance", json!([hex0x(address), "latest"]))?;
+        let balance = u128::from_str_radix(b.as_str().unwrap_or("").trim_start_matches("0x"), 16).map_err(|_| "no balance".to_owned())?;
+        Ok((sent, balance))
     }
 }
 

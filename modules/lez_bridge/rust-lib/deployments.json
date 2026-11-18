@@ -1,5 +1,5 @@
 {
- "_about": "The bridge deployments this module knows, in ONE place (config.rs reads this file at build time; use_deployment takes a name from it, a path or a JSON object of the same shape). A new bridge instance is a new entry here, never a code change. Sources: vault/DEPLOYMENTS.md, public-demo/RUNBOOK.md (not published) (sections 11 and 13), web/deposit/src/lib/deployments.js. To switch the app to another bridge, change `default` (the ONE switch).",
+ "_about": "The bridge deployments this module knows, in ONE place (config.rs reads this file at build time; use_deployment takes a name from it, a path or a JSON object of the same shape). A new bridge instance is a new entry here, never a code change. Sources: vault/DEPLOYMENTS.md, public-demo/RUNBOOK.md (not published) (sections 11 and 13), web/deposit/src/lib/deployments.js. To switch the app to another bridge, change `default` (the ONE switch). Each entry with a `bridge` block (and token `denoms`) also has a bridge code (logosbr1…, src/bridge_code.rs); a wallet adds a deployment that isn't listed here from its code, checked on both chains (src/bridges.rs), with no rebuild.",
  "default": "bridge-test-network-v5",
  "deployments": [
   {
@@ -22,13 +22,23 @@
      "eth_token": "0x0000000000000000000000000000000000000000",
      "symbol": "ETH",
      "decimals": 18,
-     "definition": "Dx5tbzn54vKJiMYmjuYV3uuhi4eNwqnzZys7EqT3gj9z"
+     "definition": "Dx5tbzn54vKJiMYmjuYV3uuhi4eNwqnzZys7EqT3gj9z",
+     "denoms": [
+      "10000000000000000",
+      "100000000000000000",
+      "1000000000000000000"
+     ]
     },
     {
      "eth_token": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e",
      "symbol": "dUSDC",
      "decimals": 6,
-     "definition": "8ctGbFACndG9C6AjzN34gBpi6kRcDhv9guA2sxBsXomT"
+     "definition": "8ctGbFACndG9C6AjzN34gBpi6kRcDhv9guA2sxBsXomT",
+     "denoms": [
+      "100000000",
+      "1000000000",
+      "10000000000"
+     ]
     }
    ],
    "notes": [
@@ -40,7 +50,20 @@
    ],
    "release": "proof",
    "release_note": "Withdrawals back to Ethereum are checked by proof on Ethereum.",
-   "release_detail": "How: RISC Zero's verifier on Sepolia checks every update and release proof. Which bridge test network blocks count is the bridge operator's word until a finality proof for that chain exists; the vault's caps bound a wrong update."
+   "release_detail": "How: RISC Zero's verifier on Sepolia checks every update and release proof. Which bridge test network blocks count is the bridge operator's word until a finality proof for that chain exists; the vault's caps bound a wrong update.",
+   "bridge": {
+    "label": "bridge v5",
+    "gate": "0x0F3F80D37B1616C0E9B182D3A87FE4f6220715d1",
+    "config_account": "FBWWSLgMgEtMs7PUNBfTGXccZdRSAeRHtMRP4nyZsrnW",
+    "min_release_delay": 0,
+    "genesis_lez_block": 11598,
+    "genesis_g2_state": "0xa339efab8cc3c73264e144d6b07b093a2258334dedf1ec00cb65095270954051",
+    "lez_chain_id": "0x2da7f7dfb6e51a28c942ea80391aa518253ec515e98d28cb4d83cc9e16ff5374",
+    "zone_id": "0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb",
+    "update_image": "0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017",
+    "release_image": "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4",
+    "settle": true
+   }
   },
   {
    "name": "bridge-test-network-v4",
@@ -62,13 +85,23 @@
      "eth_token": "0x0000000000000000000000000000000000000000",
      "symbol": "ETH",
      "decimals": 18,
-     "definition": "9tcLmjKixcGZJMnXS381Dhuzd8u9jPvQYF21F3vDhGE2"
+     "definition": "9tcLmjKixcGZJMnXS381Dhuzd8u9jPvQYF21F3vDhGE2",
+     "denoms": [
+      "10000000000000000",
+      "100000000000000000",
+      "1000000000000000000"
+     ]
     },
     {
      "eth_token": "0xAc207b9Bfebf3eF7C26297eA6AbaDeEcCC4Aa71e",
      "symbol": "dUSDC",
      "decimals": 6,
-     "definition": "92PJXZ2E3QPupUFuhc5f4rgsRiAZKv62TpSYfZEgLeru"
+     "definition": "92PJXZ2E3QPupUFuhc5f4rgsRiAZKv62TpSYfZEgLeru",
+     "denoms": [
+      "100000000",
+      "1000000000",
+      "10000000000"
+     ]
     }
    ],
    "notes": [
@@ -80,7 +113,20 @@
    ],
    "release": "proof",
    "release_note": "An earlier test vault: withdrawals work, with a one-hour wait.",
-   "release_detail": "v4 checks every update and release proof on Ethereum like v5, and waits one hour (its fixed minimum) before a release. Which bridge test network blocks count is the bridge operator's word until a finality proof for that chain exists."
+   "release_detail": "v4 checks every update and release proof on Ethereum like v5, and waits one hour (its fixed minimum) before a release. Which bridge test network blocks count is the bridge operator's word until a finality proof for that chain exists.",
+   "bridge": {
+    "label": "bridge v4",
+    "gate": "0xe5236Bc2a03235145C0FaCF327fdc9D1c90F4967",
+    "config_account": "HUdVSAHEKE2cQbrzzb9eBi4LSwjvQV64XqxmwH9PXsWX",
+    "min_release_delay": 3600,
+    "genesis_lez_block": 10265,
+    "genesis_g2_state": "0x3d1b762a529d2c0d9eed637913c64e65aabab0961a5a2fbdb1384f6b85a24155",
+    "lez_chain_id": "0x2da7f7dfb6e51a28c942ea80391aa518253ec515e98d28cb4d83cc9e16ff5374",
+    "zone_id": "0x4bd1c1bd6ea22e722a0cad604c306cce32cf6001d735888ec0ea5d1dd0882afb",
+    "update_image": "0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017",
+    "release_image": "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4",
+    "settle": true
+   }
   },
   {
    "name": "bridge-test-network-v3",

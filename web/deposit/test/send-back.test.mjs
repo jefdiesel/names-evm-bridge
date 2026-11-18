@@ -8,7 +8,8 @@ import { createMockChain, createMockWallet, ADDR } from '../dev/mock-chain.js';
 import { rpc } from '../src/lib/providers.js';
 import { DEPLOYMENTS } from '../src/lib/deployments.js';
 import { decodeWithdrawTo, withdrawWords, encodeRelease, decodeRelease } from '../src/lib/withdraw.js';
-import { withdrawFor, releaseChecks, sendRelease, releaseCalldata, RELEASE_SIG } from '../src/lib/send-back.js';
+import { withdrawFor, releaseChecks, sendRelease, releaseCalldata, RELEASE_SIG, PRIVATE_HINT, accountHistory, historyLine } from '../src/lib/send-back.js';
+import { readFileSync as readSource } from 'node:fs';
 import { selector } from '../src/lib/keccak.js';
 
 const ROOT = '0x' + '5a'.repeat(32);
@@ -73,4 +74,30 @@ test('the release call data is the vault ABI: eight head words, then the 260-byt
   assert.equal(BigInt('0x' + body.slice(64 * 8, 64 * 9)), 260n);
   assert.equal(body.length, 64 * 9 + 2 * 288);
   assert.equal(body.slice(64 * 9, 64 * 9 + 8), 'e71e6620');
+});
+
+test('withdraw mode suggests a fresh account beside Connect wallet, without requiring it', () => {
+  assert.ok(PRIVATE_HINT.startsWith('Want it private?'));
+  assert.ok(!/must|required|need to/i.test(PRIVATE_HINT.split(':')[0]));
+  const app = readSource(new URL('../src/app.js', import.meta.url), 'utf8');
+  assert.match(app, /primary\('Connect wallet'[^\n]*PRIVATE_HINT/, 'the hint sits beside Connect wallet in withdraw mode');
+});
+
+test('the connected account’s past: nothing sent and nothing held, sent from, holding, not readable', async () => {
+  const fake = (count, bal, fail) => ({
+    request: async (m) => { if (fail) throw new Error('down'); assert.equal(m, 'eth_getTransactionCount'); return '0x' + count.toString(16); },
+    balance: async () => { if (fail) throw new Error('down'); return bal; },
+  });
+  const eth = (wei) => `${wei} wei`;
+  const zero = await accountHistory(fake(0, 0n), '0x' + '11'.repeat(20));
+  assert.deepEqual(historyLine(zero, eth), { kind: 'quiet', text: 'Nothing has been sent from this account and it holds nothing.' });
+  const sent = historyLine(await accountHistory(fake(3, 0n), '0x' + '11'.repeat(20)), eth);
+  assert.equal(sent.kind, 'warn');
+  assert.ok(sent.text.startsWith('This account has been used before (3 transactions sent). Anyone can see its history.'));
+  assert.ok(sent.text.endsWith('Or carry on: it’s your choice.'));
+  const holds = historyLine(await accountHistory(fake(0, 5n), '0x' + '11'.repeat(20)), eth);
+  assert.ok(holds.text.includes('(holds 5 wei)'));
+  await assert.rejects(accountHistory(fake(0, 0n, true), '0x' + '11'.repeat(20)));
+  assert.deepEqual(historyLine(null), { kind: 'unknown', text: 'Couldn’t check this account’s history.' });
+  for (const t of [historyLine(zero).text, sent.text]) assert.ok(!/\bunused\b|^New account/i.test(t));
 });

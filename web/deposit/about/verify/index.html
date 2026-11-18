@@ -53,6 +53,11 @@ shasum -a 256 -c MANIFEST.sha256</code></pre>
       <h2>Check the headers</h2>
       <pre><code>curl -sI https://nameswallet.app/bridge/ | grep -i content-security-policy</code></pre>
       <p>It must equal the page’s own meta tag. Its only outside address is <code>https://ethereum-sepolia-rpc.publicnode.com</code>.</p>
+      <h2 id="bridge-code">This bridge’s code, for the Names Wallet</h2>
+      <p>A Names Wallet that doesn’t list this bridge yet adds it from this code: Settings, Bridge, Add a bridge. It checks the code on Sepolia and on the bridge test network first, then shows four words. They must be these:</p>
+      <p class="compare-words">toss · welcome · unaware · engage</p>
+      <p class="mono">logosbr1qyqqqqqqqz4rdfa0hhceys6wnzytkg76umedzhh2vfrw6yqqqqqqqq9efsvq70uq6da3v9kqaxcc95ag0lj0vgs8zhgm4u0ej9zafuyuwvf88lrcwztcthv4nzqv2y7q7655nnvp7l5rf59u7acl685f7apslgdhz0z644c7r66005fd5lmaldh9rg5vjsh2squ34fgcy5lv290f355vknvrej0pdl6nw39arsdad63zuu32pjkkqnpsdn8r9nmqq8tntzywcr4968ws3q40hv8zdctz30jdm8f4xxd67gr4l73xpsf670zr40vwh5dnf598m5af626v5yd6ejd4fswu887hfrjjmltrkgedyhf2s72vcav7ufyafhp5jj4xkdejaannqysug5kml8julcdg6fpdn9prjf5x79gzfzljd3qpqqqqqqqqqqqqqqqqqqqqqqpdf63nnmat3npuwvnyu9zddvrmpyazykpnfhklrmqqedjsj5nsj4q9zzv0tgdtpyq0qe2jej398zveu9u4gy226u4vnrruppwz6xghuvqhd09aw9x2rqk7j88mdxppve39xxhgysl627daxxuwfz63fhcxw2jqx8rgw368que69uhkcet69ehxzmt9wdmkzmrvv46zuctswqhsjcnjd9jxwefqwc6syqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpsrgka5pdvka028v298gqvmj656lvn0ktymechr07dys2607jy8fzgp524zgqvqqqqqqqqqqqqqqywr0ym7pqqqqqqqqqqqqqqqqq93527za3gqqqqqqqqqqqqqqqqx7pd4n5ajqqq9vypaehl4l8mmuyc5haf4t4hhve392w8n3xvd5k6pespfmvsgjqaj4trkv5vtm75mdap4hf5q4c74tzrs5tgrq2ez42dzyxqcqqqqqqqqqqqqqqqqqqqzltcgqqqqqqqqqqqqqqqqqqqqrhxk2qqqqqqqqqqqqqqqqqqqqy4qtusqqf6fgzz</p>
+      <p>A bridge code decides where deposits go: take it only from this page or the bridge page, where it has a Copy button (<a href="../../#bridge">This bridge’s code</a>). It holds only public facts: Sepolia vault v5, its gate and deposit desk, the bridge program and its Config on the bridge test network, the wrapped tokens and amounts, the proof image ids and the network address.</p>
       <h2>What this proves</h2>
       <ul>
         <li>The files you were served match the list.</li>

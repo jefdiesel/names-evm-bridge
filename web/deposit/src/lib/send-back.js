@@ -11,6 +11,34 @@ import { encodeWithdrawTo, withdrawWords } from './withdraw.js';
 
 export const RELEASE_SIG = 'release(bytes,bytes32,bytes32,address,uint32,address,address,uint256)';
 /** The release's gas on anvil in the v4 rehearsal: 139,391 (public-demo/V4-PLAN.md §3). */
+/**
+ * What the connected account shows of its past, read through the connected wallet's own provider
+ * (`r`, providers.js `rpc`; no other network origin): transactions SENT from it and its balance now.
+ * `{ sent, balance }` (bigints), or throws.
+ */
+export async function accountHistory(r, address) {
+  const sent = BigInt(await r.request('eth_getTransactionCount', [address, 'latest']));
+  const balance = await r.balance(address);
+  return { sent, balance };
+}
+
+/**
+ * The line for it: `{ kind: 'quiet' | 'warn' | 'unknown', text }` (owner, 2026-11-16: a warning, never a
+ * block). An account that only received and was emptied by someone else looks like an unused one, so
+ * it never says "new" or "unused": only what was checked.
+ */
+export function historyLine(h, ethText = (wei) => `${wei} wei`) {
+  if (!h) return { kind: 'unknown', text: 'Couldn’t check this account’s history.' };
+  if (h.sent === 0n && h.balance === 0n) return { kind: 'quiet', text: 'Nothing has been sent from this account and it holds nothing.' };
+  const parts = [];
+  if (h.sent > 0n) parts.push(`${h.sent} ${h.sent === 1n ? 'transaction' : 'transactions'} sent`);
+  if (h.balance > 0n) parts.push(`holds ${ethText(h.balance)}`);
+  return { kind: 'warn', text: `This account has been used before (${parts.join(' / ')}). Anyone can see its history. For privacy, add a new account in your wallet and connect that one. Or carry on: it’s your choice.` };
+}
+
+/** An optional line beside Connect wallet in withdraw mode (the owner, 2026-11-16): a fresh account keeps the
+ *  release apart from the person's other Ethereum activity. A suggestion only: privacy is their choice. */
+export const PRIVATE_HINT = 'Want it private? In your Ethereum wallet, add a new account and use that one. It needs no ETH: the bridge pays the gas.';
 export const RELEASE_GAS_ABOUT = 140_000n;
 
 // The vault's and the verifier's refusals a release can meet (BridgeVault.sol, RiscZeroGroth16Verifier).

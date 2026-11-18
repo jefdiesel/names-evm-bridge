@@ -22,7 +22,8 @@ import { compareWords } from './lib/compare-words.js';
 import { normalizeName, resolve as lnsResolve, confirmSame, confirmationLine } from './lib/lns.js';
 import { deriveName } from './lib/lnsderive.js';
 import { decodeRelease, codeFromInput, codeKind } from './lib/withdraw.js';
-import { withdrawFor, releaseChecks, sendRelease, releaseWhy, RELEASE_GAS_ABOUT } from './lib/send-back.js';
+import { withdrawFor, releaseChecks, sendRelease, releaseWhy, RELEASE_GAS_ABOUT, PRIVATE_HINT, accountHistory, historyLine } from './lib/send-back.js';
+import { bridgeCodeOf } from './lib/bridge-code.js';
 import { rpc as rpcOf, isUserRejection } from './lib/providers.js';
 
 const flow = createFlow();
@@ -950,7 +951,7 @@ function notes(s, { sent, refused }) {
   const dep = s.deployment || DEP;
   if (dep.demoNote) lines.append(h('p', { class: 'locked' }, dep.demoShort || dep.demoNote), more('About this test vault', dep.demoShort ? h('p', {}, dep.demoNote) : null));
   lines.append(h('p', {}, 'Public on Sepolia: your address, amount and time. Not public: who receives it on Logos. ', h('a', { href: 'about/privacy/' }, 'Privacy')));
-  lines.append(h('p', {}, hashLink('Settings', '#settings', openSettings), ' · ', h('a', { href: TESTING_PAGE }, 'Testing this bridge')));
+  lines.append(h('p', {}, hashLink('Settings', '#settings', openSettings), ' · ', h('a', { href: TESTING_PAGE }, 'Testing this bridge'), ' · ', h('a', { href: '#bridge' }, 'This bridge’s code')));
   return lines;
 }
 
@@ -1067,7 +1068,7 @@ function details(s) {
     h('dl', { class: 'facts' }, rows.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
     h('div', { class: 'grid-row' }, bitfield(r.commitment), h('p', { class: 'small' }, s.createdHere ? 'The commitment, drawn as its 256 bits. It seals your LEZ account and secret; neither can be read from it.' : 'The commitment from your Names Wallet, drawn as its 256 bits. Your wallet can draw the same grid for comparison.')),
     s.checks.some((c) => c.status !== 'pending') ? h('ul', { class: 'checks', 'aria-label': 'Checks' }, s.checks.map(checkItem)) : null,
-    h('p', { class: 'small' }, h('a', { href: 'about/security/' }, 'Security'), ' · ', h('a', { href: 'about/verify/' }, 'Verify this page')),
+    h('p', { class: 'small' }, h('a', { href: 'about/security/' }, 'Security'), ' · ', h('a', { href: 'about/verify/' }, 'Verify this page'), ' · ', h('a', { href: '#bridge' }, 'This bridge’s code')),
   );
   if (!s.createdHere && !s.tx) {
     const qr = h('details', { class: 'handoff' }, h('summary', {}, 'Continue on your phone'));
@@ -1385,6 +1386,7 @@ function sendBackOf(fragment) {
     /* not a send-back link */
   }
   if (f === 'withdraw' || codeKind(f) === 'withdraw') return { kind: 'withdraw' };
+  if (f === 'bridge') return { kind: 'bridge' };
   if (f === 'release') return { kind: 'release', text: '' };
   if (codeKind(f) === 'release') return { kind: 'release', text: f };
   return null;
@@ -1404,20 +1406,26 @@ function sbWallet() {
 }
 
 const wdCodes = new Map(); // account -> Promise<{code, words_text}>, memory only
+const wdHistory = new Map(); // account -> Promise<{sent, balance} | null>, memory only
+/** A balance for the history line: at most 4 decimals; a speck as "less than 0.0001 ETH". */
+const ethAtMost4 = (wei) => { const t = formatUnits(wei, 18, { maxFraction: 4 }); return /^0(\.0*)?$/.test(t) ? 'less than 0.0001 ETH' : `${t} ETH`; };
 const fmtTime = (secs) => new Date(Number(secs) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 function withdrawView(s, host) {
   const connected = !!s.account;
   host.append(walletRow(s) || h('span'), h('div', { class: 'card-head' }, h('h1', { id: 'card-h', tabindex: '-1' }, 'Bridge to Ethereum')), sbSteps(SB_WITHDRAW_STEPS, connected ? 1 : 0));
   if (!connected) {
-    host.append(h('div', { class: 'action' }, ...primary('Connect wallet', () => connectWallet())));
+    host.append(h('div', { class: 'action' }, ...primary('Connect wallet', () => connectWallet())), h('p', { class: 'small', id: 'wd-private' }, PRIVATE_HINT));
     return;
   }
   const a = addr(s.account);
+  // What this account shows of its past, through the connected wallet (a warning, never a block).
+  const past = h('p', { class: 'small', id: 'wd-history', role: 'status' }, 'Checking this account’s history…');
   const codeBox = h('p', { class: 'mono sb-code', id: 'wd-code' }, '…');
   const words = h('p', { class: 'compare-words', id: 'wd-words' }, '…');
   const copy = h('div', { class: 'action' });
   host.append(
+    past,
     h('section', { class: 'sb-out', 'aria-labelledby': 'wd-h' },
       h('h2', { id: 'wd-h' }, 'Your withdraw-to code'),
       codeBox,
@@ -1426,11 +1434,20 @@ function withdrawView(s, host) {
       h('p', { class: 'sb-to' }, 'To ', h('span', { class: 'mono' }, a)),
       more('Details',
         h('p', {}, `The code holds only public facts: Sepolia, the bridge vault ${shortHex(addr(DEP.vault))} and this address. No secret.`),
-        h('p', {}, `You send the last step from this page yourself. Your wallet then needs a little Sepolia ETH for gas (about ${RELEASE_GAS_ABOUT.toLocaleString('en')} gas).`),
+        h('p', {}, `Your Names Wallet can hand the last step to the bridge’s service (Finish on Ethereum), which pays the gas. If you send it from this page yourself instead, your wallet needs a little Sepolia ETH (about ${RELEASE_GAS_ABOUT.toLocaleString('en')} gas).`),
         h('p', {}, 'After you approve the burn in your Names Wallet, Ethereum records it with the bridge operator’s next update (by hand today); then the vault waits one hour before it pays out.'),
         h('p', {}, 'Another wallet, another address: disconnect and connect it, and this page makes its code.')),
     ),
   );
+  if (!wdHistory.has(s.account)) {
+    const r = sbWallet();
+    wdHistory.set(s.account, r ? accountHistory(r, s.account).catch(() => null) : Promise.resolve(null));
+  }
+  wdHistory.get(s.account).then((hist) => {
+    const line = historyLine(hist, ethAtMost4);
+    past.textContent = line.text;
+    past.className = line.kind === 'warn' ? 'callout caution' : 'small';
+  });
   if (!wdCodes.has(s.account)) wdCodes.set(s.account, withdrawFor(s.account));
   wdCodes.get(s.account).then((w) => {
     codeBox.textContent = w.code;
@@ -1439,13 +1456,46 @@ function withdrawView(s, host) {
   }, (e) => (codeBox.textContent = `This address can’t take a release: ${e.message}`));
 }
 
-function copyButtonPrimary(text) {
+// #bridge: the live deployment's bridge code (src/lib/bridge-code.js), for a Names Wallet that doesn't
+// know this vault yet (Settings → Bridge → Add a bridge). Computed here from DEPLOYMENTS[0]: no network.
+let brCode = null; // Promise<{code, words_text}>, memory only
+function bridgeCodeView(host) {
+  const codeBox = h('p', { class: 'mono sb-code', id: 'br-code' }, '…');
+  const words = h('p', { class: 'compare-words', id: 'br-words' }, '…');
+  const copy = h('div', { class: 'action' });
+  host.append(
+    h('div', { class: 'card-head' }, h('h1', { id: 'card-h', tabindex: '-1' }, 'This bridge’s code')),
+    h('p', {}, `For a Names Wallet that doesn’t list this bridge yet: ${DEP.label}, vault ${shortHex(addr(DEP.vault))} on ${chainInfo(DEP.chainId).name}.`),
+    sbSteps(['Copy the code.', 'In your Names Wallet: Settings, Bridge, Add a bridge. Paste it.', 'Check the wallet shows these four words. If they differ, stop.'], 0),
+    h('section', { class: 'sb-out', 'aria-labelledby': 'br-h' },
+      h('h2', { id: 'br-h' }, 'Bridge code'),
+      codeBox,
+      copy,
+      h('div', { class: 'compare', role: 'group', 'aria-labelledby': 'br-words br-line' }, words, h('p', { class: 'compare-line', id: 'br-line' }, 'Your Names Wallet shows the same four words once it has checked the code on Sepolia and on the bridge test network.')),
+      more('Details',
+        h('p', {}, 'The code holds only public facts: the vault, its gate and deposit desk, the bridge program and its Config on the bridge test network, the wrapped tokens and their amounts, the proof image ids, and the network address the wallet reads.'),
+        h('p', {}, 'A bridge code decides where deposits go. Take it only from the bridge’s own page; the same code and words are on ', h('a', { href: 'about/verify/' }, 'Verify this page'), '.')),
+    ),
+  );
+  if (!brCode) brCode = bridgeCodeOf(DEP);
+  brCode.then((c) => {
+    if (!c) {
+      codeBox.textContent = 'This deployment has no bridge code.';
+      return;
+    }
+    codeBox.textContent = c.code;
+    words.textContent = c.words_text;
+    copy.replaceChildren(copyButtonPrimary(c.code, 'Copied. Paste it in your Names Wallet: Settings, Bridge.'));
+  }, (e) => (codeBox.textContent = `The code can’t be made: ${e.message}`));
+}
+
+function copyButtonPrimary(text, said = 'Copied. Paste it in your Names Wallet.') {
   const b = h('button', { type: 'button', class: 'btn btn-primary btn-wide' }, 'Copy the code');
   b.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(text);
       b.textContent = 'Copied';
-      say('Copied. Paste it in your Names Wallet.');
+      say(said);
     } catch {
       b.textContent = 'Select the code and copy it';
     }
@@ -1550,8 +1600,9 @@ function renderSendBack(s) {
     side.hidden = true;
   }
   if (sb.kind === 'withdraw') withdrawView(s, host);
+  else if (sb.kind === 'bridge') bridgeCodeView(host);
   else releaseView(s, host);
-  document.title = sb.kind === 'withdraw' ? 'Bridge to Ethereum · Names Wallet (Sepolia testnet)' : `${sb.check?.wait ? `Releasable at ${fmtTime(sb.check.wait.until)}` : 'Release'} · Names Wallet (Sepolia testnet)`;
+  document.title = sb.kind === 'withdraw' ? 'Bridge to Ethereum · Names Wallet (Sepolia testnet)' : sb.kind === 'bridge' ? 'This bridge’s code · Names Wallet (Sepolia testnet)' : `${sb.check?.wait ? `Releasable at ${fmtTime(sb.check.wait.until)}` : 'Release'} · Names Wallet (Sepolia testnet)`;
 }
 
 // ------------------------------------------------------------------ render
