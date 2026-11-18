@@ -8,10 +8,19 @@ by the light client.** The bridge proved the vault's `isDepositRoot[root] = 1` (
 `eth_getProof` under Sepolia block 12158083, an execution anchor that the RFP-021 light-client instance had
 finalized from Sepolia's own sync-committee signatures in a public update (LEZ block 23406). The operator's
 attester, the root source of v2–v5, was refused by this bridge (LEZ block 23349, reverted). Nothing was proved
-anywhere: every LEZ step is a public transaction the sequencer executes.
+anywhere for that claim: every LEZ step of it is a public transaction the sequencer executes.
 
-What this does not remove: the team still runs the only sequencer, the chain operator is the v6 bridge's LEZ
-admin and freezer (as for v5), and **no updater serves v6, so v6 has no exit running today** (Limits).
+**Both round trips then closed on Sepolia (Exits, below).** Round trip 1: that public claim, a public burn (LEZ
+23555) and a release to a never-used address (Sepolia block 12159544). Round trip 2: a second deposit claimed
+**privately** under a light-client anchor (LEZ 23909) and burned privately (LEZ 24073), both with real proofs,
+then released by a relayer that is neither depositor nor claimer (Sepolia block 12159545). One state update with
+a real proof covered both burns and was accepted through the v6 gate (Sepolia block 12159474). The vault holds
+nothing after it.
+
+What this does not remove: the team still runs the only sequencer; the chain operator is the v6 bridge's LEZ
+admin and freezer (as for v5); which LEZ blocks count on the way out is still the word of the one submitter key
+at the v6 gate (v6 changes the inbound side only); and **no standing updater serves v6**: its one update was
+run once, by hand (Limits).
 
 State labels (`DESIGN.md`): **(1) run on a chain**: Sepolia (vault, desk, deposit) and **the team's public
 demo chain** (LEZ v0.4.0-rc3, operator-run, `https://lez.nameswallet.app/`); the rehearsal ran on a
@@ -36,9 +45,9 @@ demo chain** (LEZ v0.4.0-rc3, operator-run, `https://lez.nameswallet.app/`); the
 - **The vault:** v5's design and settings exactly. Only what the root source forces differs: `zoneId`
   (the source id of the light-client instance), `programId` (the new bridge header), the genesis G2 state
   (a new bridge), and so the `cfgId` and the addresses. Outbound keeps v5's design (TrustedTip updates
-  through an `UpdateGatedVerifier` with the same submitter). **No updater serves v6**: the outbound updater
-  stays on v5 (one update about every two hours), so v6 has no exit running today; a v6 burn would wait for
-  a v6 update.
+  through an `UpdateGatedVerifier` with the same submitter). **No standing updater serves v6**: the outbound
+  updater stays on v5 (one update about every two hours); v6's one update (Exits) was a one-shot run by hand,
+  so a later v6 burn waits until someone runs another.
 
 ## Part 1: the light client across handoffs, public (live)
 
@@ -173,6 +182,64 @@ cast block 12158083 -f hash --rpc-url https://sepolia.gateway.tenderly.co   # 0x
 Run 2026-11-18 from a workstation: the five transactions came back in blocks 23408, 23343, 23349, 23263 and
 23406 (claim 7,099 bytes).
 
+## Exits: both round trips closed (2026-11-18)
+
+State label: **(1) run on a chain**: Sepolia and the team's public demo chain. The private claim and burn, the
+state update and both releases were **proved** (RISC Zero, in-process CPU prover, 4 threads, on a 16 GB desktop);
+the update and the releases were then wrapped to Groth16 on a GitHub-hosted x86 runner (three wrap runs,
+about 6 minutes each) and checked on chain by RISC Zero's verifier 3.1.0.
+
+| Step | Where | Block | Transaction | Notes |
+|---|---|---:|---|---|
+| RT1 public claim (above) | LEZ | 23408 | `0d8ea4315cc86d667c99a9e66d2848df36b2d51705942d6d3161c9ab8757d5b1` | under a light-client anchor |
+| RT1 public burn, 0.01 wETH (v6) | LEZ | 23555 | `444c4bab7abffffe53fecb647c38838922167f118774d36ec46099802dcbc909` | exit `0xf8c841a7…6aa8`, max relay fee 0 |
+| RT2 second deposit, 0.01 ETH + 0.3% through the desk, leaf 1, for a fresh private account | Sepolia | 12158510 | `0x62936d6c2cd0461bb9eb0ea2307e1fbe42effba52bb2d9a1a3973787d25c3469` | |
+| RT2 **private claim** (`claim-attested` under a light-client anchor; the bridge float's sponsor paid the fee) | LEZ | 23909 | `3f377285ba07a052f839816395c48ef5468314b8e381cbf5a51e9688d4a53bce` | proved in 703 s |
+| RT2 **private burn** toward a fresh Sepolia address | LEZ | 24073 | `aad7e6577f111995a39318a8e862184670e4f26ebefbf31de7cd607afe5c5be6` | proved in 651 s; exit `0x400ad3dd…9dd1`, max relay fee 1e14 |
+| **State update** over LEZ 23274..24079 (both burns), v5's update image `0x098f…3017` from the v6 genesis state | proved | — | — | 53 po2-19 segments, 19,471,924 user cycles, whole script 5,468 s |
+| `submitUpdate` through the v6 gate `0x4aFB8eeCd80B95e79D9280D462D13dA14f9aAC1B`, from the submitter `0xB81aa37D80F8a9588ce9B09B6d6145D1FC4095f4` | Sepolia | 12159474 | `0x71fbea8aba6542d3941271569e1b928297c931ffa4c4f3b15af9cfd83718db68` | status 1, 1,033,511 gas; the vault's `exitCount()` = 2 |
+| RT1 **release**, exit 0 (one-segment proof, about 28 s), to `0xEdAA1aB63a7583EC3eAc11e97467Da707f97E30d` | Sepolia | 12159544 | `0x5e95383fe16f458776ea7ea1ac7758289c8eccf71ad3c61a3fa4c4e6bbc1c15b` | recipient 0 → 10,000,000,000,000,000 wei, relay fee 0; the recipient address had never been used (nonce 0) |
+| RT2 **release**, exit 1 (one-segment proof, about 28 s), to `0xC2DcC9edd83B81aCe6491a99CA39be52dC291931` | Sepolia | 12159545 | `0x5ac9b30be34dc89e312284adbb183d22c50ae4728ef34e30716e3afe881f7ba9` | recipient 0 → 9,950,000,000,000,000 wei; relay fee 50,000,000,000,000 wei (0.5%, on the vault's menu) to the relayer `0xbBe4ef82922df8B13D5888b9865E05b2eebF0A69`, the settlement service's address, which sent both releases; recipient nonce 0 |
+
+- **Vault after:** ETH balance 0. Two deposits, two claims, two burns, two releases.
+- **What links what on chain.** Round trip 1 is public end to end. In round trip 2:
+  - the claim and the burn are private LEZ transactions; their public outputs are a nullifier, a one-time
+    recipient and an exit commitment;
+  - the release pays a fresh address, and a relayer that is neither the depositor nor the claimer sent it.
+
+**How the steps ran:**
+- The private proofs: `public-demo/prove/prove-private-v6.sh claim|burn` (guard.sh, the build lock, 60% free
+  memory, one proof at a time).
+- The update: `prove-outbound-rc3.sh` with the pinned host and TrustedTip ELF, `--vault` checking `g2State()`
+  and `cfgId()` first.
+- The wraps: `public-demo/v6/v6-exit.py wrap`, the outbound updater's GitHub route.
+- The submit: `v6-exit.py submit`, from the v5 updater's own submitter key file, by path. It waits while the v5
+  updater is about to submit and while the key has a transaction pending.
+- The releases: `prove-release-rc3.sh`, then `v6-exit.py release`.
+- The conductor's runbook is `public-demo/v6/ROUNDTRIPS-RUNBOOK.md`.
+
+**Re-read (any machine, read only):**
+
+```sh
+S=https://sepolia.gateway.tenderly.co
+V6=0x95cea20e75d3B352B49d13cb0cDdC268a14C427e
+cast receipt 0x71fbea8aba6542d3941271569e1b928297c931ffa4c4f3b15af9cfd83718db68 status --rpc-url $S   # submitUpdate: status true
+cast receipt 0x5e95383fe16f458776ea7ea1ac7758289c8eccf71ad3c61a3fa4c4e6bbc1c15b status --rpc-url $S   # release 0: status true
+cast receipt 0x5ac9b30be34dc89e312284adbb183d22c50ae4728ef34e30716e3afe881f7ba9 status --rpc-url $S   # release 1: status true
+cast call $V6 'exitCount()(uint64)' --rpc-url $S                                                       # 2
+cast call $V6 'counters(address,uint256)(uint64,uint64,uint64,uint64)' 0x0000000000000000000000000000000000000000 0 --rpc-url $S   # 2 2 2 2
+cast balance $V6 --rpc-url $S                                                                           # 0
+cast balance 0xEdAA1aB63a7583EC3eAc11e97467Da707f97E30d --block 12159544 --rpc-url $S                   # 10000000000000000
+cast balance 0xC2DcC9edd83B81aCe6491a99CA39be52dC291931 --block 12159545 --rpc-url $S                   # 9950000000000000
+# (read on 2026-11-18: the three receipts status true, exitCount 2, counters 2 2 2 2, vault balance 0)
+E=https://lez.nameswallet.app/
+rpc() { curl -s -H 'Content-Type: application/json' -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$1\",\"params\":$2}" $E; }
+for h in 444c4bab7abffffe53fecb647c38838922167f118774d36ec46099802dcbc909 3f377285ba07a052f839816395c48ef5468314b8e381cbf5a51e9688d4a53bce \
+         aad7e6577f111995a39318a8e862184670e4f26ebefbf31de7cd607afe5c5be6; do
+  rpc getTransaction "[\"$h\"]" | python3 -c 'import sys,json,base64;t,b=json.load(sys.stdin)["result"];print(sys.argv[1][:8],"block",b,"bytes",len(base64.b64decode(t)))' $h
+done   # 23555 (671 bytes, public); 23909 and 24073 (253,250 and 254,948 bytes, private, the receipt included)
+```
+
 ## Rehearsal (local LEZ chain + anvil; `rehearsal.log`)
 
 `public-demo/v6/rehearse-v6.sh`, stages `chains lc lc-finality bridge eth claim g2`:
@@ -218,10 +285,14 @@ vault (`zoneId`, `lezChainId`, `g2State` read back; `cfgId` equal to the CLI's),
 - **Weak subjectivity:** if the follower stops for more than about 6 days, the instance cannot be updated
   again; a new instance and a new bridge would be needed (the bridge's source is fixed at init).
 - **Liveness:** the follower is one process started by hand (no restart after a reboot).
-- **No updater serves v6, so v6 has no exit running today.** The outbound updater stays on v5 (one update
-  about every two hours). A v6 burn would wait for a v6 update; the executor run above shows v5's image can
-  make one.
+- **No standing updater serves v6.** Its one update was a one-shot run by hand; the outbound updater stays on v5
+  (one update about every two hours). A later v6 burn waits until someone runs another v6 update.
+- **Outbound trust is unchanged from v5:** which LEZ blocks count is the word of the one submitter key at the v6
+  gate (the TrustedTip image proves the bridge's logic over the blocks it is given, not that they are final).
+  v6 changes the inbound side only.
 - **What is still trusted:** the team runs the only sequencer, and the chain operator is the v6 bridge's LEZ
   admin and freezer (as for v5). No attester key is involved in v6 claims.
+- **Private transactions in the update:** the TrustedTip image takes private claims and burns on the sequencer's
+  word (feature `unchecked-private`, as for v5); the sequencer itself verified their proofs.
 - **Not yet shown on the public chain:** a committee rotation (due after 19:32:48 UTC today; see Part 1).
 - Reviewed by nobody beyond this run; not audited.
