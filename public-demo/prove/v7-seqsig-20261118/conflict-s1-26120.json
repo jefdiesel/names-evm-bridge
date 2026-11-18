@@ -1,0 +1,21 @@
+{
+  "blockHash": "0x66db93276c5cf9eaaadf041df4193bbeb209ddef5252aaef816e47b1525c1597",
+  "blockId": 26120,
+  "cfgId": "0x7ef9153b69a348ff39e3daf7b893f1b775513489c71c7331d88b4a5cf30652d5",
+  "key": "0x05d1ef9d5bad8315f0edd5289f74ab82a0d7d6bd3532fb205585cdd0bbd01076",
+  "message": "0xe645e568eb2bde202cac9820cf41798c04e3aaab0305de722a43bab8cd4b2725",
+  "prevHash": "0x4d99c122dbb1f8c6bbdb82a083d2a15b6193bd90ff6b91a708f62274729ff1bd",
+  "prevId": 24720,
+  "replay": {
+    "blocks": [
+      24721,
+      26120
+    ],
+    "claims": 0,
+    "depositRootsUsed": 0,
+    "exits": 0,
+    "newState": "0xf4fa6b26826bb3c06bd42f25290544f708eec8728a451409d7554b7679fe1207",
+    "notChecked": "privacy receipts (taken on the sequencer's word) and public execution"
+  },
+  "sig": "0x4128ec020fdc058c1f97aaec83db5d26f6c5a36790dd5321c8f6f6dd777db1fb8b7eeb3879a4e4249657e5df3181b24e4133f6f49ee6c3c1e98f8cb586e4680c"
+}

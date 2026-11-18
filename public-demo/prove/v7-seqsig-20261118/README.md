@@ -11,6 +11,10 @@
 - **Paid:** the update was submitted by a key with no role at the gate (Sepolia block 12159910), finalized after the
   600 s window with no contest (12159962), and the release paid 0.01 ETH to an address never used before (12159991).
 - **Refused:** the same journal claiming only 1 of 3 signers was refused by the gate (`BadSignerBitmap`, read only).
+- **Ejected (later the same day):** a second update was submitted, then contested with a real evidence proof that one
+  of its two signers had also signed a different hash for the same block (made on purpose, with a test flag, by our
+  own key). The gate ejected that key and cancelled the update; the vault did not move. See "Equivocation on
+  Sepolia (2026-11-18)" below.
 
 v7 is v6's bridge with no single key on the way out. Inbound is v6's: deposit roots come from the RFP-021
 light-client instance `0xe4b7d26a…3600` of program `9Wb7sBxs…uhNR` on the team's public demo chain
@@ -33,7 +37,8 @@ transactions (no proof needed).
 
 Run by the team from the operator's runbook (`public-demo/v7/RUNBOOK-v7.md`, private). Every value below was read back
 on chain afterwards (commands under "Re-read"). Deviations: the claim came one follower cycle earlier than estimated;
-the optional reverted 1-of-3 transaction was not sent (a read-only call only); no equivocation on Sepolia (as planned).
+the optional reverted 1-of-3 transaction was not sent (a read-only call only); no equivocation on Sepolia during the
+round trip (as planned; it was run afterwards, on a second update: "Equivocation on Sepolia (2026-11-18)" below).
 
 **S0, before the deploy: a real seal of the update image.** The rehearsal's batch (local LEZ blocks 28..50, 2
 signatures) was proved with the canonical seq-sig ELF: 2,822,215 user cycles, 7 segments, 619.2 s of proving (627 s
@@ -91,8 +96,9 @@ Signer 3 (a laptop) stayed offline, as a third key may. Signer bitmap `11` (set 
 | The release proof (v5's release image, 1 segment, 29 s), wrapped (workflow run 44258503328, accepted) | | | |
 | **`release()`**: 0.01 ETH to `0x268b…f0be` (balance 0 → 10,000,000,000,000,000 wei; it has sent nothing, nonce 0); the vault's balance is 0 | 12159991 | `0x8744765abe02f5572638567a1ee5aa3d4c98ca8d3b0310a332f0beae098e0409` | 631,562 |
 
-Vault counters for ETH 0.01: deposits 1, claims 1, burns 1, releases 1. The gate: `ejected()` 0, `halted()` false,
-nothing pending. `VERSIONS.toml` `[deployments.v7]`: deployed, `g2_updates` 1.
+Vault counters for ETH 0.01: deposits 1, claims 1, burns 1, releases 1. The gate after the round trip: `ejected()` 0,
+`halted()` false, nothing pending (`ejected()` is 1 since the equivocation run below). `VERSIONS.toml`
+`[deployments.v7]`: deployed, `g2_updates` 1.
 
 ### Re-read (any machine, read only)
 
@@ -113,10 +119,11 @@ cast balance 0x268b1b3a2ecfa5bdcac2a8d53b58d0718e72f0be --rpc-url $R            
 # submit transaction's calldata): clear all but the lowest signer bit, then submit in a read-only call
 D=$(python3 -c 'import sys; j=bytes.fromhex(open("journal.hex").read().strip()[2:]); t=len(j)-256; b=int.from_bytes(j[t+96:t+128],"big"); print("0x"+(j[:t+96]+(b&-b).to_bytes(32,"big")+j[t+128:]).hex())')
 S=$(cat seal.hex)
-cast call $G 'submit(bytes,bytes)' $D $S --rpc-url $R                       # reverts 0x731ea350 = BadSignerBitmap()
+cast call $G 'submit(bytes,bytes)' $D $S --rpc-url $R                       # reverts 0x731ea350 = BadSignerBitmap() (since S1's ejection the unaltered journal does too: the pair at 12159909 is the control)
 cast call $G 'submit(bytes,bytes)' $D $S --rpc-url $R --block 12159909      # the same, at the block before the submit
 cast call $G 'submit(bytes,bytes)' $(cat journal.hex) $S --rpc-url $R --block 12159909   # 0x: the unaltered journal passed then
-cast call $G 'submit(bytes,bytes)' $(cat journal.hex) $S --rpc-url $R       # now reverts 0x3902a9c9 = StaleState(): the vault moved on
+cast call $G 'submit(bytes,bytes)' $(cat journal.hex) $S --rpc-url $R --block 12162505   # reverts 0x3902a9c9 = StaleState(): the vault moved on
+cast call $G 'submit(bytes,bytes)' $(cat journal.hex) $S --rpc-url $R       # now reverts 0x731ea350 = BadSignerBitmap(): one of its two signers (S1) was ejected later
 cast call 0x8c915b5071206C6E328BC18529586c513408aB3b 'verify(bytes,bytes32,bytes32)' $S \
   0x93c88f77e60ee5698849163ec51d6b8647e58df752984dcb15ca2f011c96955d 0x50712c9798df330eaf38061f9e983eebce1f599423a8cc28d14b941f9f5be3c2 --rpc-url $R   # 0x: accepted
 # LEZ side: [base64 transaction, block]
@@ -130,10 +137,113 @@ done
 
 Re-run 2026-11-18 from a workstation: the seven receipts came back with the blocks and gas above, status 1; the
 one-signer journal reverted `0x731ea350` at the latest block and at 12159909, the unaltered journal returned `0x` at
-12159909 and reverts `0x3902a9c9` (`StaleState()`) now; the update's seal (from the submit's calldata, 260 bytes) was accepted by the verifier
+12159909 and reverted `0x3902a9c9` (`StaleState()`) afterwards (re-checked at block 12162505; since S1's ejection at
+12162508 it reverts `0x731ea350` first, `BadSignerBitmap()`, re-run the same day); the update's seal (from the submit's calldata, 260 bytes) was accepted by the verifier
 (`0x`); the vault read `g2State` `0x319f231d…f936`, counters 1 1 1 1, balance 0; the recipient held
 10,000,000,000,000,000 wei with nonce 0; the four LEZ transactions came back in blocks 24635, 24715, 24717 and 24718
 (932, 29,275, 7,154 and 671 bytes).
+
+## Equivocation on Sepolia (2026-11-18)
+
+**Result.** On the same gate, after the round trip: a second update was staged, then contested with a real evidence
+proof that one of its two signers had also signed a different hash for the same LEZ block. The gate ejected that key
+for good and cancelled the update; the vault's state did not move and the gate was not halted.
+
+**How it was made (read this first).** All three keys are ours. The conflicting signature was made **on purpose**, by
+our own signer S1, with the test flag `seqsig attest --test-conflicting-hash` (it signs a given hash and writes no
+sign-once record; a signer without the flag refuses a second hash for the same block). The contest window is the
+10-minute test setting (`TEST_ONLY_SHORT_WINDOW`). This shows the gate's contest path with real proofs on Sepolia; it
+does not show a contester catching a dishonest signer it did not control.
+
+**The second update.** LEZ blocks 24721..26120 of the team's public demo chain (1,400 blocks, 2,822 transactions,
+none private, none reverted), from the vault's tip 24720 (hash `0x4d99c122dbb1f8c6bbdb82a083d2a15b6193bd90ff6b91a708f62274729ff1bd`)
+to block 26120 (hash `0xc2e59496a178bcb379fcfe7143b109ac7ed9692a633eaa8973fc0ea5b4331aee`; both hashes as the public
+endpoint's `getBlock` returns them). Signer S1 (the build host, signer `0x05d1ef9d…1076`, set index 0) and signer S2
+(signer `0x6b4b81e4…52d6`, index 1) each replayed the range and signed block 26120 (`checkpoint-s1-26120.json`,
+`checkpoint-s2-26120.json` in this folder: the signer, its signature and the signed values). The update proof
+(owner-started; in-process CPU prover under `guard.sh`, 4 threads): 32,137,262 user cycles, 83 segments, 7,489 s wall,
+peak footprint 4,781 MB, verified natively; signer bitmap `11`, ejected mask 0 in the journal; journal digest
+`0xfdfded242eb2da4a8b1fa1c939633bc7d9e3e51becd335578baf5635dd3d6807` (`update2-journal.hex`, 576 bytes; its vault part
+`update2-vault-journal.hex`, digest `0xb5a6d76d…7bce`, the `journalDigest` in the gate's events), image
+`0x93c88f77…955d`. Wrapped to Groth16 on the public repository's `wrap-private.yml` (run 44330602862, wrap 164 s;
+`update2-seal.hex`); the verifier's `verify` accepted it read-only.
+
+**The conflicting signature.** S1 also signed, with the test flag, a different hash for the same (cfgId, tip 24720,
+block 26120): `0x66db93276c5cf9eaaadf041df4193bbeb209ddef5252aaef816e47b1525c1597`, the keccak256 of the text
+"v7 Sepolia equivocation demo 2026-11-18: a block 26120 that is not the chain's" (`conflict-s1-26120.json`). The
+evidence proof over that one checkpoint (the evidence image `0x9df4de66…d21d`; signer bitmap `1` = S1): 1,133,939 user
+cycles, 3 segments, 225 s wall, peak footprint 4,596 MB, verified natively; journal digest
+`0xed0c5de5d32c8fc9d3a83e282be00097402f527922bfc15765bc25247b9d95f8` (`evidence-journal.hex`, 224 bytes). Wrapped on
+`wrap-private.yml` (run 44308584650, wrap 244 s; `evidence-seal.hex`); `verify` accepted it read-only. The evidence
+proof and its wrap were made about three hours **before** the submit: we were both the equivocator and the contester,
+so the 10-minute window was never a race here.
+
+**Sepolia** (both from the deployer `0x37a46E73…321F`, which holds no role at the gate):
+
+| Step | Sepolia block | tx | Gas |
+|---|---:|---|---:|
+| **`submit()`** of the second update: staged, event `UpdateAccepted` (block 26120, signers `11`, finalizable at 1795018404) | 12162506 | `0x47f4cb216fd2e3939a3a916c99f5c5d43b1fee1c938ce9a1186878bc10e53eff` | 974,563 |
+| **`contest()`** with the evidence journal and seal, 24 s later: event `Equivocation` (ejected keys `1` = S1, cancelled true, block 26120, the chain's hash, the conflicting hash) | 12162508 | `0x0291308ed09e18de620482673237e06d70ecc9d90fce682e90ecfd2500e91b84` | 479,624 |
+
+After the contest (read back the same day): `ejected()` 1 (it was 0 at block 12162507), `activeSigners()` 2, `dead()`
+false, `halted()` false, `finalizableAt()` 0 (nothing pending; it was 1795018404 at block 12162507); `refuted(…)` is
+true for the cancelled checkpoint (24720 `0x4d99…f1bd` → 26120 `0xc2e5…1aee`); the vault's `g2State()` is still
+`0x319f231d0e47d5194a34a63cd7d2213cd495d042eaf3712f0547119aaa5ef936` and `exitCount()` still 1, as at block 12162505.
+Re-submitting the second update now reverts `0x731ea350` (`BadSignerBitmap()`: S1 is in its bitmap); at block
+12162505 the same call returned `0x`. `VERSIONS.toml` `g2_updates` stays 1.
+
+**What it does not show, and what it leaves.**
+- **Our keys, a test flag.** All three signers are ours; S1's second signature was made on purpose with
+  `--test-conflicting-hash`, which skips the sign-once record. Nobody dishonest was caught.
+- **A test window.** 600 s (`TEST_ONLY_SHORT_WINDOW`). The evidence was ready before the submit; a contester starting
+  cold would need to prove (225 s here) and wrap (244 s here, plus the queue) inside the window.
+- **S1 is ejected for good on this gate.** S2 and S3 can still update: 2 active keys = the threshold, so one more
+  ejection would kill the gate (`dead()` true). The set cannot be changed without a new gate.
+- **No stake was slashed.** The keys are stand-ins, not staked sequencer keys, and LEZ has no evidence-based slashing
+  (we proposed it upstream: logos-blockchain/logos-execution-zone issue #1130).
+- **The cancelled checkpoint is refuted on the gate:** that exact update (24720 → 26120 with that hash) cannot be
+  submitted again; a later update from tip 24720 has to end at a block other than 26120.
+- **Halting** (a conflicting quorum) is still shown on anvil only (the `seq-sig` record).
+
+### Re-read (any machine, read only; from this folder)
+
+```sh
+R=https://sepolia.gateway.tenderly.co; G=0x5E891d52eB9a729feCFDd9051685FDeaCd9F0FaE; V=0x4D7B360cf385d3477F1A67c1AEdEB6C17c26d23E
+for t in 0x47f4cb216fd2e3939a3a916c99f5c5d43b1fee1c938ce9a1186878bc10e53eff 0x0291308ed09e18de620482673237e06d70ecc9d90fce682e90ecfd2500e91b84; do
+  cast receipt $t --rpc-url $R --json | python3 -c 'import json,sys;r=json.load(sys.stdin);print(int(r["blockNumber"],16),int(r["gasUsed"],16),r["status"],r["to"])'
+done   # 12162506 974563 0x1 the gate; 12162508 479624 0x1 the gate
+# UpdateAccepted(digest, newState, blockId, blockHash, signers, finalizableAt), then
+# Equivocation(digest, ejectedKeys, cancelled, blockId, blockHash, conflictingHash): one 32-byte word per field, in hex
+# without leading zeros (6608 = block 26120, 3 = signers 11, 6afdcea4 = 1795018404)
+cast logs --from-block 12162506 --to-block 12162508 --address $G --rpc-url $R --json | python3 -c '
+import json,sys
+for l in json.load(sys.stdin):
+    d=l["data"][2:]; print(int(l["blockNumber"],16), l["topics"][0][:10], [d[i:i+64].lstrip("0") or "0" for i in range(0,len(d),64)])'
+cast call $G 'ejected()(uint64)' --rpc-url $R                           # 1 (bit 0 = S1)
+cast call $G 'ejected()(uint64)' --rpc-url $R --block 12162507          # 0, before the contest
+cast call $G 'activeSigners()(uint256)' --rpc-url $R                    # 2
+cast call $G 'dead()(bool)' --rpc-url $R; cast call $G 'halted()(bool)' --rpc-url $R   # false, false
+cast call $G 'finalizableAt()(uint256)' --rpc-url $R                    # 0: nothing pending
+cast call $G 'finalizableAt()(uint256)' --rpc-url $R --block 12162507   # 1795018404, while the second update was pending
+cast call $G 'refuted(bytes32)(bool)' $(cast keccak $(cast abi-encode 'f(uint256,bytes32,uint256,bytes32)' 24720 \
+  0x4d99c122dbb1f8c6bbdb82a083d2a15b6193bd90ff6b91a708f62274729ff1bd 26120 0xc2e59496a178bcb379fcfe7143b109ac7ed9692a633eaa8973fc0ea5b4331aee)) --rpc-url $R   # true
+cast call $V 'g2State()(bytes32)' --rpc-url $R; cast call $V 'g2State()(bytes32)' --rpc-url $R --block 12162505   # both 0x319f231d…f936
+cast call $V 'exitCount()(uint64)' --rpc-url $R                         # 1, as before
+H() { python3 -c 'import sys,hashlib;print("0x"+hashlib.sha256(bytes.fromhex(open(sys.argv[1]).read().strip()[2:])).hexdigest())' $1; }
+cast call 0x8c915b5071206C6E328BC18529586c513408aB3b 'verify(bytes,bytes32,bytes32)' $(cat update2-seal.hex) \
+  0x93c88f77e60ee5698849163ec51d6b8647e58df752984dcb15ca2f011c96955d $(H update2-journal.hex) --rpc-url $R      # 0x: accepted
+cast call 0x8c915b5071206C6E328BC18529586c513408aB3b 'verify(bytes,bytes32,bytes32)' $(cat evidence-seal.hex) \
+  0x9df4de66eb874e5c8570a5e4f4332b3a505de9e80c0f7dc8ea67f77daba2d21d $(H evidence-journal.hex) --rpc-url $R     # 0x: accepted
+cast call $G 'submit(bytes,bytes)' $(cat update2-journal.hex) $(cat update2-seal.hex) --rpc-url $R --block 12162505   # 0x: it passed then
+cast call $G 'submit(bytes,bytes)' $(cat update2-journal.hex) $(cat update2-seal.hex) --rpc-url $R   # now reverts 0x731ea350 = BadSignerBitmap()
+cast keccak "v7 Sepolia equivocation demo 2026-11-18: a block 26120 that is not the chain's"         # 0x66db9327…1597, the conflicting hash
+# LEZ: block 26120's real hash, from the public endpoint (id, then the hash)
+curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"getBlock","params":[26120]}' https://lez.nameswallet.app/ \
+  | python3 -c 'import sys,json,base64;b=base64.b64decode(json.load(sys.stdin)["result"]);print(int.from_bytes(b[:8],"little"),"0x"+b[40:72].hex())'
+```
+
+Run 2026-11-18 from a workstation: every value above came back as stated; the two receipts' calldata hold this
+folder's journals and seals.
 
 ## What v7 changes against v6
 
@@ -296,8 +406,8 @@ In order:
   they are not LEZ sequencer keys (LEZ v0.4.0-rc3 headers carry no signature). All three read the same endpoint of
   the one sequencer: they spread custody of the signing keys, not of the chain's truth.
 - **A test window.** 600 s is allowed only by `TEST_ONLY_SHORT_WINDOW = true`, visible on chain; the gate's normal
-  minimum is 6 h. 10 minutes is too short for a contester who must prove evidence (about 1.2M cycles, 2 segments) and
-  wrap it on a hosted runner.
+  minimum is 6 h. 10 minutes is too short for a contester who must prove evidence (about 1.1M cycles, 3 segments and
+  225 s on Sepolia's run) and wrap it on a hosted runner (244 s there, plus the queue).
 - **Still trusted:** the team runs the only sequencer; private claims and burns are taken on the sequencer's word (as
   in v5 and v6: the signers check neither privacy receipts nor public execution); the chain operator is the bridge's
   LEZ admin and freezer, and the deployer is the vault's admin and freezer.
@@ -306,5 +416,7 @@ In order:
 - **Finality is depth:** 20 blocks under the head (about 5 min); the chain has no Bedrock finality.
 - **The update image is not reproducible across build directories**; the canonical ELF is kept on the build host and
   pinned by hash (`public-demo/v7/BUILD-seqsig.txt`, `VERSIONS.toml`).
-- **Equivocation and halting are shown on anvil only** (the rehearsal below and the `seq-sig` record), not on Sepolia.
+- **Equivocation ran on Sepolia with our own keys and a test-flag signature** ("Equivocation on Sepolia" above): S1 is
+  ejected for good on this gate, so S2 and S3 must both sign every later update. **Halting** (a conflicting quorum) is
+  shown on anvil only (the `seq-sig` record).
 - Nothing is audited. All funds are test funds.

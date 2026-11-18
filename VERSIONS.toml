@@ -481,7 +481,7 @@ desk = { v = "0x9b4040A990aEe283F1DE5451fFBaEE3679507fb5", src = "Sepolia block 
 build_commit = { v = "3c767ef176f858711f2db6983b8aca0f52c5b38c", src = "public-demo/v7/BUILD-seqsig.txt (the canonical build of seqsig and the two seq-sig guests)" }
 update_image = { v = "0x93c88f77e60ee5698849163ec51d6b8647e58df752984dcb15ca2f011c96955d", elf_sha256 = "08e7bf52611da14bfbbd0d4fbd6904641fdae11ac7ad69c75b1083f4c763442c", risc0_zkvm = "3.1.0", src = "public-demo/v7/BUILD-seqsig.txt (outbound_guest_seqsig.bin; circuit-id recomputed from the ELF)" }
 release_image = { v = "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4", elf_sha256 = "2353c51e8366f2379a0acf703257a15a6eff449575e17b12e55e6700ea102d8a", risc0_zkvm = "3.0.5", src = "= v5/v6 (public-demo/v4/BUILD-outbound.txt RELEASE_IMAGE_ID)" }
-g2_updates = { v = 1, src = "finalize() tx 0xfd128bcd…b889, Sepolia block 12159962: g2State 0x319f231d…f936 (public-demo/prove/v7-seqsig-20261118/README.md)" }
+g2_updates = { v = 1, src = "finalize() tx 0xfd128bcd…b889, Sepolia block 12159962: g2State 0x319f231d…f936 (public-demo/prove/v7-seqsig-20261118/README.md); a second update, staged in block 12162506, was cancelled by a contest in 12162508" }
 genesis_g2_state = { v = "0x49a2f8786fd7d4b7caa0e59c1c974c84917b5e0b977a8c852eb42dab6b5ffa4e", src = "seqsig/outbound_host genesis --block 24616 --bridge CdijfhGnf1NjyCvYTZcGijQZzZ6soNJQ75Piex1ZTM93 (the tip before InitializeAttested), 2026-11-18" }
 program_id = { v = "0xacd8a7ecb56e98a0ed1ad2dc966511529e42fe5525c46e2c6ec024a3023303f2", src = "v7-public.sh ids, bridge CdijfhGnf1NjyCvYTZcGijQZzZ6soNJQ75Piex1ZTM93" }
 zone_id = { v = "0x21617f2f28040bbbaa8eed893bd78b65c2e5056ab7f55fda7b3f736a97c03fff", src = "= v6: lez-bridge source-id of the light-client instance 0xe4b7d26a…3600 (program 9Wb7sBxs…uhNR, slot 83)" }
@@ -504,6 +504,9 @@ signers = { v = 3, src = "the owner's decision (2026-11-18)" }
 threshold = { v = 2, src = "the owner's decision (2026-11-18); the gate needs n/2 < T <= n - 1" }
 contest_window = { v = 600, src = "the owner's decision (2026-11-18)" }
 test_only_short_window = { v = true, src = "forced by a 600 s window (the gate's MIN_CONTEST_WINDOW is 6 h): public-demo/prove/v7-seqsig-20261118/README.md" }
+# Gate state (not checked by check-versions.mjs): ejected() = 1 (key index 0, S1) since the contest of 2026-11-18, Sepolia
+# block 12162508, tx 0x0291308e…1b84 (public-demo/prove/v7-seqsig-20261118/README.md, "Equivocation on Sepolia");
+# activeSigners() 2 = threshold; the second update was cancelled, so g2_updates stays 1.
 kind_text = { v = "seq-sig: RISC Zero verifies every proof; an update needs THRESHOLD of SIGNERS keys over its LEZ end block (in the proof), anyone submits; contest window: equivocators ejected, two quorums halt", src = "KIND() of vault/src/SeqSigGate.sol" }
 
 [deployments.v7.roles.lez_chain]
