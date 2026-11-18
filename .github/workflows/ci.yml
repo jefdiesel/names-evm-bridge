@@ -22,6 +22,18 @@ jobs:
           persist-credentials: false
       - run: lez-bridge/scripts/test-pipe-readers.sh
 
+  # The public-network rows of docs/EVIDENCE.md, replayed from the committed answers
+  # (docs/evidence-answers/): no network. Non-blocking; a reviewer runs the live check without --offline.
+  evidence:
+    name: Evidence re-check (scripts/verify-evidence.sh --offline, non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: scripts/verify-evidence.sh --offline docs/evidence-answers
+
   # VERSIONS.toml against every Cargo.lock/Cargo.toml, the deployment registries, the pinned
   # values in docs and scripts, and its own records (selector vs verifier, control roots, known-bad
   # versions, genesis G2 state). Offline; the on-chain mode (--onchain) runs before a deploy.

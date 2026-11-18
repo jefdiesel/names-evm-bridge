@@ -8,6 +8,8 @@ Nothing here ran on a Logos network: LEZ testnet 0.4 is not live. "Our public ch
 
 ## On public networks
 
+Re-check: `scripts/verify-evidence.sh` reads every row below back from public endpoints (Sepolia JSON-RPC, our public chain, the deposit page), read only, with bash, curl and python3 in about a minute: each transaction's status, block, recipient and date, the vaults' and gates' fixed values, the committed Groth16 seals through RISC Zero's verifier, and both light-client stores' head slot and period. One PASS or FAIL line per check, tagged with its row. `--offline docs/evidence-answers` replays the answers saved on 2026-11-18 without a network. Expected values and the record each comes from: `docs/evidence-checks.json`.
+
 | What | Where | Proofs | Record |
 |---|---|---|---|
 | Round trip: deposit, relayed claim, burn, state update, release | Sepolia vault v4 + our public chain, 2026-11-15 | real | deposit Sepolia block 12142034; update accepted in block 12142209; [release paid](https://sepolia.etherscan.io/tx/0x8b39bdc7df743f9b6bb23b90866586b02908e64b0d06beaa88e5d1820d74c7bb) (block 12142503); second update block 12143000. Re-check: [docs/VERIFY-ROUND-TRIP.md](https://github.com/jefdiesel/names-evm-bridge/blob/main/docs/VERIFY-ROUND-TRIP.md); receipts in `public-demo/prove/receipts/` |
@@ -48,4 +50,4 @@ All of these are ordinary public transactions on real Sepolia data unless the ro
 ## Reviews and tests
 
 - Internal security review, 2026-11-14, by AI agents in separate sessions, not a third-party audit: one critical, two high and several medium issues; all fixed in code except one medium, partly fixed. [Write-up](https://github.com/jefdiesel/names-evm-bridge/blob/main/research/security-review-2026-11-14.md).
-- CI on every push to this repository: the vault suite, the LEZ program suites, a version-alignment check and a script check. Runs: [Actions](https://github.com/jefdiesel/names-evm-bridge/actions).
+- CI on every push to this repository: the vault suite, the LEZ program suites, a version-alignment check, a script check and a replay of the saved evidence answers (`scripts/verify-evidence.sh --offline`, non-blocking). Runs: [Actions](https://github.com/jefdiesel/names-evm-bridge/actions).
