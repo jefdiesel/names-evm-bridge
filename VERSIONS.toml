@@ -1058,16 +1058,19 @@ private = true
 file = "public-demo/prove/prove-seqsig-rc3.sh"
 re = 'IMAGE_UPDATE=\$\{IMAGE_UPDATE:-(0x[0-9a-f]{64})\}'
 value = "deployments.v7.update_image"
+private = true
 
 [[pin]]
 file = "public-demo/prove/prove-seqsig-rc3.sh"
 re = 'ELF_UPDATE_SHA=\$\{ELF_UPDATE_SHA:-([0-9a-f]{64})\}'
 value = "deployments.v7.update_image.elf_sha256"
+private = true
 
 [[pin]]
 file = "public-demo/prove/prove-seqsig-rc3.sh"
 re = 'IMAGE_EVIDENCE=\$\{IMAGE_EVIDENCE:-(0x[0-9a-f]{64})\}'
 value = "deployments.v7.gate.evidence_image"
+private = true
 
 [[pin]]
 file = "public-demo/v7/BUILD-seqsig.txt"
