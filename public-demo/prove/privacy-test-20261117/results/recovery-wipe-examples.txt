@@ -1,0 +1,56 @@
+== main-00
+BEFORE (ls -laR; owner, group and date columns removed)
+total 144
+drwx------        160 16:20  .
+drwx------       1376 15:40  ..
+drwxr-xr-x         96 16:20  bridge-client
+-rw-------      66417 16:20  storage.json
+-rw-r--r--        290 15:39  wallet_config.json
+
+<run>/wallets/main-00/bridge-client:
+total 10080
+drwxr-xr-x         96 16:20  .
+drwx------        160 16:20  ..
+-rw-------    5160044 16:20  8fe2a13b7acf12bd84587dab443474d592c9fedd83dacf342f48e3b749d344e7.json
+
+AFTER the delete
+total 0
+drwx------         64 16:23  .
+drwx------       1376 16:23  ..
+-- restore-keys output
+Cleanup of tree at depth 3
+Cleanup of tree at depth 2
+Cleanup of tree at depth 1
+Cleanup of tree at depth 3
+Cleanup of tree at depth 2
+Cleanup of tree at depth 1
+Public tree cleaned up
+Private tree cleaned up
+== c1_public-00
+BEFORE (ls -laR; owner, group and date columns removed)
+total 80
+drwx------        160 15:43  .
+drwx------       1376 16:24  ..
+drwxr-xr-x         96 16:23  bridge-client
+-rw-------      34687 15:39  storage.json
+-rw-r--r--        290 15:39  wallet_config.json
+
+<run>/wallets/c1_public-00/bridge-client:
+total 11328
+drwxr-xr-x         96 16:23  .
+drwx------        160 15:43  ..
+-rw-------    5798990 16:23  8fe2a13b7acf12bd84587dab443474d592c9fedd83dacf342f48e3b749d344e7.json
+
+AFTER the delete
+total 0
+drwx------         64 16:24  .
+drwx------       1376 16:24  ..
+-- restore-keys output
+Cleanup of tree at depth 3
+Cleanup of tree at depth 2
+Cleanup of tree at depth 1
+Cleanup of tree at depth 3
+Cleanup of tree at depth 2
+Cleanup of tree at depth 1
+Public tree cleaned up
+Private tree cleaned up

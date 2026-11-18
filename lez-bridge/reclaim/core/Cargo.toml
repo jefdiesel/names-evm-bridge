@@ -1,0 +1,20 @@
+[package]
+name = "reclaim_core"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# G4, the failsafe reclaim proof (research/failsafe-design.md §2.7, as built for the demo): the pure
+# statement shared by the zkVM guest (methods/reclaim_guest) and the native host (reclaim/host).
+# It reuses the formulas it must agree with instead of copying them: bridge_core (commitment,
+# deposit leaf, claim nullifier, nullifier PDA), claim_acc (the accumulator G2 keeps) and
+# outbound_core (the G2 state whose commitment the vault stores as g2State). None of those crates
+# is changed by this one.
+[dependencies]
+outbound_core = { path = "../../outbound/core" }
+claim_acc = { path = "../../outbound/claim-acc" }
+bridge_core = { path = "../../bridge" }
+lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+# Caret, as release_core: the guest pins its own version in its lock.
+risc0-zkvm = { version = "3.0.5", default-features = false, features = ["std"] }
+borsh = { version = "1.5.7", features = ["derive"] }

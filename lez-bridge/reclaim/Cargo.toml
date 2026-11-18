@@ -1,0 +1,15 @@
+# G4 (the failsafe reclaim proof): reclaim/core is the statement, reclaim/host the EXECUTOR-ONLY
+# runner, tests and cross-language fixture writer. Its own workspace (excluded from lez-bridge's by
+# its own [workspace] table), like release/: the host needs risc0-zkvm's "prove" feature for the
+# in-process executor (ExecutorImpl), and adding members to the outbound or release workspaces would
+# change locks those pinned images were built from. Nothing here proves.
+[workspace]
+resolver = "3"
+members = ["core", "host"]
+
+# Same keccak patch as the bridge workspace: core links bridge_core (lee_core).
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
+
+[profile.release]
+opt-level = 3

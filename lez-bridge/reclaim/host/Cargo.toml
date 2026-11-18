@@ -1,0 +1,29 @@
+[package]
+name = "reclaim_host"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# EXECUTOR ONLY: runs the G4 guest (methods/reclaim_guest) in RISC Zero's in-process executor and
+# checks it against reclaim_core natively; builds a reclaim's input from a deposit master secret
+# file, the vault's deposit leaves and the final G2 state the outbound host saved; writes the
+# cross-language fixture vault/test/fixtures/ReclaimVector.sol. No prover call exists in this
+# crate; "prove" is only what exposes ExecutorImpl.
+[dependencies]
+reclaim_core = { path = "../core" }
+outbound_core = { path = "../../outbound/core" }
+claim_acc = { path = "../../outbound/claim-acc" }
+bridge_core = { path = "../../bridge" }
+bridge_client = { path = "../../client" }
+lee_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.4.0-rc3" }
+risc0-zkvm = { version = "=3.1.0", features = ["prove"] }
+borsh = { version = "1.5.7", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+anyhow = "1"
+
+[build-dependencies]
+risc0-build = "=3.0.7"   # what risc0-zkvm 3.1.0 requires (^3.0.7)
+
+[package.metadata.risc0]
+methods = ["../../methods/reclaim_guest"]

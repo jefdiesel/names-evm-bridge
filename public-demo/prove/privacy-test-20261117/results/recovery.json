@@ -1,0 +1,966 @@
+{
+ "results": {
+  "main-00": {
+   "kind": "private",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "main-01": {
+   "kind": "private",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "main-02": {
+   "kind": "private",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "main-03": {
+   "kind": "private",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "main-04": {
+   "kind": "private",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "main-05": {
+   "kind": "private",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "main-06": {
+   "kind": "private",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "main-07": {
+   "kind": "private",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "main-08": {
+   "kind": "private",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "main-09": {
+   "kind": "private",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "c1_public-00": {
+   "kind": "public",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "c1_public-01": {
+   "kind": "public",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "c1_public-02": {
+   "kind": "public",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "c1_public-03": {
+   "kind": "public",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  },
+  "c1_public-04": {
+   "kind": "public",
+   "deposits_found": 3,
+   "deposits_expected": 3,
+   "exits_found": 2,
+   "exits_expected": 2,
+   "extra": [],
+   "got_deposits": [
+    [
+     0,
+     "claimed"
+    ],
+    [
+     1,
+     "claimed"
+    ],
+    [
+     2,
+     "claimable"
+    ]
+   ],
+   "got_exits": [
+    [
+     0,
+     "released"
+    ],
+    [
+     1,
+     "unreleased"
+    ]
+   ],
+   "dir_before_files": 3,
+   "dir_after_files": 0
+  }
+ },
+ "completed": {
+  "main-00": {
+   "claim2": true,
+   "release_tx": "0xaed7a2dbc72ba517a60f9f825a4297b8a3b923abf45cd7f478b6f48ed51e2109",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "main-01": {
+   "claim2": true,
+   "release_tx": "0xbd8c2a03024dd5d150cc6850296b7a41d73bad627bc565d0d4d39302084ec46b",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "main-02": {
+   "claim2": true,
+   "release_tx": "0xc1497c5f8487af8754defb3b94aa7686d44e1df130a98577a07faec036fc7bd7",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "main-03": {
+   "claim2": true,
+   "release_tx": "0x00c9acd83f1f00a8abc578c1e517503b344a81c264b9bcc23937777fe5a2ad3b",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "main-04": {
+   "claim2": true,
+   "release_tx": "0x1651868265614bacdd1c4e98d2f3067a6b121737cfb67a4843de4468ac0e9bfc",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "main-05": {
+   "claim2": true,
+   "release_tx": "0x6bdefded954c4164973f912d7665d393a3369dacbb82d326ea1a1026e29e8ce8",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "main-06": {
+   "claim2": true,
+   "release_tx": "0x618721236d062adfafe8e46c37a0a2e6488e4c1fe3ff26c72e11ed5a4add1c7b",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "main-07": {
+   "claim2": true,
+   "release_tx": "0x54564b7873561aa3a701b3bb667ee6feef1bee334baaf10e112b664c521824ef",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "main-08": {
+   "claim2": true,
+   "release_tx": "0x06aa8202d0ad40fe3368d1fe5ac02018ab9a5074a5eb016414fa4cebde2cdf11",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "main-09": {
+   "claim2": true,
+   "release_tx": "0x8de0c25435e7ca48d716c37392584adca053a17b1a6b85552cd960445b4d7e79",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "c1_public-00": {
+   "claim2": true,
+   "release_tx": "0x5267a3300fb53b7bfb369ddac7afcf66d8cdfdeff0cd4e1acb256a2577cbda58",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "c1_public-01": {
+   "claim2": true,
+   "release_tx": "0x7b3736475239c88d771fc072a188c0b4c15f3568b665a50491f22f7292a89202",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "c1_public-02": {
+   "claim2": true,
+   "release_tx": "0xf0305a4670f03bc8e1bcf5749ee9afd8c5fc4b6c2dcc65ebcda3e19e31039138",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "c1_public-03": {
+   "claim2": true,
+   "release_tx": "0x766781647b31a4c54f635a8e5e644b866f621bb8f5cccb92420d5ba37d9d499f",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  },
+  "c1_public-04": {
+   "claim2": true,
+   "release_tx": "0x7b9bf1f7a0de10459cc43e5c14337c3170d446a230a2aef66ef9892f39f2d9af",
+   "after": {
+    "deposits": [
+     [
+      0,
+      "claimed"
+     ],
+     [
+      1,
+      "claimed"
+     ],
+     [
+      2,
+      "claimed"
+     ]
+    ],
+    "exits": [
+     [
+      0,
+      "released"
+     ],
+     [
+      1,
+      "released"
+     ]
+    ]
+   }
+  }
+ }
+}
