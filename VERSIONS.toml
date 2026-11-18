@@ -467,6 +467,72 @@ risc0_build = { v = "3.0.7", src = "risc0-zkvm 3.1.0 Cargo.toml (risc0-build 3.0
 [deployments.v6.roles.research]
 risc0_zkvm = { v = "3.0.5", src = "= lez_chain (they link lee_core)" }
 
+
+[deployments.v7]
+label = "Sepolia vault v7 (2026-11-18, branch v7-seqsig): v6's inbound (deposit roots from the RFP-021 light-client instance), withdrawals on 2 of 3 signer keys through a SeqSigGate (anyone submits; 600 s contest window)"
+status = "deployed"
+lez = "rc3"
+chain_id = 11155111
+web_id = "sepolia-v7"
+vault = { v = "0x4D7B360cf385d3477F1A67c1AEdEB6C17c26d23E", src = "Sepolia block 12159635, tx 0x03fb6e3a…1911 (vault/broadcast/SepoliaV7.s.sol), 2026-11-18" }
+vault_create_block = { v = 12159635, src = "the deploy receipt" }
+cfg_id = { v = "0x7ef9153b69a348ff39e3daf7b893f1b775513489c71c7331d88b4a5cf30652d5", src = "cfgId() read 2026-11-18; = lez-bridge cfg-id for this vault and bridge CdijfhGn…TM93" }
+desk = { v = "0x9b4040A990aEe283F1DE5451fFBaEE3679507fb5", src = "Sepolia block 12159647, tx 0x44e92497…3654, feeBps 30" }
+build_commit = { v = "3c767ef176f858711f2db6983b8aca0f52c5b38c", src = "public-demo/v7/BUILD-seqsig.txt (the canonical build of seqsig and the two seq-sig guests)" }
+update_image = { v = "0x93c88f77e60ee5698849163ec51d6b8647e58df752984dcb15ca2f011c96955d", elf_sha256 = "08e7bf52611da14bfbbd0d4fbd6904641fdae11ac7ad69c75b1083f4c763442c", risc0_zkvm = "3.1.0", src = "public-demo/v7/BUILD-seqsig.txt (outbound_guest_seqsig.bin; circuit-id recomputed from the ELF)" }
+release_image = { v = "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4", elf_sha256 = "2353c51e8366f2379a0acf703257a15a6eff449575e17b12e55e6700ea102d8a", risc0_zkvm = "3.0.5", src = "= v5/v6 (public-demo/v4/BUILD-outbound.txt RELEASE_IMAGE_ID)" }
+g2_updates = { v = 1, src = "finalize() tx 0xfd128bcd…b889, Sepolia block 12159962: g2State 0x319f231d…f936 (public-demo/prove/v7-seqsig-20261118/README.md)" }
+genesis_g2_state = { v = "0x49a2f8786fd7d4b7caa0e59c1c974c84917b5e0b977a8c852eb42dab6b5ffa4e", src = "seqsig/outbound_host genesis --block 24616 --bridge CdijfhGnf1NjyCvYTZcGijQZzZ6soNJQ75Piex1ZTM93 (the tip before InitializeAttested), 2026-11-18" }
+program_id = { v = "0xacd8a7ecb56e98a0ed1ad2dc966511529e42fe5525c46e2c6ec024a3023303f2", src = "v7-public.sh ids, bridge CdijfhGnf1NjyCvYTZcGijQZzZ6soNJQ75Piex1ZTM93" }
+zone_id = { v = "0x21617f2f28040bbbaa8eed893bd78b65c2e5056ab7f55fda7b3f736a97c03fff", src = "= v6: lez-bridge source-id of the light-client instance 0xe4b7d26a…3600 (program 9Wb7sBxs…uhNR, slot 83)" }
+
+[deployments.v7.verifier]
+kind = "risc0-groth16"
+address = { v = "0x8c915b5071206C6E328BC18529586c513408aB3b", src = "= v6 (GHSA-mm6c-35cm-g4x2 patched Sepolia verifier)" }
+version = { v = "3.1.0", src = "VERSION() read 2026-11-15" }
+selector = { v = "0xe71e6620", src = "SELECTOR() read 2026-11-15, again 2026-11-18" }
+control_root = { v = "e6feef13db7aed4a731c7b0852de1f5c89b137726073f625d05333184d3a551d", src = "= v6" }
+bn254_control_id = { v = "de81d091ba14062acb5023b3b36deee95624e3fd47475cb7ff64aed5f9eac20a", src = "= v6" }
+
+# The vault's verifier() is a SeqSigGate (vault/src/SeqSigGate.sol): no submitter; bound to the one vault. --onchain reads all of it.
+[deployments.v7.gate]
+kind = "seq-sig"
+address = { v = "0x5E891d52eB9a729feCFDd9051685FDeaCd9F0FaE", src = "Sepolia block 12159634, tx 0xa1ab8e5d…a048, 2026-11-18" }
+evidence_image = { v = "0x9df4de66eb874e5c8570a5e4f4332b3a505de9e80c0f7dc8ea67f77daba2d21d", elf_sha256 = "43185f5a86201c757d628efd85b1039b07754820021f1ce27a231a1e731c5bf6", src = "public-demo/v7/BUILD-seqsig.txt (seqsig_evidence_guest.bin)" }
+signer_set_hash = { v = "0x1f82d03ad3956612fe100b2deb76fac2dc6f430042f1c477bdd19e8390d7b8cf", src = "public-demo/v7/signer-set.json (seqsig set over the three machines' public keys, 2026-11-18)" }
+signers = { v = 3, src = "the owner's decision (2026-11-18)" }
+threshold = { v = 2, src = "the owner's decision (2026-11-18); the gate needs n/2 < T <= n - 1" }
+contest_window = { v = 600, src = "the owner's decision (2026-11-18)" }
+test_only_short_window = { v = true, src = "forced by a 600 s window (the gate's MIN_CONTEST_WINDOW is 6 h): public-demo/prove/v7-seqsig-20261118/README.md" }
+kind_text = { v = "seq-sig: RISC Zero verifies every proof; an update needs THRESHOLD of SIGNERS keys over its LEZ end block (in the proof), anyone submits; contest window: equivocators ejected, two quorums halt", src = "KIND() of vault/src/SeqSigGate.sol" }
+
+[deployments.v7.roles.lez_chain]
+risc0_zkvm = { v = "3.0.5", src = "= v6" }
+risc0_circuit_recursion = { v = "4.0.4", src = "= v6" }
+risc0_groth16 = { v = "3.0.4", src = "= v6" }
+risc0_build = { v = "3.0.5", src = "= v6" }
+
+[deployments.v7.roles.lez_host]
+risc0_zkvm = { v = "3.0.5", src = "= v6" }
+risc0_circuit_recursion = { v = "4.0.4", src = "= v6" }
+risc0_groth16 = { v = "3.0.4", src = "= v6" }
+
+[deployments.v7.roles.lez_guests]
+risc0_zkvm = { v = "3.0.5", src = "= v6" }
+risc0_build = { v = "3.0.5", src = "= v6" }
+
+[deployments.v7.roles.eth_guests]
+risc0_zkvm = { v = "3.1.0", src = "the seq-sig guests' Cargo.lock (= v6's G2-lite guests)" }
+
+[deployments.v7.roles.eth_provers]
+risc0_zkvm = { v = "3.1.0", src = "lez-bridge/outbound-seqsig/Cargo.lock (= v6)" }
+risc0_circuit_recursion = { v = "4.1.0", src = "risc0-zkvm 3.1.0 Cargo.toml" }
+risc0_groth16 = { v = "3.0.6", src = "risc0-zkvm 3.1.0 Cargo.toml" }
+risc0_build = { v = "3.0.7", src = "risc0-zkvm 3.1.0 Cargo.toml (risc0-build 3.0.7)" }
+
+[deployments.v7.roles.research]
+risc0_zkvm = { v = "3.0.5", src = "= v6" }
+
 [toolchain]
 rust = { v = "1.98.1", src = "lez-bridge/rust-toolchain.toml; LEZ v0.4.0-rc3 rust-toolchain.toml" }
 rzup = { v = "0.5.0", src = ".github/workflows/judge-demo.yml; scripts/judge-demo.sh" }
@@ -526,6 +592,20 @@ image = "release_image"
 
 [[workspace]]
 path = "lez-bridge/outbound"
+roles = ["eth_provers"]
+
+# Branch seq-sig (2026-11-17): the sequencer-signature route, local and executor only. New guests and
+# their own workspace; no deployment pins their images.
+[[workspace]]
+path = "lez-bridge/methods/outbound_guest_seqsig"
+roles = ["eth_guests"]
+
+[[workspace]]
+path = "lez-bridge/methods/seqsig_evidence_guest"
+roles = ["eth_guests"]
+
+[[workspace]]
+path = "lez-bridge/outbound-seqsig"
 roles = ["eth_provers"]
 
 [[workspace]]
@@ -972,3 +1052,34 @@ file = "public-demo/v4/BUILD-outbound.txt"
 re = 'previous canonical release guest .*\(sha256 ([0-9a-f]{64})\)'
 value = "deployments.v3.release_image.elf_sha256"
 private = true
+
+# v7 (planned): the prover script's pinned canonical build and the build record copy.
+[[pin]]
+file = "public-demo/prove/prove-seqsig-rc3.sh"
+re = 'IMAGE_UPDATE=\$\{IMAGE_UPDATE:-(0x[0-9a-f]{64})\}'
+value = "deployments.v7.update_image"
+
+[[pin]]
+file = "public-demo/prove/prove-seqsig-rc3.sh"
+re = 'ELF_UPDATE_SHA=\$\{ELF_UPDATE_SHA:-([0-9a-f]{64})\}'
+value = "deployments.v7.update_image.elf_sha256"
+
+[[pin]]
+file = "public-demo/prove/prove-seqsig-rc3.sh"
+re = 'IMAGE_EVIDENCE=\$\{IMAGE_EVIDENCE:-(0x[0-9a-f]{64})\}'
+value = "deployments.v7.gate.evidence_image"
+
+[[pin]]
+file = "public-demo/v7/BUILD-seqsig.txt"
+re = '^(0x[0-9a-f]{64}) outbound_guest_seqsig\.bin'
+value = "deployments.v7.update_image"
+
+[[pin]]
+file = "public-demo/v7/BUILD-seqsig.txt"
+re = '^(0x[0-9a-f]{64}) seqsig_evidence_guest\.bin'
+value = "deployments.v7.gate.evidence_image"
+
+[[pin]]
+file = "public-demo/v7/signer-set.json"
+json = "setHash"
+value = "deployments.v7.gate.signer_set_hash"

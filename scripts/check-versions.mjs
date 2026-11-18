@@ -597,6 +597,10 @@ const SIG = {
   g2State: '0xfd64db0a', cfgId: '0xed9305e3', verifier: '0x2b7ac3f3', programId: '0x98812da8',
   // UpdateGatedVerifier (vault/src/UpdateGatedVerifier.sol): KIND() shares the selector above
   VERIFIER: '0x08c84e70', UPDATE_IMAGE_ID: '0x872109a5', SUBMITTER: '0xf28a6123',
+  // SeqSigGate (vault/src/SeqSigGate.sol, v7): VERIFIER, UPDATE_IMAGE_ID and KIND() as above
+  VAULT: '0x411557d1', CFG_ID: '0x58d4e3c1', EVIDENCE_IMAGE_ID: '0x2a79eba8', RELEASE_IMAGE_ID: '0xadfc5ee2',
+  SIGNER_SET_HASH: '0x591e583a', SIGNERS: '0xd3a8388f', THRESHOLD: '0x785ffb37', CONTEST_WINDOW: '0x3cb39682',
+  TEST_ONLY_SHORT_WINDOW: '0x73bb8935',
 };
 
 const revBytes = (h) => normHex(h).match(/../g).reverse().join('');
@@ -677,6 +681,8 @@ async function onchainChecks({ V, deps, only, add, rpc, fetchImpl }) {
       cmp('programId', val(d.program_id));
       // A vault behind an UpdateGatedVerifier ([deployments.X.gate], v4) names the gate as its
       // verifier; the gate names the RISC Zero verifier, the vault's update image and the submitter.
+      // A SeqSigGate (`kind = "seq-sig"`, v7) instead names its one vault, cfgId, evidence and
+      // release images, signer set hash, n, threshold, window and the test-only flag.
       const gate = d.gate || null;
       const gaddr = val(gate?.address);
       cmp('verifier', gaddr || vaddr);
@@ -691,15 +697,33 @@ async function onchainChecks({ V, deps, only, add, rpc, fetchImpl }) {
           if (gv !== normHex(vaddr)) gbad.push(`VERIFIER() ${short(gv)} ≠ ${short(vaddr)}`);
           const gu = normHex(await read(gaddr, 'UPDATE_IMAGE_ID'));
           if (gu !== normHex(val(d.update_image))) gbad.push(`UPDATE_IMAGE_ID() ${short(gu)} ≠ ${short(val(d.update_image))}`);
-          const gs = normHex(await read(gaddr, 'SUBMITTER')).slice(24);
-          if (!val(gate.submitter)) gbad.push('no submitter declared');
-          else if (gs !== normHex(val(gate.submitter))) gbad.push(`SUBMITTER() ${short(gs)} ≠ ${short(val(gate.submitter))}`);
+          let who = '';
+          if (gate.kind === 'seq-sig') {
+            // A SeqSigGate (v7): no submitter; bound to one vault, its signer set, threshold and window.
+            const num = async (fn) => BigInt(`0x${normHex(await read(gaddr, fn)) || '0'}`);
+            const eq = (fn, got, want) => { if (want !== undefined && want !== '' && String(got) !== String(want)) gbad.push(`${fn}() ${short(String(got))} ≠ ${short(String(want))}`); };
+            eq('VAULT', normHex(await read(gaddr, 'VAULT')).slice(24), normHex(vault));
+            eq('CFG_ID', normHex(await read(gaddr, 'CFG_ID')), val(d.cfg_id) ? normHex(val(d.cfg_id)) : undefined);
+            eq('EVIDENCE_IMAGE_ID', normHex(await read(gaddr, 'EVIDENCE_IMAGE_ID')), val(gate.evidence_image) ? normHex(val(gate.evidence_image)) : 'undeclared');
+            eq('RELEASE_IMAGE_ID', normHex(await read(gaddr, 'RELEASE_IMAGE_ID')), normHex(val(d.release_image)));
+            eq('SIGNER_SET_HASH', normHex(await read(gaddr, 'SIGNER_SET_HASH')), val(gate.signer_set_hash) ? normHex(val(gate.signer_set_hash)) : 'undeclared');
+            eq('SIGNERS', await num('SIGNERS'), val(gate.signers));
+            eq('THRESHOLD', await num('THRESHOLD'), val(gate.threshold));
+            eq('CONTEST_WINDOW', await num('CONTEST_WINDOW'), val(gate.contest_window));
+            eq('TEST_ONLY_SHORT_WINDOW', (await num('TEST_ONLY_SHORT_WINDOW')) === 1n, val(gate.test_only_short_window));
+            who = `signers ${val(gate.threshold)} of ${val(gate.signers)}, window ${val(gate.contest_window)} s`;
+          } else {
+            const gs = normHex(await read(gaddr, 'SUBMITTER')).slice(24);
+            if (!val(gate.submitter)) gbad.push('no submitter declared');
+            else if (gs !== normHex(val(gate.submitter))) gbad.push(`SUBMITTER() ${short(gs)} ≠ ${short(val(gate.submitter))}`);
+            who = `submitter ${short(gs)}`;
+          }
           if (val(gate.kind_text)) {
             const k = abiString(await read(gaddr, 'KIND'));
             if (k !== val(gate.kind_text)) gbad.push(`KIND() "${k.slice(0, 40)}…" ≠ the declared text`);
           }
           if (gbad.length) add('FAIL', 'onchain', `${dname}: gate ${gaddr}: ${gbad.join('; ')}`, scope);
-          else add('OK', 'onchain', `${dname}: gate ${short(gaddr)} in front of verifier ${short(vaddr)}, update image ${short(gu)}, submitter ${short(gs)}`, scope);
+          else add('OK', 'onchain', `${dname}: ${gate.kind === 'seq-sig' ? 'seq-sig ' : ''}gate ${short(gaddr)} in front of verifier ${short(vaddr)}, update image ${short(gu)}, ${who}`, scope);
         }
       }
       if (/^0+$/.test(got.g2State)) add('FAIL', 'g2-zero', `${dname}: vault ${short(vault)} g2State() reads zero on chain: it can take no update and never release`, scope);

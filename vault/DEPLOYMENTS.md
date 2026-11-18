@@ -17,6 +17,67 @@ SEPOLIA_PK=<deployer key> EXPECTED_DESK=<DESK from the simulation> forge script 
 
 `DESK_FEE_BPS` (default 300, at most 300) sets the starting rate. The script refuses a key that is not the deployer and a vault whose `cfgId` is not v2's. After it: the desk address goes into `web/deposit/src/lib/deployments.js` (`desk`, the page's one switch) and, with its creation block, into the grants daemon's `DESK` and `DESK_FROM_BLOCK` (`public-demo/RUNBOOK.md` (not published) §12).
 
+## Sepolia vault v7 (2026-11-18): withdrawals on 2 of 3 signer keys, deposit roots from the light client
+
+**Deployed on Sepolia on 2026-11-18** (branch `v7-seqsig`). The record, with the round trip and the commands to re-read
+it, is `public-demo/prove/v7-seqsig-20261118/README.md`. Not the default of the page or the app; v5 stays the default.
+- **What it is:** v6's inbound (the bridge takes deposit roots from the RFP-021 light-client instance, no attester
+  key) and a `SeqSigGate` in front of RISC Zero's bare `RiscZeroGroth16Verifier` 3.1.0 instead of an
+  `UpdateGatedVerifier`: an update counts when 2 of a fixed set of 3 signer keys signed the LEZ block it ends at (in
+  the proof), anyone may submit it, and it applies after a 600 s contest window. No submitter, no gate admin. The v3
+  canonical bridge program at a new header, `CdijfhGnf1NjyCvYTZcGijQZzZ6soNJQ75Piex1ZTM93`.
+- **A test gate:** `TEST_ONLY_SHORT_WINDOW()` is true (the gate's normal minimum window is 6 h). The three keys are
+  the team's, on three machines; they are not LEZ sequencer keys.
+- **One round trip so far:** 1 deposit, 1 claim, 1 burn, 1 update (`finalize` in block 12159962), 1 release
+  (block 12159991). The vault holds 0.
+
+| What | Value |
+|---|---|
+| RISC Zero verifier | `0x8c915b5071206C6E328BC18529586c513408aB3b` (3.1.0, selector `0xe71e6620`), as v4-v6 |
+| `SeqSigGate` (the vault's `verifier()`) | `0x5E891d52eB9a729feCFDd9051685FDeaCd9F0FaE`, block 12159634, tx `0xa1ab8e5dcf56d751a2dc407e96f3e009adddbcad3b456999d8735647cf74a048`, 12,612,379 gas |
+| Gate: `SIGNERS()`, `THRESHOLD()`, `CONTEST_WINDOW()`, `TEST_ONLY_SHORT_WINDOW()` | 3, 2, 600, true |
+| Gate: `SIGNER_SET_HASH()` | `0x1f82d03ad3956612fe100b2deb76fac2dc6f430042f1c477bdd19e8390d7b8cf` (`public-demo/v7/signer-set.json`) |
+| Gate: `UPDATE_IMAGE_ID()` / `EVIDENCE_IMAGE_ID()` / `RELEASE_IMAGE_ID()` | `0x93c88f77…955d` / `0x9df4de66…d21d` / `0x6bcbd714…72a4` (`public-demo/v7/BUILD-seqsig.txt`) |
+| `BridgeVault` | `0x4D7B360cf385d3477F1A67c1AEdEB6C17c26d23E`, block 12159635, tx `0x03fb6e3ae19e00939ddd1b0c7396c29efc692f8fc005ec0755a400b6de421911`, 33,047,977 gas |
+| `cfgId()` | `0x7ef9153b69a348ff39e3daf7b893f1b775513489c71c7331d88b4a5cf30652d5` (= the v7 bridge Config's and the gate's `CFG_ID()`) |
+| `programId()` | `0xacd8a7ecb56e98a0ed1ad2dc966511529e42fe5525c46e2c6ec024a3023303f2` (bridge `CdijfhGn…TM93`) |
+| `zoneId()` / `lezChainId()` | as v6 (the light-client instance `0xe4b7d26a…3600`'s source id) / as v3-v6 |
+| `updateImageId()` / `releaseImageId()` | `0x93c88f77…955d` (the seq-sig image) / `0x6bcbd714…72a4` |
+| `g2State()` | genesis `0x49a2f8786fd7d4b7caa0e59c1c974c84917b5e0b977a8c852eb42dab6b5ffa4e` (LEZ tip 24616, `InitializeAttested` in 24635); after update 1: `0x319f231d0e47d5194a34a63cd7d2213cd495d042eaf3712f0547119aaa5ef936` |
+| `minReleaseDelay()` | 0; each token's delay 0 |
+| Admin, freezer, fee recipient | `0x37a46E7334Dd061E0C7E2298247EE9278d0d321F` (the throwaway deployer) |
+| Tokens | as v5/v6 (DemoUSDC `0xAc207b9B…a71e` reused) |
+| `configure()` | blocks 12159638–12159646, 9 transactions |
+| DepositDesk v7 | `0x9b4040A990aEe283F1DE5451fFBaEE3679507fb5`, block 12159647, tx `0x44e92497ca001af7959c7ad0af7e04baf9b7eef8f67dcae9a7473da0266f3654`, 6,516,024 gas, `feeBps()` 30 |
+
+- `public-demo/v7/readback-v7.sh`: `READBACK OK`; `node scripts/check-versions.mjs --onchain --deployment v7` passes.
+- The vault, the gate and the desk are `exact_match` on Sourcify.
+- **Scripts:** `script/SepoliaV7.s.sol` (`run()`, then `configure()`; `TEST_ONLY_SHORT_WINDOW` a required input),
+  `script/SepoliaDesk.s.sol`, `script/SepoliaDeskDeposit.s.sol`; updates and releases through
+  `script/SepoliaV7Ops.s.sol` (`submit`, `finalize`, `contest`, `release`, from any key).
+
+## Sepolia vault v6 (2026-11-18): v5's design, deposit roots from the light client
+
+**Deployed on Sepolia on 2026-11-18** (branch `v6-lc`). The record is `public-demo/prove/v6-lc-20261118/README.md`.
+Not the default; no updater serves v6, so it has no exit running.
+- **What it is:** v5's design and settings (an `UpdateGatedVerifier` with v5's submitter and images), bound to a bridge
+  instance `4PxaLAfPZDvpfZaR8SsC2Y7pYMPNwPPGVGMpjEVPQWed` created with `InitializeAttested`: deposit roots come from
+  the RFP-021 light-client instance `0xe4b7d26a…3600`, not the operator attester.
+
+| What | Value |
+|---|---|
+| `UpdateGatedVerifier` (the vault's `verifier()`) | `0x4aFB8eeCd80B95e79D9280D462D13dA14f9aAC1B`, block 12158040, tx `0xecae8b10d327a2f1b0aa1f0f2546d567eabd54432cedd9ef64320798d2660293`; `SUBMITTER()` `0xB81a…95f4` (as v5) |
+| `BridgeVault` | `0x95cea20e75d3B352B49d13cb0cDdC268a14C427e`, block 12158041, tx `0x19046790894fb9de2447f50b45fae5875a531ddcd5669269bd638f52d1d315b6` |
+| `cfgId()` | `0x7d1a304a12a486c730d94321244bd6d15741208c1ef9d00e352acda8589e6f60` |
+| `zoneId()` | `0x21617f2f28040bbbaa8eed893bd78b65c2e5056ab7f55fda7b3f736a97c03fff` (the light-client instance's source id) |
+| `programId()` | `0x3274ad532fcf5a9e62430ad67c2d8552885c1fc395151dc4f315ffddc8ede952` (bridge `4PxaLAfP…QWed`) |
+| `g2State()` at deploy | `0x9c7fcc5c382e1a4af98a8dff1277ffaf4ab5eb15d869d46ff8f7d39334c0fb04` (genesis at LEZ block 23273) |
+| Images, delays, admin/freezer/fee recipient, tokens | as v5 |
+| `configure()` | blocks 12158045–12158053, 9 transactions |
+| DepositDesk v6 | `0x8Aab670f14A53A41f20a6aA75137b13C0234A1c3`, block 12158055, tx `0xe041f0d7e8b0d608f38368bba35a4db9c5249a2d83538ef0b41478c47917c865`, 30 bps |
+
+- **Script:** `script/SepoliaV4.s.sol` with v5's delays (0/0) and the light-client `ZONE_ID`; the desk as v5.
+
 ## Sepolia vault v5 (2026-11-15): v4's design with no release delay
 
 **Deployed on Sepolia on 2026-11-15** from `public-demo/V5-PLAN.md`. The record is

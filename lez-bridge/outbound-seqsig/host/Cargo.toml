@@ -1,0 +1,26 @@
+[package]
+name = "seqsig_host"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# `seqsig`: stand-in signer keys, the attestor (signs a LEZ checkpoint with one key), and the
+# executor-only update driver for the seq-sig guest (never proves).
+[[bin]]
+name = "seqsig"
+path = "src/main.rs"
+
+[dependencies]
+seqsig_core = { path = "../core" }
+outbound_host = { path = "../../outbound/host" }
+outbound_core = { path = "../../outbound/core", features = ["trusted-tip"] }
+risc0-zkvm = { version = "=3.1.0" }
+borsh = { version = "1.5.7", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+
+[build-dependencies]
+risc0-build = "=3.0.7"
+
+[package.metadata.risc0]
+methods = ["../../methods/outbound_guest_seqsig", "../../methods/seqsig_evidence_guest"]

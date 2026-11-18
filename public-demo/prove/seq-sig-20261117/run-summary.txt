@@ -1,0 +1,212 @@
+# seq-sig end-to-end run (revision 3), 2026-11-17 (lez-bridge/scripts/e2e-seqsig.sh), throwaway local chains
+# mock-verified: proofs executed, not proved; signer keys are STAND-INS (ours), not LEZ sequencer keys
+
+## 15:59:20 Throwaway LEZ rc3 chain (kit, genesis test key) on 3470 and anvil on 8570
+anvil chain 31337; deployer/admin 0x90F79bf6EB2c4f870365E785982E1f101E93b906; no-role accounts 0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc (submits) and 0x976EA74026E726554dB657fA54763abd0C3a0aa9 (finalizes, cancels, releases)
+## 15:59:27 LEZ: wallet, genesis account F, our account P
+## 15:59:42 LEZ: G2 genesis at block 7; deploy token and bridge programs
+## 16:02:17 Stand-in signer keys (ours, NOT LEZ sequencer keys): k0..k3 form the set, k4 is an outsider
+k0 0x4d6b1be5878b2066c36ecc23b904725cc43ab4bd5ec758d5897091bc4d4e3b3c
+k1 0x99270e4b6930285b3cc9a81144437ee229ade0d99750bb156f09fcd36a733b33
+k2 0xd70d0955f81b8110ca9bd85b249a314912ca471d559ec34292c49407396f1677
+k3 0xb0e6fb31ab8388649cb250a74c62613b1b57e138ac023317921b884ae7c44863
+k4 0x9d03a2064076d0c63bc775be0619a17065162c9f72c056d4c3651062a53f4a06
+SET_HASH=0x4c39137d5b23507ef2bd2e4fc56012960d98e355e8f620c312e3591ee38367e7
+k0 is set index 0
+k1 is set index 1
+k2 is set index 3
+k3 is set index 2
+## 16:02:17 Ethereum: MockVerifier, SeqSigGate (update image 0xd38000ebff958a5b004f999e87e55c5529b7cb1cb17301c7f94cc502a5c3635b, evidence image 0x9df4de66eb874e5c8570a5e4f4332b3a505de9e80c0f7dc8ea67f77daba2d21d, set 0x4c39137d5b23507ef2bd2e4fc56012960d98e355e8f620c312e3591ee38367e7, threshold 3, window 60s), BridgeVault behind it
+the gate computed the set hash from the keys: equals seqsig's 0x4c39137d5b23507ef2bd2e4fc56012960d98e355e8f620c312e3591ee38367e7; TEST_ONLY_SHORT_WINDOW = true (window 60s, under the real minimum 21600 [2.16e4]s)
+vault 0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623 gate 0x261D8c5e9742e6f7f1076Fa1F560894524e19cad cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b; g2State = genesis 0x08d76ebbc706fca0ffa3419aca4166eecfbf02644476fe349e705eb767f2fba5
+## 16:02:19 LEZ: wrapped ETH (mint authority = the bridge), init (stand-in root attestor P), register
+## 16:02:56 Ethereum: 3 deposits of 0.01 ETH for P
+deposit-0: tx 0xfd2b0e836f79a69742f84c3e3c803f92d34cd76c9e7d1c1e673d859a023b4be7 gas 204282
+deposit-1: tx 0x7149b1b9e9a4c2b9c7485d8ce313493c959a99fe85c20bbdb0ceabab1e7e724d gas 155803
+deposit-2: tx 0x59070c25f4c73d94379146e8e0772f1d1546f496a47399d8bcb24351d41d0278 gas 138035
+## 16:02:58 LEZ: record the vault root (stand-in attestor), claim the 3 deposits into P
+## 16:03:46 LEZ: burn 0.01 wETH -> exit 0
+## 16:04:05 Attestors: each stand-in key replays blocks 8..94 itself, then signs the checkpoint (cfgId, genesis tip 7, block 94)
+replayed blocks 8..94 (1 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 94 hash 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f (prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0), key 0x4d6b1be5878b2066c36ecc23b904725cc43ab4bd5ec758d5897091bc4d4e3b3c
+replayed blocks 8..94 (1 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 94 hash 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f (prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0), key 0x99270e4b6930285b3cc9a81144437ee229ade0d99750bb156f09fcd36a733b33
+replayed blocks 8..94 (1 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 94 hash 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f (prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0), key 0xd70d0955f81b8110ca9bd85b249a314912ca471d559ec34292c49407396f1677
+replayed blocks 8..94 (1 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 94 hash 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f (prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0), key 0xb0e6fb31ab8388649cb250a74c62613b1b57e138ac023317921b884ae7c44863
+replayed blocks 8..94 (1 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 94 hash 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f (prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0), key 0x9d03a2064076d0c63bc775be0619a17065162c9f72c056d4c3651062a53f4a06
+## 16:04:12 Executor: the seq-sig guest refuses 2 of 4 (k0, k1; threshold 3)
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0 -> block 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f
+native signature check: REFUSED: 2 distinct valid signers, threshold 3
+REFUSED by the seq-sig guest (no journal): Guest panicked: seq-sig refused: 2 distinct valid signers, threshold 3
+## 16:04:13 Executor: k1 signing twice counts once (k0, k1, k1; threshold 3): refused
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0 -> block 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f
+native signature check: REFUSED: 2 distinct valid signers, threshold 3
+REFUSED by the seq-sig guest (no journal): Guest panicked: seq-sig refused: 2 distinct valid signers, threshold 3
+## 16:04:13 Executor: an outsider's signature (k4) presented as set member 2 (k0, k1, k4): refused
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0 -> block 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f
+native signature check: REFUSED: signature for key 2 does not verify
+REFUSED by the seq-sig guest (no journal): Guest panicked: seq-sig refused: signature for key 2 does not verify
+## 16:04:13 Executor: 2 of 4 with the threshold claimed as 2: the guest refuses a threshold that is not a strict majority
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0 -> block 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f
+native signature check: REFUSED: threshold 2 not in (n/2, n] for n = 4
+REFUSED by the seq-sig guest (no journal): Guest panicked: seq-sig refused: threshold 2 not in (n/2, n] for n = 4
+## 16:04:13 Executor: 4 of 4 with the threshold claimed as 4 (a journal the gate must refuse: its threshold is 3; also the per-signature cycles)
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0 -> block 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f
+native signature check: ACCEPTED, 4 distinct signers (bitmap 0b1111), threshold 4, ejected mask 0b0
+seq-sig guest: 9331284 user cycles (12 segment(s)); TrustedTip guest on the same batch: 5452959; difference 3878325; inside the signature check 3879962 for 4 signature(s), 4 distinct signers
+## 16:04:14 Executor: update 1 signed by 3 of 4 (k0, k1, k3)
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 7 0x28cb5148a21e833b943add1144071e34eb272b1524b16d8bf7c30c6f0e8a41b0 -> block 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f
+native signature check: ACCEPTED, 3 distinct signers (bitmap 0b111), threshold 3, ejected mask 0b0
+seq-sig guest: 8439173 user cycles (12 segment(s)); TrustedTip guest on the same batch: 5452959; difference 2986214; inside the signature check 2988695 for 3 signature(s), 3 distinct signers
+## 16:04:14 Ethereum: the threshold-4 journal is refused by the gate (its THRESHOLD is 3)
+submit-threshold-4: refused as expected: WrongThreshold
+## 16:04:14 Ethereum: update 1's journal with the 4-of-4 run's seal is refused (the seal binds threshold and signer bitmap)
+submit-wrong-seal: refused as expected: BadSeal
+## 16:04:14 Ethereum: update 1 (3 of 4) submitted by 0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc, an account with no role
+submit-u1: tx 0xd2ac7d7619f397b364ab369ee99613d77f6640741e81d689ca2a8f359e427c79 gas 366346
+pending; finalizable at 1794949514; the vault's g2State is still genesis
+## 16:04:15 Ethereum: during the window, exit 0's release is refused (its root is not in the vault) and finalize is refused
+release-0-early: refused as expected: UnknownExitRoot
+finalize-u1-early: refused as expected: ContestWindowOpen
+## 16:05:18 Ethereum: after the window, 0x976EA74026E726554dB657fA54763abd0C3a0aa9 (no role) finalizes update 1
+finalize-u1: tx 0xcd7a90a6f22cecb36f4c7b626019b6ab030c44563e94f432ded64d78e11e0bfc gas 210556
+release-0: tx 0xb369e751fb39c2ec62e9722b1891c328e9848de521607102aa8d8db63a2aa6a5 gas 123179
+OK: exit 0 paid: recipient 0x2baaa8b70fe5186aa1c02ab7c6c0998f0d446c0e +9950000000000000 wei (0.01 ETH - withdraw fee 50000000000000)  [mock-verified: proofs executed, not proved; signer keys are stand-ins (ours), not LEZ sequencer keys]
+## 16:05:19 LEZ: burn 0.01 wETH -> exit 1
+replayed blocks 95..125 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 125 hash 0xa8100144e9ab863c3e5d30c9ac469571e15eb72e40a7caced3f575622b45ae4a (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0x4d6b1be5878b2066c36ecc23b904725cc43ab4bd5ec758d5897091bc4d4e3b3c
+replayed blocks 95..125 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 125 hash 0xa8100144e9ab863c3e5d30c9ac469571e15eb72e40a7caced3f575622b45ae4a (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0x99270e4b6930285b3cc9a81144437ee229ade0d99750bb156f09fcd36a733b33
+replayed blocks 95..125 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 125 hash 0xa8100144e9ab863c3e5d30c9ac469571e15eb72e40a7caced3f575622b45ae4a (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0xd70d0955f81b8110ca9bd85b249a314912ca471d559ec34292c49407396f1677
+replayed blocks 95..125 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 125 hash 0xa8100144e9ab863c3e5d30c9ac469571e15eb72e40a7caced3f575622b45ae4a (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0xb0e6fb31ab8388649cb250a74c62613b1b57e138ac023317921b884ae7c44863
+replayed blocks 95..125 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 125 hash 0xa8100144e9ab863c3e5d30c9ac469571e15eb72e40a7caced3f575622b45ae4a (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0x9d03a2064076d0c63bc775be0619a17065162c9f72c056d4c3651062a53f4a06
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f -> block 125 0xa8100144e9ab863c3e5d30c9ac469571e15eb72e40a7caced3f575622b45ae4a
+native signature check: ACCEPTED, 3 distinct signers (bitmap 0b1011), threshold 3, ejected mask 0b0
+seq-sig guest: 3655828 user cycles (4 segment(s)); TrustedTip guest on the same batch: 653430; difference 3002398; inside the signature check 2998739 for 3 signature(s), 3 distinct signers
+## 16:05:46 Ethereum: update 2 (k0, k1, k2 over block 125) submitted by 0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc
+submit-u2: tx 0x6a5f4a11119b26f24ba80de7117c7864db87c54230766524f474ac43a0b77137 gas 308570
+## 16:05:46 k3 did NOT sign update 2; it signs a conflicting hash for block 125
+TEST: --test-conflicting-hash: signing another hash for block 125 WITHOUT the record (a dishonest signer)
+replayed blocks 95..125 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 125 hash 0xbfc17e8c7fa49aa848a8fe8980c569beafcaa3e46a58a4197ccb8221cd82e468 (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0xb0e6fb31ab8388649cb250a74c62613b1b57e138ac023317921b884ae7c44863  [TEST: NOT the chain's hash: an equivocating signature]
+evidence guest: 1 signature(s), signer bitmap 0b100, 1199622 user cycles (1191885 in the signature check), 2 segment(s)  [mock-verified: proofs executed, not proved; signer keys are STAND-INS (ours), not LEZ sequencer keys]
+contest-nonsigner: refused as expected: NoEquivocation
+OK: a conflicting hash from a key that did not sign the update cancels nothing  [mock-verified: proofs executed, not proved; signer keys are stand-ins (ours), not LEZ sequencer keys]
+## 16:05:46 Ethereum: evidence for the SAME hash (k1's signature on the real block) is no conflict
+evidence guest: 1 signature(s), signer bitmap 0b10, 1206117 user cycles (1198380 in the signature check), 2 segment(s)  [mock-verified: proofs executed, not proved; signer keys are STAND-INS (ours), not LEZ sequencer keys]
+contest-same-hash: refused as expected: NoConflict
+## 16:05:46 The attestor's record: k1 re-signing its update-2 checkpoint is fine; a record saying it signed another hash for that key makes it refuse
+replayed blocks 95..125 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 125 hash 0xa8100144e9ab863c3e5d30c9ac469571e15eb72e40a7caced3f575622b45ae4a (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0x99270e4b6930285b3cc9a81144437ee229ade0d99750bb156f09fcd36a733b33
+refusing to sign: this key already signed block 125 after (94, 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f) with hash 0xbfc17e8c7fa49aa848a8fe8980c569beafcaa3e46a58a4197ccb8221cd82e468, not 0xa8100144e9ab863c3e5d30c9ac469571e15eb72e40a7caced3f575622b45ae4a
+OK: the attestor refuses to sign a second hash for a checkpoint key in its record  [mock-verified: proofs executed, not proved; signer keys are stand-ins (ours), not LEZ sequencer keys]
+## 16:05:46 k1 SIGNED update 2 and now signs a conflicting hash for the same (cfgId, previous tip, block 125): equivocation
+TEST: --test-conflicting-hash: signing another hash for block 125 WITHOUT the record (a dishonest signer)
+replayed blocks 95..125 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 125 hash 0xbfc17e8c7fa49aa848a8fe8980c569beafcaa3e46a58a4197ccb8221cd82e468 (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0x99270e4b6930285b3cc9a81144437ee229ade0d99750bb156f09fcd36a733b33  [TEST: NOT the chain's hash: an equivocating signature]
+evidence guest: 1 signature(s), signer bitmap 0b10, 1206898 user cycles (1199161 in the signature check), 2 segment(s)  [mock-verified: proofs executed, not proved; signer keys are STAND-INS (ours), not LEZ sequencer keys]
+contest-u2: tx 0x8c6fd112f5b44106a9c5f216225126f45408f4bd867a0a636a5aa20e9d74c551 gas 87674
+OK: update 2 cancelled (g2State = update 1's, exit count 1); k1 (set index 1) ejected: mask 2, active signers 3  [mock-verified: proofs executed, not proved; signer keys are stand-ins (ours), not LEZ sequencer keys]
+resubmit-u2-counted-k1: refused as expected: BadSignerBitmap
+finalize-u2: refused as expected: NoPending
+## 16:05:47 Executor: k1's signature no longer counts (k0, k1, k2 with the new mask): refused
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f -> block 125 0xa8100144e9ab863c3e5d30c9ac469571e15eb72e40a7caced3f575622b45ae4a
+native signature check: REFUSED: key 1 is ejected; its signature does not count
+REFUSED by the seq-sig guest (no journal): Guest panicked: seq-sig refused: key 1 is ejected; its signature does not count
+## 16:05:47 The same checkpoint signed by k0, k2, k3 with the new mask: the guest commits it, the gate refuses it (refuted)
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f -> block 125 0xa8100144e9ab863c3e5d30c9ac469571e15eb72e40a7caced3f575622b45ae4a
+native signature check: ACCEPTED, 3 distinct signers (bitmap 0b1101), threshold 3, ejected mask 0b10
+seq-sig guest: 3653897 user cycles (4 segment(s)); TrustedTip guest on the same batch: 653430; difference 3000467; inside the signature check 2996808 for 3 signature(s), 3 distinct signers
+resubmit-u2-refuted: refused as expected: Refuted
+## 16:05:54 Update 3: from update 1's state over blocks to 131 (contains exit 1), signed by k0, k2, k3 (k1 ejected)
+replayed blocks 95..131 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 131 hash 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58 (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0x4d6b1be5878b2066c36ecc23b904725cc43ab4bd5ec758d5897091bc4d4e3b3c
+replayed blocks 95..131 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 131 hash 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58 (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0x99270e4b6930285b3cc9a81144437ee229ade0d99750bb156f09fcd36a733b33
+replayed blocks 95..131 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 131 hash 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58 (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0xd70d0955f81b8110ca9bd85b249a314912ca471d559ec34292c49407396f1677
+replayed blocks 95..131 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 131 hash 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58 (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0xb0e6fb31ab8388649cb250a74c62613b1b57e138ac023317921b884ae7c44863
+replayed blocks 95..131 (0 claim deltas, 1 exits; receipts NOT checked); signed checkpoint: block 131 hash 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58 (prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f), key 0x9d03a2064076d0c63bc775be0619a17065162c9f72c056d4c3651062a53f4a06
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 94 0x0205983cd63b2a97b9b6b41ddc0b4836a5075c0975b4e63e2d4798f62af81f0f -> block 131 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58
+native signature check: ACCEPTED, 3 distinct signers (bitmap 0b1101), threshold 3, ejected mask 0b10
+seq-sig guest: 3740167 user cycles (4 segment(s)); TrustedTip guest on the same batch: 772942; difference 2967225; inside the signature check 2964080 for 3 signature(s), 3 distinct signers
+submit-u3: tx 0x7be63765f626a1b460a205224e7fe482f86397eea225447caba0874f1c5e26dc gas 308686
+finalize-u3: tx 0xc17f05a3591e87b468bb222a39fe919ca97ae294605e36d8b0a3f5071fb1ac3f gas 152949
+release-1: tx 0xb96a1ab089d439a9dce71fec938a8066d96592fdbc16aca5bbc9e8c291a97b27 gas 123179
+OK: exit 1 paid after the honest update 3: +9950000000000000 wei  [mock-verified: proofs executed, not proved; signer keys are stand-ins (ours), not LEZ sequencer keys]
+## 16:07:14 Update 4 (blocks 132..157, k0, k2, k3) staged; then k0, k2, k3 also sign a conflicting hash for block 157
+replayed blocks 132..157 (0 claim deltas, 0 exits; receipts NOT checked); signed checkpoint: block 157 hash 0x958a61cd82298143640940e4a40defa516f76785d94c62742770b72a112c41ef (prev 131 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58), key 0x4d6b1be5878b2066c36ecc23b904725cc43ab4bd5ec758d5897091bc4d4e3b3c
+replayed blocks 132..157 (0 claim deltas, 0 exits; receipts NOT checked); signed checkpoint: block 157 hash 0x958a61cd82298143640940e4a40defa516f76785d94c62742770b72a112c41ef (prev 131 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58), key 0x99270e4b6930285b3cc9a81144437ee229ade0d99750bb156f09fcd36a733b33
+replayed blocks 132..157 (0 claim deltas, 0 exits; receipts NOT checked); signed checkpoint: block 157 hash 0x958a61cd82298143640940e4a40defa516f76785d94c62742770b72a112c41ef (prev 131 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58), key 0xd70d0955f81b8110ca9bd85b249a314912ca471d559ec34292c49407396f1677
+replayed blocks 132..157 (0 claim deltas, 0 exits; receipts NOT checked); signed checkpoint: block 157 hash 0x958a61cd82298143640940e4a40defa516f76785d94c62742770b72a112c41ef (prev 131 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58), key 0xb0e6fb31ab8388649cb250a74c62613b1b57e138ac023317921b884ae7c44863
+replayed blocks 132..157 (0 claim deltas, 0 exits; receipts NOT checked); signed checkpoint: block 157 hash 0x958a61cd82298143640940e4a40defa516f76785d94c62742770b72a112c41ef (prev 131 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58), key 0x9d03a2064076d0c63bc775be0619a17065162c9f72c056d4c3651062a53f4a06
+checkpoint: cfgId 0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b prev 131 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58 -> block 157 0x958a61cd82298143640940e4a40defa516f76785d94c62742770b72a112c41ef
+native signature check: ACCEPTED, 3 distinct signers (bitmap 0b1101), threshold 3, ejected mask 0b10
+seq-sig guest: 3505312 user cycles (4 segment(s)); TrustedTip guest on the same batch: 537799; difference 2967513; inside the signature check 2963500 for 3 signature(s), 3 distinct signers
+submit-u4: tx 0x824cf108c4e13d06d6574e4757a1b12186e2917c9a82cb358e7f9254161474d6 gas 211481
+TEST: --test-conflicting-hash: signing another hash for block 157 WITHOUT the record (a dishonest signer)
+replayed blocks 132..157 (0 claim deltas, 0 exits; receipts NOT checked); signed checkpoint: block 157 hash 0x56919fdbab8361212aaa65066493f71913be32d468bf8cfb0551c5ebe96f5a75 (prev 131 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58), key 0x4d6b1be5878b2066c36ecc23b904725cc43ab4bd5ec758d5897091bc4d4e3b3c  [TEST: NOT the chain's hash: an equivocating signature]
+TEST: --test-conflicting-hash: signing another hash for block 157 WITHOUT the record (a dishonest signer)
+replayed blocks 132..157 (0 claim deltas, 0 exits; receipts NOT checked); signed checkpoint: block 157 hash 0x56919fdbab8361212aaa65066493f71913be32d468bf8cfb0551c5ebe96f5a75 (prev 131 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58), key 0xd70d0955f81b8110ca9bd85b249a314912ca471d559ec34292c49407396f1677  [TEST: NOT the chain's hash: an equivocating signature]
+TEST: --test-conflicting-hash: signing another hash for block 157 WITHOUT the record (a dishonest signer)
+replayed blocks 132..157 (0 claim deltas, 0 exits; receipts NOT checked); signed checkpoint: block 157 hash 0x56919fdbab8361212aaa65066493f71913be32d468bf8cfb0551c5ebe96f5a75 (prev 131 0xfc4b803ddbc7d63cb1ec342f0c6d9022ef9592967c0ca7036b934c52f0583f58), key 0xb0e6fb31ab8388649cb250a74c62613b1b57e138ac023317921b884ae7c44863  [TEST: NOT the chain's hash: an equivocating signature]
+evidence guest: 3 signature(s), signer bitmap 0b1101, 2981497 user cycles (2972181 in the signature check), 4 segment(s)  [mock-verified: proofs executed, not proved; signer keys are STAND-INS (ours), not LEZ sequencer keys]
+contest-quorum: tx 0x714385fed4f70c0f5ffab9b8d8b051290d3122737983637236fd6b85583bd56a gas 55262
+submit-after-halt: refused as expected: Halted
+finalize-after-halt: refused as expected: Halted
+OK: two conflicting quorums: the gate halted for good (dead = true); the vault keeps update 3's state  [mock-verified: proofs executed, not proved; signer keys are stand-ins (ours), not LEZ sequencer keys]
+## 16:07:22 Conservation: vault counters
+ETH d0: deposits 3 claims 3 burns 2 releases 2; claimedValue 30000000000000000 burnedValue 20000000000000000
+OK: released 2 <= burned 2 <= claimed 3 <= deposited 3  [mock-verified: proofs executed, not proved; signer keys are stand-ins (ours), not LEZ sequencer keys]
+## 16:07:22 Cycles (executor, user cycles)
+u1: blocks 8..94, signatures 3 (3 distinct), seq-sig guest 8439173, TrustedTip guest 5452959, difference 2986214, inside the signature check 2988695, signer bitmap 0b0111, ejected mask 0b0000
+u1-4of4: blocks 8..94, signatures 4 (4 distinct), seq-sig guest 9331284, TrustedTip guest 5452959, difference 3878325, inside the signature check 3879962, signer bitmap 0b1111, ejected mask 0b0000
+u2: blocks 95..125, signatures 3 (3 distinct), seq-sig guest 3655828, TrustedTip guest 653430, difference 3002398, inside the signature check 2998739, signer bitmap 0b1011, ejected mask 0b0000
+u2-again: blocks 95..125, signatures 3 (3 distinct), seq-sig guest 3653897, TrustedTip guest 653430, difference 3000467, inside the signature check 2996808, signer bitmap 0b1101, ejected mask 0b0010
+u3: blocks 95..131, signatures 3 (3 distinct), seq-sig guest 3740167, TrustedTip guest 772942, difference 2967225, inside the signature check 2964080, signer bitmap 0b1101, ejected mask 0b0010
+u4: blocks 132..157, signatures 3 (3 distinct), seq-sig guest 3505312, TrustedTip guest 537799, difference 2967513, inside the signature check 2963500, signer bitmap 0b1101, ejected mask 0b0010
+evidence ev-k3: 1 signature(s), bitmap 0b0100, 1199622 user cycles, 1191885 in the check
+evidence ev-same: 1 signature(s), bitmap 0b0010, 1206117 user cycles, 1198380 in the check
+evidence ev-k1: 1 signature(s), bitmap 0b0010, 1206898 user cycles, 1199161 in the check
+evidence ev-quorum: 3 signature(s), bitmap 0b1101, 2981497 user cycles, 2972181 in the check
+u1-2of4: refused by the guest: Guest panicked: seq-sig refused: 2 distinct valid signers, threshold 3
+u1-dup: refused by the guest: Guest panicked: seq-sig refused: 2 distinct valid signers, threshold 3
+u1-outsider: refused by the guest: Guest panicked: seq-sig refused: signature for key 2 does not verify
+u1-t2: refused by the guest: Guest panicked: seq-sig refused: threshold 2 not in (n/2, n] for n = 4
+u2-with-k1: refused by the guest: Guest panicked: seq-sig refused: key 1 is ejected; its signature does not count
+
+## 16:07:22 Transactions
+step                    from                                        tx                                                                  gas     result
+deposit-0               0x90F79bf6EB2c4f870365E785982E1f101E93b906  0xfd2b0e836f79a69742f84c3e3c803f92d34cd76c9e7d1c1e673d859a023b4be7  204282  ok
+deposit-1               0x90F79bf6EB2c4f870365E785982E1f101E93b906  0x7149b1b9e9a4c2b9c7485d8ce313493c959a99fe85c20bbdb0ceabab1e7e724d  155803  ok
+deposit-2               0x90F79bf6EB2c4f870365E785982E1f101E93b906  0x59070c25f4c73d94379146e8e0772f1d1546f496a47399d8bcb24351d41d0278  138035  ok
+submit-threshold-4      0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc  -                                                                   -       refused: WrongThreshold
+submit-wrong-seal       0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc  -                                                                   -       refused: BadSeal
+submit-u1               0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc  0xd2ac7d7619f397b364ab369ee99613d77f6640741e81d689ca2a8f359e427c79  366346  ok
+release-0-early         0x976EA74026E726554dB657fA54763abd0C3a0aa9  -                                                                   -       refused: UnknownExitRoot
+finalize-u1-early       0x976EA74026E726554dB657fA54763abd0C3a0aa9  -                                                                   -       refused: ContestWindowOpen
+finalize-u1             0x976EA74026E726554dB657fA54763abd0C3a0aa9  0xcd7a90a6f22cecb36f4c7b626019b6ab030c44563e94f432ded64d78e11e0bfc  210556  ok
+release-0               0x976EA74026E726554dB657fA54763abd0C3a0aa9  0xb369e751fb39c2ec62e9722b1891c328e9848de521607102aa8d8db63a2aa6a5  123179  ok
+submit-u2               0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc  0x6a5f4a11119b26f24ba80de7117c7864db87c54230766524f474ac43a0b77137  308570  ok
+contest-nonsigner       0x976EA74026E726554dB657fA54763abd0C3a0aa9  -                                                                   -       refused: NoEquivocation
+contest-same-hash       0x976EA74026E726554dB657fA54763abd0C3a0aa9  -                                                                   -       refused: NoConflict
+contest-u2              0x976EA74026E726554dB657fA54763abd0C3a0aa9  0x8c6fd112f5b44106a9c5f216225126f45408f4bd867a0a636a5aa20e9d74c551  87674   ok
+resubmit-u2-counted-k1  0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc  -                                                                   -       refused: BadSignerBitmap
+finalize-u2             0x976EA74026E726554dB657fA54763abd0C3a0aa9  -                                                                   -       refused: NoPending
+resubmit-u2-refuted     0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc  -                                                                   -       refused: Refuted
+submit-u3               0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc  0x7be63765f626a1b460a205224e7fe482f86397eea225447caba0874f1c5e26dc  308686  ok
+finalize-u3             0x976EA74026E726554dB657fA54763abd0C3a0aa9  0xc17f05a3591e87b468bb222a39fe919ca97ae294605e36d8b0a3f5071fb1ac3f  152949  ok
+release-1               0x976EA74026E726554dB657fA54763abd0C3a0aa9  0xb96a1ab089d439a9dce71fec938a8066d96592fdbc16aca5bbc9e8c291a97b27  123179  ok
+submit-u4               0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc  0x824cf108c4e13d06d6574e4757a1b12186e2917c9a82cb358e7f9254161474d6  211481  ok
+contest-quorum          0x976EA74026E726554dB657fA54763abd0C3a0aa9  0x714385fed4f70c0f5ffab9b8d8b051290d3122737983637236fd6b85583bd56a  55262   ok
+submit-after-halt       0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc  -                                                                   -       refused: Halted
+finalize-after-halt     0x976EA74026E726554dB657fA54763abd0C3a0aa9  -                                                                   -       refused: Halted
+ALL STEPS PASSED  [mock-verified: proofs executed, not proved; signer keys are stand-ins (ours), not LEZ sequencer keys]
+E2E EXIT 0
+
+# ids
+VAULT=0xCE3478A9E0167a6Bc5716DC39DbbbfAc38F27623
+GATE=0x261D8c5e9742e6f7f1076Fa1F560894524e19cad
+CFG_ID=0x36e083df1ce041e7d3c7bfe92cc9a8b81f5d0bffdbc1dfa4b3d6ed3a0b3d957b
+BP=9sowFU7XspMq7x78NnPbr1RvwUnAEZ4SrkV4WjVQgak3
+TP=8cE31xbNpdeSZdWCQmNLFgEikQnTyh5uX5kJoSFUhN3X
+UPDATE_IMAGE_ID=0xd38000ebff958a5b004f999e87e55c5529b7cb1cb17301c7f94cc502a5c3635b
+EVIDENCE_IMAGE_ID=0x9df4de66eb874e5c8570a5e4f4332b3a505de9e80c0f7dc8ea67f77daba2d21d
+RELEASE_IMAGE_ID=0xc07a664658c193498fd74067efab4d389e9fea8b71fcd2248be39e93ef87ad4a
+SET_HASH=0x4c39137d5b23507ef2bd2e4fc56012960d98e355e8f620c312e3591ee38367e7
+START=7
+LAST1=94
+LAST2=125
+LAST3=131
+LAST4=157
+EJECTED=2

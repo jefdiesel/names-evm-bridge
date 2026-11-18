@@ -37,8 +37,8 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | F2 | "A deposit must not … reveal its LEZ destination" | In | 1 | PUB Sepolia |
 | F3 | mint "on cryptographic verification … consume the attestation primitive" | In-dev (nullifier) | 1, 3 | LOC |
 | F4 | "both a private LEZ account and a public LEZ account" | In | 1 | LOC; PUB demo chain |
-| F5 | burn "must not … reveal its Ethereum destination" | In | 1 | PUB demo chain (public burns); LOC private |
-| F6 | burn from "either a private or a public LEZ account" | In | 1 | PUB demo chain (public, self-paid and relayed); LOC private |
+| F5 | burn "must not … reveal its Ethereum destination" | In | 1 | PUB demo chain (public burns; a private burn on v5, LEZ block 15395) |
+| F6 | burn from "either a private or a public LEZ account" | In | 1 | PUB demo chain (public, self-paid and relayed; private on v5, LEZ block 15395) |
 | F7 | vault releases "on cryptographic verification of a valid LEZ burn" | Cond | 4, 6 | PUB Sepolia + demo chain (vault v4: proved update and release, RISC Zero verifier 3.1.0; LEZ finality the submitter's word, roots operator-attested); trustless G2 Cond |
 | F8 | amounts "must not identify"; "effect on anonymity-set size" | In | 1, 7 | PUB denominations; set size NS |
 | F9 | "recover every one of their own unclaimed deposits and unreleased burns" | In | 1, 5 | LOC public accounts; web-page deposits not seed-derived |

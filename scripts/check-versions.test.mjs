@@ -252,3 +252,35 @@ test('--onchain with a gate: the vault names the gate, the gate the verifier, th
   const img = await run(gateEdit, { onchain: true, rpc: 'http://stand-in', fetchImpl: behindGate({ gupd: word('ab') }) });
   failsWith(img, 'onchain', /v1: gate .*UPDATE_IMAGE_ID\(\)/);
 });
+
+// --- a vault behind a SeqSigGate (v7): no submitter; the gate names its vault, set, threshold and window
+const SSG = '0x5eC5160000000000000000000000000000000007';
+const SSG_KIND = 'seq-sig: RISC Zero verifies every proof; an update needs THRESHOLD of SIGNERS keys over its LEZ end block (in the proof), anyone submits; contest window: equivocators ejected, two quorums halt';
+const EVI = `0x${'e7'.repeat(32)}`;
+const SET = `0x${'5e'.repeat(32)}`;
+const seqEdit = { 'VERSIONS.toml': [['', `\n[deployments.v1.gate]\nkind = "seq-sig"\naddress = { v = "${SSG}", src = "fixture" }\nevidence_image = { v = "${EVI}", src = "fixture" }\nsigner_set_hash = { v = "${SET}", src = "fixture" }\nsigners = { v = 3, src = "fixture" }\nthreshold = { v = 2, src = "fixture" }\ncontest_window = { v = 600, src = "fixture" }\ntest_only_short_window = { v = true, src = "fixture" }\nkind_text = { v = "${SSG_KIND}", src = "fixture" }\n`]] };
+const SEL2 = { '0x411557d1': 'gvault', '0x58d4e3c1': 'gcfg', '0x2a79eba8': 'gevi', '0xadfc5ee2': 'grel', '0x591e583a': 'gset', '0xd3a8388f': 'gn', '0x785ffb37': 'gt', '0x3cb39682': 'gw', '0x73bb8935': 'gflag' };
+Object.assign(SEL, SEL2);
+const num = (n) => `0x${n.toString(16).padStart(64, '0')}`;
+async function vaultOf() {
+  const t = parseToml(fs.readFileSync(path.join(FIXTURE, 'VERSIONS.toml'), 'utf8'));
+  const v = t.deployments.v1.vault; return (typeof v === 'object' ? v.v : v).toLowerCase();
+}
+const behindSeqSig = async (over = {}) => fakeChain({
+  ver: `0x${'0'.repeat(24)}${SSG.slice(2).toLowerCase()}`, gver: '0x0000000000000000000000008c915b5071206c6e328bc18529586c513408ab3b',
+  gupd: '0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017', gkind: abiStr(SSG_KIND),
+  gvault: `0x${'0'.repeat(24)}${(await vaultOf()).slice(2)}`, gcfg: '0x9a37708a79334bbce6946e4dab4d9f6530538e867fcec10083b05b7d19f20d15',
+  gevi: EVI, grel: '0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4', gset: SET, gn: num(3), gt: num(2), gw: num(600), gflag: num(1), ...over,
+});
+
+test('--onchain with a seq-sig gate: vault, cfgId, images, set, threshold, window and the test flag are read back', async () => {
+  const ok = await run(seqEdit, { onchain: true, rpc: 'http://stand-in', fetchImpl: await behindSeqSig() });
+  assert.deepEqual(ok.fails, [], ok.text);
+  assert.ok(ok.res.findings.some((f) => f.level === 'OK' && /v1: seq-sig gate .* signers 2 of 3, window 600 s/i.test(f.msg)), ok.text);
+  const t = await run(seqEdit, { onchain: true, rpc: 'http://stand-in', fetchImpl: await behindSeqSig({ gt: num(3) }) });
+  failsWith(t, 'onchain', /v1: gate .*THRESHOLD\(\) 3 ≠ 2/);
+  const f = await run(seqEdit, { onchain: true, rpc: 'http://stand-in', fetchImpl: await behindSeqSig({ gflag: num(0) }) });
+  failsWith(f, 'onchain', /v1: gate .*TEST_ONLY_SHORT_WINDOW\(\) false ≠ true/);
+  const v = await run(seqEdit, { onchain: true, rpc: 'http://stand-in', fetchImpl: await behindSeqSig({ gvault: word('ab') }) });
+  failsWith(v, 'onchain', /v1: gate .*VAULT\(\)/);
+});
