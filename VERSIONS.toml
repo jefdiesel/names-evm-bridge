@@ -402,6 +402,71 @@ risc0_build = { v = "3.0.7", src = "risc0-zkvm 3.1.0 Cargo.toml (risc0-build 3.0
 [deployments.v5.roles.research]
 risc0_zkvm = { v = "3.0.5", src = "= lez_chain (they link lee_core)" }
 
+[deployments.v6]
+label = "Sepolia vault v6 (2026-11-18): v5's design, deposit roots from the RFP-021 light-client instance (public path) instead of the operator attester; genesis G2 state at LEZ block 23273"
+status = "deployed"
+lez = "rc3"
+chain_id = 11155111
+web_id = "sepolia-v6"
+vault = { v = "0x95cea20e75d3B352B49d13cb0cDdC268a14C427e", src = "public-demo/prove/v6-lc-20261118/README.md (Sepolia block 12158041, tx 0x19046790…15b6)" }
+vault_create_block = { v = 12158041, src = "public-demo/prove/v6-lc-20261118/README.md" }
+cfg_id = { v = "0x7d1a304a12a486c730d94321244bd6d15741208c1ef9d00e352acda8589e6f60", src = "cfgId() read 2026-11-18; = lez-bridge cfg-id for this vault and bridge 4PxaLAfP…QWed" }
+desk = { v = "0x8Aab670f14A53A41f20a6aA75137b13C0234A1c3", src = "public-demo/prove/v6-lc-20261118/README.md (block 12158055, feeBps 30)" }
+build_commit = { v = "adc0bcacc2ca7827c6836f061cf11727c81b3533", src = "= v5: public-demo/v4/BUILD-outbound.txt (no outbound rebuild: the bridge and outbound sources are c9ec880's/adc0bca's; public-demo/prove/v6-lc-20261118/README.md)" }
+update_image = { v = "0x098f5a1ab0900f06552cca2538999e17954114ad72ac98c7c085c2d1917e3017", elf_sha256 = "cf06043dd43f99c185b9995050854ae9f30479c071937a0de00c656a81604fe7", risc0_zkvm = "3.1.0", src = "= v5 (public-demo/v4/BUILD-outbound.txt UPDATE_IMAGE_ID_TRUSTED_TIP); walks ClaimAttested (rehearsal public-demo/prove/v6-lc-20261118/rehearsal.log step 8)" }
+release_image = { v = "0x6bcbd714ca182de91cfb698216662531ae8243fa579bd31b8e48b514df0672a4", elf_sha256 = "2353c51e8366f2379a0acf703257a15a6eff449575e17b12e55e6700ea102d8a", risc0_zkvm = "3.0.5", src = "= v5 (public-demo/v4/BUILD-outbound.txt RELEASE_IMAGE_ID)" }
+genesis_g2_state = { v = "0x9c7fcc5c382e1a4af98a8dff1277ffaf4ab5eb15d869d46ff8f7d39334c0fb04", src = "outbound_host genesis --block 23273 --bridge 4PxaLAfP…QWed (the tip right after the v6 bridge deploy, before its Initialize), 2026-11-18" }
+program_id = { v = "0x3274ad532fcf5a9e62430ad67c2d8552885c1fc395151dc4f315ffddc8ede952", src = "lez-bridge program-id --bridge 4PxaLAfPZDvpfZaR8SsC2Y7pYMPNwPPGVGMpjEVPQWed" }
+zone_id = { v = "0x21617f2f28040bbbaa8eed893bd78b65c2e5056ab7f55fda7b3f736a97c03fff", src = "lez-bridge source-id --attest-program 9Wb7sBxsHBV1RPhHj4qPhQaRaiNn72L7EFjAsQdmuhNR --instance 0xe4b7d26a…3600 (slot 83): the light-client instance of public-demo/prove/v6-lc-20261118/README.md" }
+
+[deployments.v6.verifier]
+kind = "risc0-groth16"
+address = { v = "0x8c915b5071206C6E328BC18529586c513408aB3b", src = "GHSA-mm6c-35cm-g4x2 (patched Sepolia verifier); code read 2026-11-15 (Tenderly)" }
+version = { v = "3.1.0", src = "VERSION() read 2026-11-15" }
+selector = { v = "0xe71e6620", src = "SELECTOR() read 2026-11-15" }
+control_root = { v = "e6feef13db7aed4a731c7b0852de1f5c89b137726073f625d05333184d3a551d", src = "CONTROL_ROOT_0/1 read 2026-11-15, byte-reversed (= risc0-circuit-recursion 4.1.0)" }
+bn254_control_id = { v = "de81d091ba14062acb5023b3b36deee95624e3fd47475cb7ff64aed5f9eac20a", src = "BN254_CONTROL_ID read 2026-11-15, byte-reversed" }
+
+# The vault's verifier() is the gate (a new instance, same arguments as v5's); the gate's VERIFIER() is the RISC Zero verifier above (--onchain reads both).
+[deployments.v6.gate]
+address = { v = "0x4aFB8eeCd80B95e79D9280D462D13dA14f9aAC1B", src = "verifier() of the v6 vault; Sepolia block 12158040, tx 0xecae8b10…0293" }
+submitter = { v = "0xB81aa37D80F8a9588ce9B09B6d6145D1FC4095f4", src = "SUBMITTER() read 2026-11-15" }
+kind_text = { v = "update-gated: RISC Zero Groth16 verifies every proof; updates only from SUBMITTER (LEZ finality is its word)", src = "KIND() of vault/src/UpdateGatedVerifier.sol" }
+
+[[deployments.v6.lez_side]]
+name = "public"
+bridge_program = { v = "4PxaLAfPZDvpfZaR8SsC2Y7pYMPNwPPGVGMpjEVPQWed", src = "public-demo/prove/v6-lc-20261118/README.md (deployed LEZ blocks ..23273)" }
+token_program = { v = "5w6nTkftFFDy8mtdpnKpZVetGQJ2WCKdhmpJsAYArbU7", src = "v3's token program, reused (public-demo/V5-PLAN.md)" }
+bridge_image = { v = "0dabbd6c4c3035d1824c7d5ccb958ab93e3d57871bfd1efea76ab72718ef9ffa", elf_sha256 = "8914861af35f1193c5a2d309ddfd1f5f041a6781d5baafab0509f7b60e4b9d24", src = "the v3 canonical ELF (public-chain/elf-v4/bridge_guest.bin); deploy printed this image id" }
+token_image = { v = "ac175cb59bff0f5e59d51b566552546087f082a9bcea9571b705633f031eafba", elf_sha256 = "7704844f97a96dbef20cf76804f05129de5239f9b4b8fa9629c0d54a778edfa6", src = "= v3 (reused program)" }
+
+[deployments.v6.roles.lez_chain]
+risc0_zkvm = { v = "3.0.5", src = "LEZ v0.4.0-rc3 Cargo.lock at bafd07be (read 2026-11-15); the judge demo kit's lock at 96a0a502 has the same three" }
+risc0_circuit_recursion = { v = "4.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
+risc0_groth16 = { v = "3.0.4", src = "LEZ v0.4.0-rc3 Cargo.lock" }
+risc0_build = { v = "3.0.5", src = "LEZ v0.4.0-rc3 Cargo.lock" }
+
+[deployments.v6.roles.lez_host]
+risc0_zkvm = { v = "3.0.5", src = "= lez_chain; lez-bridge/cli/Cargo.toml =3.0.5" }
+risc0_circuit_recursion = { v = "4.0.4", src = "= lez_chain (LEZ refuses receipts from another control root); lez-bridge/cli/Cargo.toml =4.0.4; test lez-bridge/cli/tests/lez_receipts.rs" }
+risc0_groth16 = { v = "3.0.4", src = "= lez_chain; lez-bridge/cli/Cargo.toml =3.0.4" }
+
+[deployments.v6.roles.lez_guests]
+risc0_zkvm = { v = "3.0.5", src = "= lez_chain" }
+risc0_build = { v = "3.0.5", src = "= lez_chain" }
+
+[deployments.v6.roles.eth_guests]
+risc0_zkvm = { v = "3.1.0", src = "the G2-lite guests' Cargo.lock since adc0bca; a workspace with `image` takes that image's risc0_zkvm instead (the release guest: 3.0.5)" }
+
+[deployments.v6.roles.eth_provers]
+risc0_zkvm = { v = "3.1.0", src = "GHSA-g6qg-9j8p-7j87 fixed version; the 3.1.0 verifier needs receipts from risc0-zkvm 3.1.0; public-demo/v4/BUILD-outbound.txt host line" }
+risc0_circuit_recursion = { v = "4.1.0", src = "risc0-zkvm 3.1.0 Cargo.toml" }
+risc0_groth16 = { v = "3.0.6", src = "risc0-zkvm 3.1.0 Cargo.toml" }
+risc0_build = { v = "3.0.7", src = "risc0-zkvm 3.1.0 Cargo.toml (risc0-build 3.0.7)" }
+
+[deployments.v6.roles.research]
+risc0_zkvm = { v = "3.0.5", src = "= lez_chain (they link lee_core)" }
+
 [toolchain]
 rust = { v = "1.98.1", src = "lez-bridge/rust-toolchain.toml; LEZ v0.4.0-rc3 rust-toolchain.toml" }
 rzup = { v = "0.5.0", src = ".github/workflows/judge-demo.yml; scripts/judge-demo.sh" }
