@@ -17,10 +17,13 @@
 #   receipt (status 1, block, to or created address, sender where recorded, the vault's event, the
 #   block's UTC date against the row's date); the v4 to v7 vaults' and gates' fixed values; RISC
 #   Zero's verifier VERSION() and SELECTOR(); the committed v4 Groth16 seals through its verify(), a
-#   changed seal refused; the v6 deposit root.
+#   changed seal refused; the v6 deposit root. Values that later updates move (a vault's g2State(),
+#   exitCount(), a gate's pending update) are read at the recorded block (eth_call at that block:
+#   the endpoint must serve old state).
 # - The team's public LEZ chain, LEZ_RPC or by default https://lez.nameswallet.app/ (JSON-RPC over
-#   POST; under 4 requests a second): each named transaction's block (and size where recorded), and the
-#   two RFP-021 light-client stores (instance, chain, head slot and period).
+#   POST; under 4 requests a second): each named transaction's block (and size where recorded), a
+#   claim nullifier's spent marker, and the two RFP-021 light-client stores (instance, chain, head slot
+#   and period; for the handoff-capable one, its committees after the handoff).
 # - The deposit page (HTTP 200 and its title).
 #
 # Output: one PASS/FAIL line per check, tagged with the EVIDENCE.md row it backs; INFO lines print

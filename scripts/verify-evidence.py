@@ -269,9 +269,11 @@ class Run:
     def check(self, ok, row, text, why=""):
         self.out("PASS" if ok else "FAIL", row, text + ("" if ok or not why else ": " + why))
 
-    def call(self, to, sig, args, returns):
+    def call(self, to, sig, args, returns, block=None):
+        """eth_call at "latest", or at a fixed block for a point-in-time read (needs an endpoint that serves old state)."""
         data = "0x" + keccak256(sig.encode()).hex()[:8] + "".join(a[2:].rjust(64, "0") for a in args)
-        ans = self.t.ask("sepolia", "eth_call", [{"to": to.lower(), "data": data}, "latest"])
+        tag = "latest" if block is None else hex(block)
+        ans = self.t.ask("sepolia", "eth_call", [{"to": to.lower(), "data": data}, tag])
         if ans["reverted"]:
             raise NoAnswer("the call reverted")
         return decode(ans["result"], returns)
@@ -286,17 +288,19 @@ class Run:
         self.check(got == c["expect"], c["row"], "%s (%d)" % (c["label"], got))
 
     def c_call(self, c):
-        got = self.call(c["to"], c["sig"], c.get("args", []), c["returns"])
+        got = self.call(c["to"], c["sig"], c.get("args", []), c["returns"], c.get("block"))
         want = c["expect"]
         cmp_ = c.get("compare", "eq")
         if isinstance(want, str):
             want = want.lower()
-        shown = fmt(got)
+        shown = fmt(got) + (" at Sepolia block %d" % c["block"] if "block" in c else "")
         if cmp_ == "info":
             same = "the recorded value" if got == want else "not the recorded %s" % fmt(want)
             self.out("INFO", c["row"], "%s: %s (%s)" % (c["label"], shown, same))
         elif cmp_ == "ne":
             self.check(got != want, c["row"], "%s: %s, not %s" % (c["label"], shown, fmt(want)))
+        elif cmp_ == "ge":
+            self.check(got >= want, c["row"], "%s: %s (recorded floor %s)" % (c["label"], shown, fmt(want)))
         else:
             self.check(got == want, c["row"], "%s: %s" % (c["label"], shown), "expected %s" % fmt(want))
 
@@ -403,9 +407,33 @@ class Run:
                    "%s %s: instance %s, chain %d" % (c["label"], addr, short(s["instance"]), s["chain_id"]))
         self.check(s["slot"] >= c["min_slot"], row, "%s: head at Sepolia finalized slot %d, period %d (recorded floor: slot %d, period %d)"
                    % (c["label"], s["slot"], s["slot"] // SLOTS_PER_PERIOD, c["min_slot"], c["min_slot"] // SLOTS_PER_PERIOD))
+        if "not_current" in c:  # a committee the store held before a handoff: never current again
+            self.check(s["current_committee"] != c["not_current"].lower(), row, "%s: current committee %s, no longer %s (the committee before the handoff)"
+                       % (c["label"], short(s["current_committee"]), short(c["not_current"].lower())))
+        if "in_period" in c:  # committees recorded for one period: compared only while the head is in it
+            p = c["in_period"]
+            want = (p["current"].lower(), p["next"].lower())
+            got = (s["current_committee"], s["next_committee"])
+            head = s["slot"] // SLOTS_PER_PERIOD
+            if head == p["period"]:
+                self.check(got == want, row, "%s: in period %d, current committee %s, next %s" % (c["label"], p["period"], short(got[0]), short(got[1])),
+                           "recorded %s and %s" % (short(want[0]), short(want[1])))
+            else:  # the head only moves forward; past the period the recorded pair is history
+                self.check(head > p["period"], row, "%s: the head has moved past period %d (now %d); recorded for %d: current committee %s, next %s"
+                           % (c["label"], p["period"], head, p["period"], short(want[0]), short(want[1])))
         anchor = "anchor block %d" % s["anchor_number"] if s["anchor_number"] is not None else "anchor block number not stored"
         self.out("INFO", row, "%s: %d updates, %s, current committee %s, next committee %s" % (
             c["label"], s["updates"], anchor, short(s["current_committee"]), short(s["next_committee"]) if s["next_committee"] else "not known"))
+
+    def c_lez_nullifier(self, c):
+        """A bridge claim nullifier spent: its PDA (seed SHA256(NULLIFIER_SEED_DOMAIN | nf), lez-bridge/bridge/src/lib.rs)
+        holds the bridge program's marker state."""
+        prog = c["program"]
+        seed = sha256(b"/RFP022/bridge/claim-nullifier/v1", bytes.fromhex(c["nullifier"][2:]))
+        addr = b58e(sha256(b"/LEE/v0.2/AccountId/PDA/" + b"\0" * 8, b58d(prog), seed))
+        raw = self.t.ask("lez", "getAccount", [addr])["actor_states"].get(prog)
+        self.check(raw == "01", c["row"], "%s: nullifier %s, PDA %s holds %s" % (c["label"], short(c["nullifier"]), addr,
+                   "the bridge's spent marker" if raw == "01" else "state %s" % raw), "expected the spent marker 01")
 
     def c_page(self, c):
         p = self.t.ask("http", "GET", [c["url"]])

@@ -1,6 +1,6 @@
 {
  "about": "Normalised answers of the public endpoints to scripts/verify-evidence.sh; replay with --offline.",
- "saved_at": "2026-11-18T16:22:15Z",
+ "saved_at": "2026-11-18T20:45:37Z",
  "answers": {
   "http GET [\"https://nameswallet.app/bridge/\"]": {
    "answer": {
@@ -13,7 +13,15 @@
   "lez getAccount [\"726S4ZeFJEo6ezHYubKqqBmgxs8pN8L8fuk9fGgUehPK\"]": {
    "answer": {
     "actor_states": {
-     "GGo5C4hf4kMF2198SqWka6BRgUCL1LDNASJaBADFnxtT": "d75ae73188e10f726678b5495e5cc0db3ccd9104c8ca3ddbbb2ca96bd5683eb1a736aa0000000000a01bb100000000001a0600000000000086e80eccdf68214431c0bac709ccfd264cf433875af76330126395e0de74beacf4db88d070eae63e7e77888def58fbf7289455d03f6c8a96e4ed9bec06516813cda93c001d4c2521409463b444e56bc70588aeeeaf3b71c3c50b93f315495a876ea87524803ba78c3f6aa8b9005f07aed9f881361098eccef4a792bcdfb3cebbf950bc7e301b9109af3c129011044543f712671b1eb462a60cbbeb2c5c99a3b800008fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891002d00000000000000"
+     "GGo5C4hf4kMF2198SqWka6BRgUCL1LDNASJaBADFnxtT": "d75ae73188e10f726678b5495e5cc0db3ccd9104c8ca3ddbbb2ca96bd5683eb1a736aa0000000000a01fb10000000000d9040000000000001cb44e5d9e73d633556ccbedf6e0ddcdd23c9359575dcd980fe8656fc88b5ac517a3adce166953e2ea5d4396301c91e8c763c8812f85b21ad1ea6cb64986254a178f80e8fa0e780f6c37556fc77953f6fa058a2ac400c486699fbfd81985183e3938c9d42e418134af012cf8d56d3dbfab2f3ba0986f1d7147a4e1b65a7969c5ea181bc9b89a8097369fdd26bc8102823b48301cd91bd12eb312c49985874ca400008fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891003400000000000000"
+    }
+   },
+   "by": "https://lez.nameswallet.app/"
+  },
+  "lez getAccount [\"BkbrcjMiWFHRMXvsKpnPqK7CZsU7J6mvE1f5uMQKn8L5\"]": {
+   "answer": {
+    "actor_states": {
+     "4PxaLAfPZDvpfZaR8SsC2Y7pYMPNwPPGVGMpjEVPQWed": "01"
     }
    },
    "by": "https://lez.nameswallet.app/"
@@ -21,7 +29,7 @@
   "lez getAccount [\"GbqqfNEfLXJV56eNEjyGRdoFjWHc3HQnfxAn84tWFqDa\"]": {
    "answer": {
     "actor_states": {
-     "9Wb7sBxsHBV1RPhHj4qPhQaRaiNn72L7EFjAsQdmuhNR": "e4b7d26a10ec6c712759dc0ce887c57425901229bee42f7f6465683cc0363600a736aa0000000000c01bb100000000001b00000000000000574f72235976770f96796fe6d4cb654f772681cbb7837d1753840e9125f71be4eb5533d5fca5319067aec023618216096bfec0ec7a1886a0d501190deb828faf59e8290b075ccd5eee0ff7982fa7d0520b0e40b0d8611c9da761c8ee14b82d8e4dd8bbc430f4ca0e8a5be4b302ed013a7fb5d0a02128d5e7779615036e4c41a5b96e0bb3f51eab6cef72f35abc000564f1b10cf40da1ec43f23cbe07318dc8ab00008fe228b96b168f5df8e5922be37e82b5f6d634979c965da29d0edb1e02f58891011f920a6725e14e46957a0db0c53e25e03d0d78ec3548e286e3ae6d38c2f4a0cc2500000000000000"
+     "9Wb7sBxsHBV1RPhHj4qPhQaRaiNn72L7EFjAsQdmuhNR": "e4b7d26a10ec6c712759dc0ce887c57425901229bee42f7f6465683cc0363600a736aa00000000008020b10000000000ec05000000000000d69a5c4c047d6a5d821abf32a7192d5456683ef39524066c0ef340f5536bbc8c2233e9ac2cd4ba705cd64682d00cf0a60b9ae0556c56e11b1a210fe22398662fc7874f2a40f21d28e92a374d1087266adee6b303fede316f7fc468fafadec49923362d573adb466832ebf105626d2e80dabf563ea9dab4fb10f61ac366925466d4a42182b06b311f6da56138c6c23c0c9d7a6a9fdda119e762cd4e0ebfe1938400001f920a6725e14e46957a0db0c53e25e03d0d78ec3548e286e3ae6d38c2f4a0cc0180e21ba65f43f094893e4ec52075bdbfa0acc8ea6f24682dfbc57f59aeb1a9f82e00000000000000"
     }
    },
    "by": "https://lez.nameswallet.app/"
@@ -55,6 +63,14 @@
     "block": 21618,
     "bytes": 81720,
     "sha256": "47f0f8d1d15f98e118b7b1d190fd7b2226356c62217290ff227a0f5b0b1f284e"
+   },
+   "by": "https://lez.nameswallet.app/"
+  },
+  "lez getTransaction [\"18f5295b3135566f0f3e27ef64ba53b933716ac3a5f21120a43bb75306777c40\"]": {
+   "answer": {
+    "block": 27401,
+    "bytes": 7300,
+    "sha256": "3670c103370f2ab0020e439d09dcf0121e6d725d8726a5f2dda298a3a561f414"
    },
    "by": "https://lez.nameswallet.app/"
   },
@@ -114,6 +130,14 @@
    },
    "by": "https://lez.nameswallet.app/"
   },
+  "lez getTransaction [\"58f58daa9ecf4cd55fea9b0010d8e99220e6f7e2740e2ab773d9f2857505492b\"]": {
+   "answer": {
+    "block": 27985,
+    "bytes": 29177,
+    "sha256": "ff61b2f0a8806aa6e389407ba21db3b8f1dddbfc46f184c55e9608c0000d9c96"
+   },
+   "by": "https://lez.nameswallet.app/"
+  },
   "lez getTransaction [\"63b19c5828e3553bfe988f77d6f2c84943a36c62a141d492cc1580da21d07c4d\"]": {
    "answer": {
     "block": 15255,
@@ -127,6 +151,14 @@
     "block": 24717,
     "bytes": 7154,
     "sha256": "898732e7bbc1d134073348940f82f1527a3536f8b0d6a31d1d2be3b2d0d5e262"
+   },
+   "by": "https://lez.nameswallet.app/"
+  },
+  "lez getTransaction [\"768aa5941640d44b0169cd07110caacc5a29306c58f1b8bb0eb23f550030bbcb\"]": {
+   "answer": {
+    "block": 27983,
+    "bytes": 27433,
+    "sha256": "4d205e5a33172e67ef31e491651bde2a7f4398bafcf71070b43860dc139422b1"
    },
    "by": "https://lez.nameswallet.app/"
   },
@@ -170,6 +202,14 @@
    },
    "by": "https://lez.nameswallet.app/"
   },
+  "lez getTransaction [\"d890f95fa462b6a226032332f062803084bef26d93f0aa4a03fc2045b5eb52a6\"]": {
+   "answer": {
+    "block": 27862,
+    "bytes": 28981,
+    "sha256": "291a84c9dbd26afa2f6f88621f3ea73366d2d94f0f6efa6a025c7b57e57a3cd5"
+   },
+   "by": "https://lez.nameswallet.app/"
+  },
   "lez getTransaction [\"d9edebd975340012367f4adc09012d1c98433701f24f8f0086701bb1c95d4b8b\"]": {
    "answer": {
     "block": 24718,
@@ -191,6 +231,14 @@
     "block": 23258,
     "bytes": 26286,
     "sha256": "fe8af2765b38263b5afda830cdccd1576d474ce94bf9e0212d3323c52b0edb04"
+   },
+   "by": "https://lez.nameswallet.app/"
+  },
+  "lez getTransaction [\"f82ea1f8d4d246a06be2e146db912c6fb843f6104d9f62227e3607a03b8a110c\"]": {
+   "answer": {
+    "block": 27984,
+    "bytes": 27843,
+    "sha256": "ccfbe05a7aad1f28f86d7bd7a2c388fa3c5517d10f57ba2520307e43104c268b"
    },
    "by": "https://lez.nameswallet.app/"
   },
@@ -251,14 +299,21 @@
    },
    "by": "https://sepolia.gateway.tenderly.co"
   },
-  "sepolia eth_call [{\"to\":\"0x4d7b360cf385d3477f1a67c1aedeb6c17c26d23e\",\"data\":\"0xbb4c31ed\"},\"latest\"]": {
+  "sepolia eth_call [{\"to\":\"0x4d7b360cf385d3477f1a67c1aedeb6c17c26d23e\",\"data\":\"0xbb4c31ed\"},\"0xb98bf7\"]": {
    "answer": {
     "reverted": false,
     "result": "0x0000000000000000000000000000000000000000000000000000000000000001"
    },
    "by": "https://sepolia.gateway.tenderly.co"
   },
-  "sepolia eth_call [{\"to\":\"0x4d7b360cf385d3477f1a67c1aedeb6c17c26d23e\",\"data\":\"0xfd64db0a\"},\"latest\"]": {
+  "sepolia eth_call [{\"to\":\"0x4d7b360cf385d3477f1a67c1aedeb6c17c26d23e\",\"data\":\"0xfd64db0a\"},\"0xb98bda\"]": {
+   "answer": {
+    "reverted": false,
+    "result": "0x319f231d0e47d5194a34a63cd7d2213cd495d042eaf3712f0547119aaa5ef936"
+   },
+   "by": "https://sepolia.gateway.tenderly.co"
+  },
+  "sepolia eth_call [{\"to\":\"0x4d7b360cf385d3477f1a67c1aedeb6c17c26d23e\",\"data\":\"0xfd64db0a\"},\"0xb995cc\"]": {
    "answer": {
     "reverted": false,
     "result": "0x319f231d0e47d5194a34a63cd7d2213cd495d042eaf3712f0547119aaa5ef936"
@@ -314,7 +369,7 @@
    },
    "by": "https://sepolia.gateway.tenderly.co"
   },
-  "sepolia eth_call [{\"to\":\"0x5e891d52eb9a729fecfdd9051685fdeacd9f0fae\",\"data\":\"0xd56fa0fc\"},\"latest\"]": {
+  "sepolia eth_call [{\"to\":\"0x5e891d52eb9a729fecfdd9051685fdeacd9f0fae\",\"data\":\"0xd56fa0fc\"},\"0xb995cc\"]": {
    "answer": {
     "reverted": false,
     "result": "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -377,10 +432,24 @@
    },
    "by": "https://sepolia.gateway.tenderly.co"
   },
+  "sepolia eth_call [{\"to\":\"0x95cea20e75d3b352b49d13cb0cddc268a14c427e\",\"data\":\"0x156428ba70c5ee970964f9ac3a00259ef98b82f5b43c0e781f702a5cb50b4b6bfd48487d\"},\"latest\"]": {
+   "answer": {
+    "reverted": false,
+    "result": "0x0000000000000000000000000000000000000000000000000000000000000001"
+   },
+   "by": "https://sepolia.gateway.tenderly.co"
+  },
   "sepolia eth_call [{\"to\":\"0x95cea20e75d3b352b49d13cb0cddc268a14c427e\",\"data\":\"0x2b7ac3f3\"},\"latest\"]": {
    "answer": {
     "reverted": false,
     "result": "0x0000000000000000000000004afb8eecd80b95e79d9280d462d13da14f9aac1b"
+   },
+   "by": "https://sepolia.gateway.tenderly.co"
+  },
+  "sepolia eth_call [{\"to\":\"0x95cea20e75d3b352b49d13cb0cddc268a14c427e\",\"data\":\"0x2dfdf0b5\"},\"latest\"]": {
+   "answer": {
+    "reverted": false,
+    "result": "0x0000000000000000000000000000000000000000000000000000000000000003"
    },
    "by": "https://sepolia.gateway.tenderly.co"
   },
@@ -405,7 +474,7 @@
    },
    "by": "https://sepolia.gateway.tenderly.co"
   },
-  "sepolia eth_call [{\"to\":\"0x95cea20e75d3b352b49d13cb0cddc268a14c427e\",\"data\":\"0xbb4c31ed\"},\"latest\"]": {
+  "sepolia eth_call [{\"to\":\"0x95cea20e75d3b352b49d13cb0cddc268a14c427e\",\"data\":\"0xbb4c31ed\"},\"0xb98a39\"]": {
    "answer": {
     "reverted": false,
     "result": "0x0000000000000000000000000000000000000000000000000000000000000002"
@@ -440,7 +509,7 @@
    },
    "by": "https://sepolia.gateway.tenderly.co"
   },
-  "sepolia eth_call [{\"to\":\"0x95cea20e75d3b352b49d13cb0cddc268a14c427e\",\"data\":\"0xfd64db0a\"},\"latest\"]": {
+  "sepolia eth_call [{\"to\":\"0x95cea20e75d3b352b49d13cb0cddc268a14c427e\",\"data\":\"0xfd64db0a\"},\"0xb989f2\"]": {
    "answer": {
     "reverted": false,
     "result": "0x306af04ff0f4817211f8492531e405184713c52380b8e3a06e23db5aea6510e9"
@@ -492,7 +561,7 @@
   "sepolia eth_call [{\"to\":\"0xafbdf192434e9888bb23dae6f2d15eea6246ed10\",\"data\":\"0xfd64db0a\"},\"latest\"]": {
    "answer": {
     "reverted": false,
-    "result": "0xf0ae80f2b8f804f8b2ea7d2de3246424ff643096740699a07291e7e43d09fc10"
+    "result": "0xe744c0c13a0debb0079578651ae27e03ff8968363c93c34488dcb1f5bbdb5c9e"
    },
    "by": "https://sepolia.gateway.tenderly.co"
   },
@@ -729,6 +798,14 @@
     "block": 12162508,
     "hash": "0xe6d8a6c4de8524f98b528752034928d7a5b7259ee2b0d5e7afa44c51478cc0cd",
     "timestamp": 1795017828
+   },
+   "by": "https://sepolia.gateway.tenderly.co"
+  },
+  "sepolia eth_getBlockByNumber [\"0xb99730\",false]": {
+   "answer": {
+    "block": 12162864,
+    "hash": "0x793ec0e0646c08e42485ad1670cd12fa651ab69186f8a800da5ef460d5a45dab",
+    "timestamp": 1795022220
    },
    "by": "https://sepolia.gateway.tenderly.co"
   },
@@ -1259,6 +1336,34 @@
      [
       "0x5e891d52eb9a729fecfdd9051685fdeacd9f0fae",
       "0x0f91172aff2c323e8b7e58a7886a16e1966258df1cae0e3782c6791f27f1aacc"
+     ]
+    ]
+   },
+   "by": "https://sepolia.gateway.tenderly.co"
+  },
+  "sepolia eth_getTransactionReceipt [\"0xfe8c351b0c38fe6425cafacb25256eebf99c5e301804856d1662dda9caf267aa\"]": {
+   "answer": {
+    "status": 1,
+    "block": 12162864,
+    "from": "0x37a46e7334dd061e0c7e2298247ee9278d0d321f",
+    "to": "0x8aab670f14a53a41f20a6aa75137b13c0234a1c3",
+    "created": null,
+    "logs": [
+     [
+      "0xfffffffffffffffffffffffffffffffffffffffe",
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+     ],
+     [
+      "0xfffffffffffffffffffffffffffffffffffffffe",
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+     ],
+     [
+      "0x95cea20e75d3b352b49d13cb0cddc268a14c427e",
+      "0x7c6270dc673eb588f0d459a71fcc44183d7b70b659eb552028fa91fadbe8ea69"
+     ],
+     [
+      "0x8aab670f14a53a41f20a6aa75137b13c0234a1c3",
+      "0x2fe535c5fd3b340521910740117c9de5d7485f5881b3b63c47bf695b1d8da057"
      ]
     ]
    },
