@@ -15,7 +15,7 @@
 # - Sepolia JSON-RPC, SEPOLIA_RPC (a comma-separated list, tried in order) or by default
 #   https://sepolia.gateway.tenderly.co, then https://11155111.rpc.thirdweb.com: each transaction's
 #   receipt (status 1, block, to or created address, sender where recorded, the vault's event, the
-#   block's UTC date against the row's date); the v4/v5/v6 vaults' and gates' fixed values; RISC
+#   block's UTC date against the row's date); the v4 to v7 vaults' and gates' fixed values; RISC
 #   Zero's verifier VERSION() and SELECTOR(); the committed v4 Groth16 seals through its verify(), a
 #   changed seal refused; the v6 deposit root.
 # - The team's public LEZ chain, LEZ_RPC or by default https://lez.nameswallet.app/ (JSON-RPC over

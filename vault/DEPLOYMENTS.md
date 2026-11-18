@@ -17,6 +17,18 @@ SEPOLIA_PK=<deployer key> EXPECTED_DESK=<DESK from the simulation> forge script 
 
 `DESK_FEE_BPS` (default 300, at most 300) sets the starting rate. The script refuses a key that is not the deployer and a vault whose `cfgId` is not v2's. After it: the desk address goes into `web/deposit/src/lib/deployments.js` (`desk`, the page's one switch) and, with its creation block, into the grants daemon's `DESK` and `DESK_FROM_BLOCK` (`public-demo/RUNBOOK.md` (not published) §12).
 
+## Sepolia vaults v6 and v7 (2026-11-18): test vaults deployed from branches
+
+Their code and full records are on branches beside `main`; this section lists the addresses only. v5 stays the default on the deposit page.
+
+- **v7** (branch `v7-seqsig`, record `public-demo/prove/v7-seqsig-20261118/README.md`): v6's inbound side; withdrawals on 2 of 3 signer keys of ours through a gate anyone can submit to, with a 600 s contest window (a test-only setting).
+  - Vault `0x4D7B360cf385d3477F1A67c1AEdEB6C17c26d23E` (block 12159635), gate `0x5E891d52eB9a729feCFDd9051685FDeaCd9F0FaE` (block 12159634), desk `0x9b4040A990aEe283F1DE5451fFBaEE3679507fb5` (block 12159647, 30 bps).
+  - `cfgId` `0x7ef9153b69a348ff39e3daf7b893f1b775513489c71c7331d88b4a5cf30652d5`; update image `0x93c88f77e60ee5698849163ec51d6b8647e58df752984dcb15ca2f011c96955d`; release image as v5.
+- **v6** (branch `v6-lc`, record `public-demo/prove/v6-lc-20261118/README.md`): v5's design with deposit roots from the RFP-021 light client instead of the operator attester.
+  - Vault `0x95cea20e75d3B352B49d13cb0cDdC268a14C427e` (block 12158041), gate `0x4aFB8eeCd80B95e79D9280D462D13dA14f9aAC1B` (block 12158040), desk `0x8Aab670f14A53A41f20a6aA75137b13C0234A1c3` (block 12158055, 30 bps).
+  - `cfgId` `0x7d1a304a12a486c730d94321244bd6d15741208c1ef9d00e352acda8589e6f60`; update and release images as v5.
+- Verifier for both: RISC Zero's Groth16 verifier 3.1.0, `0x8c915b5071206C6E328BC18529586c513408aB3b`. All six contracts are source-verified on Sourcify (exact match).
+
 ## Sepolia vault v5 (2026-11-15): v4's design with no release delay
 
 **Deployed on Sepolia on 2026-11-15** from `public-demo/V5-PLAN.md`. The record is
