@@ -19,12 +19,12 @@ import {MockVerifier, TestToken, NoReturnToken} from "../test/mocks/Mocks.sol";
 ///   releases()           three ERC-20 releases, relayer paid (first, same recipient, fresh recipient)
 /// Read gas from the receipts (cast receipt / broadcast run-latest.json).
 contract GasMeasure is Script {
-    uint256 constant K0 = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
-    uint256 constant K1 = 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d;
+    uint256 immutable K0 = vm.envUint("ANVIL_DEV_KEY_0");
+    uint256 immutable K1 = vm.envUint("ANVIL_DEV_KEY_1");
     bytes32 constant G2 = keccak256("g2");
     bytes32 constant G3 = keccak256("g3");
 
-    function _a() internal pure returns (address d, address alice, MockVerifier mv, TestToken usdc, NoReturnToken usdt, BridgeVault v) {
+    function _a() internal view returns (address d, address alice, MockVerifier mv, TestToken usdc, NoReturnToken usdt, BridgeVault v) {
         d = vm.addr(K0);
         alice = vm.addr(K1);
         mv = MockVerifier(vm.computeCreateAddress(d, 0));

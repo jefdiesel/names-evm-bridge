@@ -10,7 +10,7 @@ import {MockVerifier} from "./mocks/Mocks.sol";
 /// attestor must reproduce (also in `src/demo/README.md`), and the gas of `verify`.
 contract DemoAttestedVerifierTest is Test {
     // Anvil / Hardhat account 0: a PUBLIC test key, used here only so the vectors are reproducible.
-    uint256 constant ANVIL0_PK = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+    uint256 immutable ANVIL0_PK = vm.envUint("ANVIL_DEV_KEY_0");
     address constant ANVIL0 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
     uint256 constant LIFETIME = 180 days;
     uint256 constant N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141;

@@ -90,7 +90,7 @@ WF_ETH=50000000000000           # its withdraw fee (0.5%)
 XMAX_ETH=100000000000000        # max relay fee written into the exit commitment
 # anvil's default account 0 (a well-known public test key; never holds real funds): the never-used
 # account's depositor on Ethereum and the submitter of its release. The round trip uses account 3.
-ANVIL0=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+ANVIL0=$("$REPO/lez-bridge/scripts/anvil-dev-key.sh" 0) || exit 1
 T_START=$(date +%s)
 
 mkdir -p "$RUN"

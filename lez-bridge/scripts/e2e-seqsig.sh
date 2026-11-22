@@ -33,9 +33,9 @@ export PATH=$HOME/.foundry/bin:$PATH
 export LEE_WALLET_HOME_DIR=$R/wallet LEZ_BRIDGE_SEQUENCER=$SEQ LEE_WALLET_PASSWORD= RISC0_PROVER=local RAYON_NUM_THREADS=4
 export TMPDIR=${TMPDIR_RUN:-$R/tmp}
 # anvil default accounts (public test keys): #3 deploys and is the vault admin; #5 and #6 hold no role
-EK=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6
-K5=0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba
-K6=0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e
+EK=$("$HERE/scripts/anvil-dev-key.sh" 3) || exit 1
+K5=$("$HERE/scripts/anvil-dev-key.sh" 5) || exit 1
+K6=$("$HERE/scripts/anvil-dev-key.sh" 6) || exit 1
 LOCAL_TEST_KEY=$("$HERE/scripts/lez-test-key.sh") || exit 1   # LEZ published genesis test key, read from LEZ
 ETH=0x0000000000000000000000000000000000000000
 D=10000000000000000; DF=100000000000000; WF=50000000000000   # 0.01 ETH, its deposit and withdraw fees

@@ -50,7 +50,7 @@ ETH_RPC = "http://127.0.0.1:%d" % ANVIL_PORT
 for p in (RPC_HOSTPORT, METRICS):
     assert int(p.rsplit(":", 1)[1]) in range(3480, 3486), "ports 3480-3485 only"
 assert ANVIL_PORT == 8580 or os.environ.get("PT_ALLOW_PORT") == "1"
-ANVIL_KEY0 = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"  # anvil's public test key 0
+ANVIL_KEY0 = subprocess.check_output([os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "anvil-dev-key.sh"), "0"], text=True).strip()  # anvil's public test key 0
 ETH = "0x0000000000000000000000000000000000000000"
 ETH_D = [10 ** 16, 10 ** 17]
 ETH_DF = [10 ** 14, 10 ** 15]

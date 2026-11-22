@@ -40,7 +40,7 @@ T="nice -n 10 $LEZ_BRIDGE_BIN"
 TOKEN_IMAGE=633555cc0d90901139f0bf541fe2f32912f969579e829e9d6acab2def083ab5d
 BRIDGE_IMAGE=249a19c6386bfab7b70018312585f4555d9a302cd972308ea4b1a77db74f0129
 LOCAL_TEST_KEY=$("$HERE/scripts/lez-test-key.sh") || exit 1   # LEZ published genesis test key, read from LEZ
-EK=0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba   # anvil account #5
+EK=$("$HERE/scripts/anvil-dev-key.sh" 5) || exit 1   # anvil account #5
 ZERO32=0x0000000000000000000000000000000000000000000000000000000000000000
 USER_DEST=0x000000000000000000000000000000000000bEEF
 say() { echo; echo "## $(date +%T) $*"; }

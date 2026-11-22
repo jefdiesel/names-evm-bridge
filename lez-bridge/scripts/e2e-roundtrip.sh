@@ -44,7 +44,7 @@ LABEL="mock-verified: proofs executed, not proved; LEZ finality trusted for the 
 export PATH=$HOME/.foundry/bin:$PATH
 export LEE_WALLET_HOME_DIR=$R/wallet LEZ_BRIDGE_SEQUENCER=$SEQ RISC0_PROVER=local RAYON_NUM_THREADS=4
 # anvil default account #3 (not #0, which other local runs use)
-EK=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6
+EK=$("$HERE/scripts/anvil-dev-key.sh" 3) || exit 1
 LOCAL_TEST_KEY=$("$HERE/scripts/lez-test-key.sh") || exit 1   # LEZ published genesis test key, read from LEZ
 ZERO32=0x0000000000000000000000000000000000000000000000000000000000000000
 ETH=0x0000000000000000000000000000000000000000

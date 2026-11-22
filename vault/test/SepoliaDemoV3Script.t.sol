@@ -14,13 +14,13 @@ import {DemoUSDC} from "../script/DemoUSDC.sol";
 ///   SEPOLIA_PK=<anvil 0 key> ATTESTOR=... RELEASE_IMAGE_ID=... UPDATE_IMAGE_ID=... PROGRAM_ID=... \
 ///   forge script test/SepoliaDemoV3Script.t.sol:SepoliaDemoV3Harness --chain-id 11155111 --offline
 contract SepoliaDemoV3Harness is SepoliaDemoV3 {
-    function _deployer() internal pure override returns (address) {
+    function _deployer() internal view override returns (address) {
         return 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
     }
 }
 
 contract SepoliaDemoV3ScriptTest is Test {
-    uint256 constant ANVIL0_PK = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+    uint256 immutable ANVIL0_PK = vm.envUint("ANVIL_DEV_KEY_0");
     address constant ANVIL0 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
     uint256 constant SEPOLIA = 11155111;
     // the G3 image id of the v1/v2 demo vaults; the G2 id here is a stand-in value for the test

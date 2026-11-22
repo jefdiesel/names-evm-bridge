@@ -95,7 +95,7 @@ digest = keccak256(0x19 ‖ 0x01 ‖ domainSeparator ‖ structHash)            
 Context for both vectors:
 - `chainId = 11155111` (Sepolia);
 - verifier at `0x0000000000000000000000000000000000de3071`;
-- attestor = Anvil/Hardhat account 0, the PUBLIC test key `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`, address `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`.
+- attestor = Anvil/Hardhat account 0, the PUBLIC test key (`lez-bridge/scripts/anvil-dev-key.sh 0` prints it), address `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`.
 
 `domainSeparator = 0xe6b874687824a21c15cc5c4cb2de2e3ba9015adc0e7dc330b64abe48610ffb63`
 

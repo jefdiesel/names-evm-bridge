@@ -17,13 +17,13 @@ import {MockGroth16Verifier} from "./mocks/Mocks.sol";
 ///   UPDATE_IMAGE_ID=... PROGRAM_ID=... LEZ_CHAIN_ID=... ZONE_ID=... INITIAL_G2_STATE=... \
 ///   forge script test/SepoliaV4Script.t.sol:SepoliaV4Harness --rpc-url http://127.0.0.1:<anvil> --broadcast
 contract SepoliaV4Harness is SepoliaV4 {
-    function _deployer() internal pure override returns (address) {
+    function _deployer() internal view override returns (address) {
         return 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
     }
 }
 
 contract SepoliaV4ScriptTest is Test {
-    uint256 constant ANVIL0_PK = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+    uint256 immutable ANVIL0_PK = vm.envUint("ANVIL_DEV_KEY_0");
     address constant ANVIL0 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
     uint256 constant SEPOLIA = 11155111;
     // Stand-in values: the plan passes the real ids as inputs (none is a constant of the script).

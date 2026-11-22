@@ -67,10 +67,10 @@ esend() { local k=$1; shift; cast send "$@" --private-key "$k" --rpc-url "$ETH_R
 erevert() { local k=$1 want=$2; shift 2; local out; if out=$(cast send "$@" --private-key "$k" --rpc-url "$ETH_RPC" 2>&1); then die "expected $want, it went through"; fi
   local sel; sel=$(cast sig "$want()"); grep -qi -- "${sel#0x}\|$want" <<<"$out" || die "expected $want ($sel), got: $(echo "$out" | tail -2)"; echo "refused as expected: $want"; }
 # anvil's public test keys: #0 deployer (= the harness's DEPLOYER), #3 depositor, #4 SUBMITTER, #5 anyone
-K0=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-K3=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6
-K4=0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a
-K5=0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba
+K0=$("$ROOT_DIR/lez-bridge/scripts/anvil-dev-key.sh" 0) || exit 1
+K3=$("$ROOT_DIR/lez-bridge/scripts/anvil-dev-key.sh" 3) || exit 1
+K4=$("$ROOT_DIR/lez-bridge/scripts/anvil-dev-key.sh" 4) || exit 1
+K5=$("$ROOT_DIR/lez-bridge/scripts/anvil-dev-key.sh" 5) || exit 1
 SUBMITTER=$(cast wallet address --private-key $K4); ANYONE=$(cast wallet address --private-key $K5)
 ETH=0x0000000000000000000000000000000000000000; D001=10000000000000000
 echo "$LABEL"; echo "run $R; CLI $(shasum -a 256 "$CLI" | cut -c1-16)…; host $(shasum -a 256 "$HOST" | cut -c1-16)…"

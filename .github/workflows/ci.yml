@@ -69,6 +69,11 @@ jobs:
       - run: forge --version
       # fails if any non-test contract exceeds EIP-170 (BridgeVault is ~22.7 KB)
       - run: forge build --sizes
+      # The tests take Anvil's public dev key from Anvil: the repo holds no private key.
+      - run: |
+          k=$(../lez-bridge/scripts/anvil-dev-key.sh 0)
+          echo "::add-mask::$k"
+          echo "ANVIL_DEV_KEY_0=$k" >> "$GITHUB_ENV"
       - run: forge test -vv
 
   # LEZ v0.4.0-rc3 (bafd07be): the tag is pinned in lez-bridge/Cargo.toml and in the tracked locks

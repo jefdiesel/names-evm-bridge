@@ -122,7 +122,7 @@ fixed_phase() {
   st() { LEE_WALLET_HOME_DIR=$S "$CLI" "$@"; }
   op() { LEE_WALLET_HOME_DIR=$OPW "$CLI" "$@"; }
   ETH_RPC=http://127.0.0.1:$ANVIL_PORT
-  ANVIL_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80   # anvil's public test key 0
+  ANVIL_KEY=$("$HERE/anvil-dev-key.sh" 0) || exit 1   # anvil's public test key 0
   say "FIXED programs: deployer, stranger, claimers V (victim) and A (attacker), relay payer"
   if [ -z "${F_D:-}" ]; then
     d wallet check-health >/dev/null 2>&1; save F_D "$(newacct d)"; DPK=$(pkof)

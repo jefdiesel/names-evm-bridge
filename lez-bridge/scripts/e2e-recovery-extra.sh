@@ -22,7 +22,7 @@ export LEZ_BRIDGE_ETH_RPC=${ETH_RPC:-http://127.0.0.1:8550}
 export RISC0_PROVER=local RAYON_NUM_THREADS=4
 ETH_RPC=$LEZ_BRIDGE_ETH_RPC
 T="nice -n 10 $LEZ_BRIDGE_BIN"
-EK=0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba   # anvil account #5
+EK=$("$HERE/scripts/anvil-dev-key.sh" 5) || exit 1   # anvil account #5
 USER_DEST=0x000000000000000000000000000000000000bEEF
 say() { echo; echo "## $(date +%T) $*"; }
 die() { echo "FAILED: $*" >&2; exit 1; }

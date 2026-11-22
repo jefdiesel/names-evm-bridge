@@ -35,7 +35,7 @@ export PATH=$HOME/.foundry/bin:$HOME/.risc0/bin:$PATH
 T="$HERE/scripts/guard.sh nice -n 10 $HERE/target/release/lez-bridge"
 export GUARD_LOG=$R/guard.log
 LOCAL_TEST_KEY=$("$HERE/scripts/lez-test-key.sh") || exit 1   # LEZ published genesis test key, read from LEZ
-ANVIL_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+ANVIL_KEY=$("$HERE/scripts/anvil-dev-key.sh" 0) || exit 1
 ETH_RPC=http://127.0.0.1:${ANVIL_PORT:-8550}
 ZERO32=0x0000000000000000000000000000000000000000000000000000000000000000
 # LEZ 0.4 has no native chain id; locally both ids are 32 zero bytes (shared with the vault).

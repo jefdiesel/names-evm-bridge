@@ -33,9 +33,9 @@ export LEZ_BRIDGE_SEQUENCER=$SEQ LEZ_BRIDGE_ETH_RPC=$ETH_RPC LEE_WALLET_PASSWORD
 # anvil's default accounts #0..#2 (public test keys of anvil's default test phrase, this anvil only;
 # the run checks their addresses): #0 deployer, admin and freezer of the vault; #1 pays the
 # deposits; #2 the relayer that submits every reclaim.
-K0=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-K1=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
-K2=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
+K0=$("$HERE/scripts/anvil-dev-key.sh" 0) || exit 1
+K1=$("$HERE/scripts/anvil-dev-key.sh" 1) || exit 1
+K2=$("$HERE/scripts/anvil-dev-key.sh" 2) || exit 1
 A0=$(cast wallet address --private-key $K0); A1=$(cast wallet address --private-key $K1); RELAYER=$(cast wallet address --private-key $K2)
 [ "$A0 $A1 $RELAYER" = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" ] \
   || { echo "FAILED: not anvil's default accounts #0..#2" >&2; exit 1; }
