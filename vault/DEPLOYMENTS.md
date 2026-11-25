@@ -46,8 +46,10 @@ Their code and full records are on branches beside `main`; this section lists th
 - **What that costs:** only the caps bound an update over a forged LEZ tip (a stolen submitter key);
   `public-demo/V5-PLAN.md` §1.
 - **S0 was not repeated:** the same images on the same verifier, accepted for v4.
-- **No deposit, update or release yet** (`depositCount()` 0, `g2State()` = the genesis state, read 2026-11-15
-  and again 2026-11-16; no `StateUpdated` or `Released` log).
+- **At deployment, no deposit, update or release** (`depositCount()` 0, `g2State()` = the genesis state, read 2026-11-15
+  and again early on 2026-11-16). Since 2026-11-16: a private round trip (update accepted in Sepolia block 12149823,
+  release paid in 12149867) and updates from the unattended updater (`docs/EVIDENCE.md`, rows `v5-private-round-trip`,
+  `v5-unattended`; `public-demo/RUNBOOK.md` (not published) §22, §23).
 
 | What | Value |
 |---|---|
