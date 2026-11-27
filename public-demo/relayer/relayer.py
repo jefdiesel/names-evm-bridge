@@ -30,7 +30,9 @@ the fee: it co-signs the claim as the transaction's fee payer, from a DEDICATED 
 
 Every POST, under one lock (one claim at a time), with at most RELAY_QUEUE more waiting (L2; a
 CLI check is a ~107 MB process):
-1. size and shape: body <= MAX_BODY, JSON, `tx` hex <= 2 x 8192 characters;
+1. size and shape: body <= MAX_BODY, JSON, `tx` hex <= 2 x MAX_TX_BYTES characters (8,192 bytes; a
+   relay of a light-client bridge (v6) takes 12,288: its claims carry the vault's proof,
+   modules/V6-IN-WALLET.md);
 2. the relay's own submissions are reconciled with the chain (below); while its last co-signed
    claim is not in a block yet, a claim (not a check) is answered "busy, retry" with
    `retry_after`, and the CLI rebuilds with the payer's fresh nonce (review M1: two co-signed
@@ -40,8 +42,9 @@ CLI check is a ~107 MB process):
    /64 (review M4), taken from CF-Connecting-IP only when the request carries the RPC filter's
    shared secret (X-Relay-Auth, RELAY_AUTH_FILE); any other loopback caller is keyed on its TCP
    peer, so all of them share one budget;
-4. `lez-bridge relay-cosign` WITHOUT --submit (no key used): strict decode (a public stand-in
-   claim on this bridge, exactly its declared accounts, no admission evidence, the claimer and the
+4. `lez-bridge relay-cosign` WITHOUT --submit (no key used): strict decode (a public claim on
+   this bridge: a stand-in `Claim`, or on a light-client bridge a `ClaimAttested`, whose vault proof
+   the CLI checks and whose light-client anchor must be recorded; exactly its declared accounts, no admission evidence, the claimer and the
    payer as the only signers, no tip, gas <= MAX_GAS, max_fee <= MAX_FEE, current nonces), the
    claim pre-checks (attested root, unspent nullifier, minting open, denomination, the deposit in
    the root), and a simulation that must apply;
@@ -134,7 +137,10 @@ BURN_DAILY_MAX = int(E("BURN_DAILY_MAX", "50"))                # relayed burns p
 IP_DAILY_BURNS = int(E("IP_DAILY_BURNS", "5"))                 # relayed burns per client per 24 h
 RELAY_QUEUE = int(E("RELAY_QUEUE", "2"))                       # requests waiting behind the running one
 WINDOW = 86400
-MAX_BODY = 20000
+BURNS = E("RELAY_BURNS", "1") == "1"                          # 0: no relayed burns (a v6 relay: no standing updater yet)
+MAX_TX_BYTES = int(E("MAX_TX_BYTES", "8192"))                  # 12288 for a light-client bridge's relay
+MAX_BODY = 20000 if MAX_TX_BYTES <= 8192 else 2 * MAX_TX_BYTES + 4000   # 20000 as before for a v2-v5 relay
+TX_HEX = re.compile(r"(0x)?[0-9a-fA-F]{2,%d}" % (2 * MAX_TX_BYTES))
 CLI_TIMEOUT = int(E("CLI_TIMEOUT", "180"))
 DRY = E("DRY_RUN", "0") == "1"
 B58 = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
@@ -482,6 +488,8 @@ def handle_burn(body, ip, state, now=None, cli=run_cli, chain=None):
     disk, the CLI's submit."""
     now = now or time.time()
     chain = chain or CHAIN
+    if not BURNS:
+        return {"ok": False, "reason": "this relay pays for claims only, not burns", "retry": False}
     if len(body) > MAX_BODY:
         return {"ok": False, "reason": "request too large", "retry": False}
     try:
@@ -490,7 +498,7 @@ def handle_burn(body, ip, state, now=None, cli=run_cli, chain=None):
         check_only = bool(req.get("check_only", False))
     except (ValueError, KeyError, TypeError):
         return {"ok": False, "reason": "expected JSON {\"tx\": hex}", "retry": False}
-    if not isinstance(tx, str) or not re.fullmatch(r"(0x)?[0-9a-fA-F]{2,16384}", tx):
+    if not isinstance(tx, str) or not TX_HEX.fullmatch(tx):
         return {"ok": False, "reason": "tx is not hex (or too long)", "retry": False}
     prune(state, now)
     reconcile(state, now, chain)
@@ -585,7 +593,7 @@ def handle(body, ip, state, now=None, cli=run_cli, desk=desk_commitments, chain=
         check_only = bool(req.get("check_only", False))
     except (ValueError, KeyError, TypeError):
         return {"ok": False, "reason": "expected JSON {\"tx\": hex}", "retry": False}
-    if not isinstance(tx, str) or not re.fullmatch(r"(0x)?[0-9a-fA-F]{2,16384}", tx):
+    if not isinstance(tx, str) or not TX_HEX.fullmatch(tx):
         return {"ok": False, "reason": "tx is not hex (or too long)", "retry": False}
     prune(state, now)
     reconcile(state, now, chain)
@@ -812,7 +820,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.rstrip("/") in ("/relay/info", "/info"):
-            return self.reply(200, {"payer": PAYER, "bridge": BRIDGE, "max_gas": MAX_GAS, "max_fee": str(MAX_FEE), "burns": True})
+            return self.reply(200, {"payer": PAYER, "bridge": BRIDGE, "max_gas": MAX_GAS, "max_fee": str(MAX_FEE), "burns": BURNS})
         self.reply(404, {"ok": False, "reason": "not found"})
 
     def do_POST(self):

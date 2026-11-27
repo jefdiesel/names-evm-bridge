@@ -577,6 +577,50 @@ class Queue(unittest.TestCase):
         self.assertTrue(all(o["retry"] and "waiting" in o["reason"] for o in busy))
 
 
+
+class LightClientRelayTest(unittest.TestCase):
+    """A relay of a light-client bridge (v6, demo.sh's relayer-v6): its env raises the
+    transaction cap for the vault proof and can turn burns off; a default relay is unchanged."""
+
+    def load(self, **env):
+        saved = {k: os.environ.get(k) for k in env}
+        os.environ.update(env)
+        try:
+            spec2 = importlib.util.spec_from_file_location("relayer_v6", os.path.join(HERE, "relayer.py"))
+            m = importlib.util.module_from_spec(spec2)
+            spec2.loader.exec_module(m)
+            return m
+        finally:
+            for k, v in saved.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+
+    def test_the_cap_follows_max_tx_bytes_and_burns_can_be_off(self):
+        self.assertEqual((rl.MAX_TX_BYTES, rl.MAX_BODY, rl.BURNS), (8192, 20000, True))
+        self.assertTrue(rl.TX_HEX.fullmatch("ab" * 8192) and not rl.TX_HEX.fullmatch("ab" * 8193))
+        v6 = self.load(MAX_TX_BYTES="12288", RELAY_BURNS="0")
+        self.assertEqual((v6.MAX_TX_BYTES, v6.MAX_BODY, v6.BURNS), (12288, 28576, False))
+        self.assertTrue(v6.TX_HEX.fullmatch("ab" * 7300) and v6.TX_HEX.fullmatch("ab" * 12288) and not v6.TX_HEX.fullmatch("ab" * 12289))
+        out = v6.handle_burn(json.dumps({"tx": TX}).encode(), "198.51.100.9", v6.load_state(), cli=None, chain=None)
+        self.assertEqual((out["ok"], out["reason"]), (False, "this relay pays for claims only, not burns"))
+
+    def test_a_default_relay_refuses_a_claim_past_8192_bytes_and_info_says_whether_it_takes_burns(self):
+        out = rl.handle(json.dumps({"tx": "ab" * 8193}).encode(), "198.51.100.9", rl.load_state(), cli=None, chain=None)
+        self.assertEqual((out["ok"], out["reason"]), (False, "tx is not hex (or too long)"))
+        for m, burns in ((rl, True), (self.load(MAX_TX_BYTES="12288", RELAY_BURNS="0"), False)):
+            srv = m.Server(("127.0.0.1", 0), m.Handler)
+            threading.Thread(target=srv.serve_forever, daemon=True).start()
+            try:
+                c = http.client.HTTPConnection("127.0.0.1", srv.server_address[1], timeout=10)
+                c.request("GET", "/relay/info")
+                self.assertEqual(json.loads(c.getresponse().read())["burns"], burns)
+                c.close()
+            finally:
+                srv.shutdown()
+                srv.server_close()
+
 if __name__ == "__main__":
     try:
         unittest.main()

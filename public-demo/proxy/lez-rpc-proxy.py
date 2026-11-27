@@ -43,6 +43,11 @@ not by the sequencer, that reach the claim relay on loopback (public-demo/relaye
   X-Relay-Auth, so the relay believes that header from this filter only and from no other
   loopback client. The secret is never logged. Without --relay both are refused like any unknown
   method.
+  Per bridge (--relay-bridge BRIDGE=HOST:PORT, repeatable; modules/V6-IN-WALLET.md): a relay call that
+  NAMES a bridge (`bridge_relayInfo [bridge]`, `bridge_relayClaim [hex, check_only, bridge]`, or a
+  `bridge` key in object params) goes to that bridge's own relay, with a larger transaction cap
+  (RELAY_TX_MAX_ROUTED, for a light-client claim's proof); a call that names no bridge, or one with no
+  route of its own, goes to --relay exactly as before (whose answer names its own bridge).
 
 CORS for browser pages (--cors-origin ORIGIN, repeatable; none by default, and then nothing here
 changes): the change of logos-names `filter/cors.patch` (web-register-04), for the bridge page's
@@ -74,6 +79,7 @@ import json
 import logging
 import logging.handlers
 import os
+import re
 import socket
 import sys
 import threading
@@ -133,7 +139,9 @@ DEFAULTS = dict(
     IP_SETTLE=(0.05, 3),  # bridge_settle: 3 at once, then one per 20 s per client (the service caps jobs itself)
     SETTLE_MAX=720 * 1024,  # a release receipt (~225 KB) as hex in JSON
     IP_FAUCET=(0.05, 3),  # bridge_faucet: 3 at once, then one per 20 s per client (the faucet caps grants itself)
-    RELAY_MAX=20000,  # body cap of a relay call (the relay's own cap)
+    RELAY_MAX=28000,  # body cap of a relay call (a routed relay's own cap; --relay's is 20000)
+    RELAY_TX_MAX=8192,  # largest half-signed transaction to --relay, bytes
+    RELAY_TX_MAX_ROUTED=12288,  # to a --relay-bridge relay (a light-client claim carries a proof)
     RELAY_INFLIGHT=2,
     RELAY_TIMEOUT=120.0,  # a relayed claim is checked, then checked again, signed and sent
     # CORS (--cors-origin)
@@ -265,11 +273,12 @@ class Server(ThreadingHTTPServer):
     allow_reuse_address = True
     request_queue_size = 64
 
-    def __init__(self, addr, handler, cfg, upstream, log, allowed=None, client_ip_header="CF-Connecting-IP", relay=None, relay_auth=None, cors_origins=(), faucet=None, settle=None):
+    def __init__(self, addr, handler, cfg, upstream, log, allowed=None, client_ip_header="CF-Connecting-IP", relay=None, relay_auth=None, cors_origins=(), faucet=None, settle=None, relay_bridges=None):
         super().__init__(addr, handler)
         self.cfg, self.upstream, self.log = cfg, upstream, log
         self.cors_origins = frozenset(cors_origins)  # exact origins only, never "*"
         self.relay = relay
+        self.relay_bridges = dict(relay_bridges or {})  # bridge program id -> its own relay (host, port)
         self.relay_auth = relay_auth  # shared secret for the relay (X-Relay-Auth); never logged
         self.faucet = faucet
         self.settle = settle
@@ -552,22 +561,41 @@ class Handler(BaseHTTPRequestHandler):
             pk = params[0] if isinstance(params, list) and params else params.get("public_key") if isinstance(params, dict) else None
             acct = (params[1] if isinstance(params, list) and len(params) > 1 else
                     params.get("account") if isinstance(params, dict) else None)
+            owner = (params[2] if isinstance(params, list) and len(params) > 2 else
+                     params.get("for") if isinstance(params, dict) else None)
             n = len(params) if isinstance(params, (list, dict)) else 0
             if not (isinstance(pk, str) and len(pk) <= 66 and all(c in "0123456789abcdefABCDEFx" for c in pk)
-                    and (acct is None or (isinstance(acct, str) and len(acct) <= 60)) and n <= 2):
-                return self.reply(400, rpc_error(-32602, "params: [public key hex] or [public key hex, account]", rid), method, started)
+                    and (acct is None or (isinstance(acct, str) and len(acct) <= 60))
+                    and (owner is None or (isinstance(owner, str) and len(owner) <= 60)) and n <= 3):
+                return self.reply(400, rpc_error(-32602, "params: [public key hex] or [public key hex, account] or [public key hex, account or null, the wallet it is for]", rid), method, started)
             path = "/faucet"
-            payload = json.dumps({"public_key": pk} if acct is None else {"public_key": pk, "account": acct}).encode()
+            req = {"public_key": pk}
+            if acct is not None:
+                req["account"] = acct
+            if owner is not None:
+                req["for"] = owner  # the faucet grants once per wallet, ever (LNS registrations)
+            payload = json.dumps(req).encode()
         elif method == "bridge_relayInfo":
+            named = (params[0] if isinstance(params, list) and len(params) == 1 else
+                     params.get("bridge") if isinstance(params, dict) else None)
+            if named is not None and not (isinstance(named, str) and BRIDGE_ID.fullmatch(named)):
+                return self.reply(400, rpc_error(-32602, "params: [] or [bridge program id]", rid), method, started)
+            target = self.server.relay_bridges.get(named, target)
             path, payload = "/relay/info", None
         else:
             tx = params[0] if isinstance(params, list) and params else params.get("tx") if isinstance(params, dict) else None
             check = (params[1] if isinstance(params, list) and len(params) > 1 else
                      params.get("check_only", False) if isinstance(params, dict) else False)
+            named = (params[2] if isinstance(params, list) and len(params) > 2 else
+                     params.get("bridge") if isinstance(params, dict) else None)
             n = len(params) if isinstance(params, (list, dict)) else 0
-            if not (isinstance(tx, str) and 2 <= len(tx) <= 2 * 8192 + 2 and all(c in "0123456789abcdefABCDEFx" for c in tx)
-                    and isinstance(check, bool) and n <= 2):
-                return self.reply(400, rpc_error(-32602, "params: [hex of a half-signed claim or burn] or [hex, check_only]", rid), method, started)
+            routed = named in self.server.relay_bridges
+            cap = self.server.cfg["RELAY_TX_MAX_ROUTED"] if routed else self.server.cfg["RELAY_TX_MAX"]
+            if not (isinstance(tx, str) and 2 <= len(tx) <= 2 * cap + 2 and all(c in "0123456789abcdefABCDEFx" for c in tx)
+                    and isinstance(check, bool) and n <= 3 and (named is None or (isinstance(named, str) and BRIDGE_ID.fullmatch(named)))):
+                return self.reply(400, rpc_error(-32602, "params: [hex of a half-signed claim or burn], [hex, check_only] or [hex, check_only, bridge]", rid), method, started)
+            if routed:
+                target = self.server.relay_bridges[named]
             path = "/relay/burn" if method == "bridge_relayBurn" else "/relay"
             payload = json.dumps({"tx": tx, "check_only": check}).encode()
         sem = (self.server.limits.faucet_inflight if method in FAUCET_METHODS else self.server.limits.settle_inflight if method in SETTLE_METHODS
@@ -596,6 +624,17 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             sem.release()
         return self.reply(200, json.dumps({"jsonrpc": "2.0", "id": rid, "result": result}).encode(), method, started)
+
+
+BRIDGE_ID = re.compile(r"[1-9A-HJ-NP-Za-km-z]{32,44}")
+
+
+def relay_route(text):
+    """BRIDGE=HOST:PORT: a bridge program id and its own relay on loopback (--relay-bridge)."""
+    bridge, sep, addr = text.partition("=")
+    if not sep or not BRIDGE_ID.fullmatch(bridge):
+        raise argparse.ArgumentTypeError(text + " is not BRIDGE=HOST:PORT (a base58 program id)")
+    return bridge, loopback_addr(addr)
 
 
 def loopback_addr(text):
@@ -627,6 +666,9 @@ def main(argv=None):
     p.add_argument("--upstream", type=loopback_addr, default=("127.0.0.1", 3290))
     p.add_argument("--relay", type=loopback_addr, default=None,
                    help="the claim relay (public-demo/relayer/relayer.py): serve bridge_relayInfo and bridge_relayClaim from it")
+    p.add_argument("--relay-bridge", type=relay_route, action="append", default=[], metavar="BRIDGE=HOST:PORT",
+                   help="a relay of its own for this bridge (repeatable): relay calls naming the bridge go there "
+                        "(modules/V6-IN-WALLET.md); calls naming none still go to --relay")
     p.add_argument("--settle", type=loopback_addr, default=None,
                    help="the settlement service (public-demo/settle/settle.py): serve bridge_settleInfo, bridge_settle, bridge_settleStatus, bridge_settleBundle")
     p.add_argument("--faucet", type=loopback_addr, default=None,
@@ -673,8 +715,11 @@ def main(argv=None):
     for origin in args.cors_origin:
         if origin != origin.rstrip("/") or origin.count("/") != 2 or not origin.startswith(("https://", "http://127.0.0.1", "http://localhost")):
             p.error("--cors-origin takes an exact origin such as https://nameswallet.app, got " + origin)
+    if args.relay_bridge and not args.relay:
+        p.error("--relay-bridge needs --relay (the default relay for calls that name no bridge)")
     srv = Server(args.listen, Handler, cfg, args.upstream, log, allowed, header, args.relay,
-                 relay_secret(args.relay_auth_file) if (args.relay or args.faucet or args.settle) else None, args.cors_origin, args.faucet, args.settle)
+                 relay_secret(args.relay_auth_file) if (args.relay or args.faucet or args.settle) else None, args.cors_origin, args.faucet, args.settle,
+                 dict(args.relay_bridge))
     print("lez-rpc-proxy on %s:%d -> %s:%d" % (args.listen + args.upstream), flush=True)
     try:
         srv.serve_forever()

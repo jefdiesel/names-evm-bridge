@@ -163,11 +163,12 @@ def prune(state, now):
         state["clients"][t] = [x for x in state["clients"][t] if x > cut]
         if not state["clients"][t]:
             del state["clients"][t]
-    acut = now - PER_ACCOUNT_HOURS * 3600
-    for a in list(state["accounts"]):
-        g = state["accounts"][a]
-        if g.get("at", 0) <= acut and g.get("status") != "uncertain":
-            del state["accounts"][a]
+    if PER_ACCOUNT_HOURS > 0:  # 0 = once per account, ever: a grant is never forgotten
+        acut = now - PER_ACCOUNT_HOURS * 3600
+        for a in list(state["accounts"]):
+            g = state["accounts"][a]
+            if g.get("at", 0) <= acut and g.get("status") != "uncertain":
+                del state["accounts"][a]
     keep = {time.strftime("%Y-%m-%d", time.gmtime(now)), time.strftime("%Y-%m-%d", time.gmtime(now - WINDOW))}
     for d in list(state["daykeys"]):
         if d not in keep:
@@ -248,6 +249,7 @@ def handle(body, ip, state, now=None, cli=run_cli, chain=None):
         req = json.loads(body)
         pk_hex = str(req["public_key"]).lower().removeprefix("0x")
         asked = req.get("account")
+        for_owner = req.get("for")
     except (ValueError, KeyError, TypeError, AttributeError):
         return refuse("bad_key", "expected JSON {\"public_key\": \"<64 hex>\"}")
     if not re.fullmatch(r"[0-9a-f]{64}", pk_hex) or not valid_public_key(bytes.fromhex(pk_hex)):
@@ -262,8 +264,15 @@ def handle(body, ip, state, now=None, cli=run_cli, chain=None):
     if g:
         if g.get("status") == "uncertain":
             return refuse("busy", "An earlier transfer to this account is being checked by the operator.", retry=False)
+        if PER_ACCOUNT_HOURS <= 0:
+            return refuse("already_used", "This account already got its free test LEZ: once per account, ever.")
         left = int((g["at"] + PER_ACCOUNT_HOURS * 3600 - now) // 3600) + 1
         return refuse("already_today", "This account got test LEZ in the last %d hours; try again in about %d hours." % (PER_ACCOUNT_HOURS, left))
+    owner = str(for_owner).removeprefix("Public/").strip() if for_owner else None
+    if owner is not None and not re.fullmatch(r"[1-9A-HJ-NP-Za-km-z]{32,44}", owner):
+        return refuse("bad_key", "The wallet the test LEZ is for is not a LEZ account id.")
+    if owner and (owner in state.setdefault("owners", {}) or owner in state["accounts"]):
+        return refuse("already_used", "This wallet already got its free test LEZ: once per wallet, ever.")
     key = client_key(ip)
     if client_count(state, key, now) >= PER_CLIENT_DAY:
         return refuse("rate_limited", "Too many test LEZ grants from this address today; try again tomorrow.")
@@ -283,6 +292,8 @@ def handle(body, ip, state, now=None, cli=run_cli, chain=None):
         return {"ok": True, "checked": True, "amount": str(AMOUNT), "account": acct}
     t, _ = tag(state, key, now)
     state["accounts"][acct] = {"at": now, "status": "pending"}
+    if owner:
+        state.setdefault("owners", {})[owner] = {"at": now, "via": acct}
     state["grants"].append(now)
     state["clients"].setdefault(t, []).append(now)
     state["inflight"] = acct
@@ -302,6 +313,8 @@ def handle(body, ip, state, now=None, cli=run_cli, chain=None):
         return refuse("busy", "The transfer was sent but not confirmed yet (tx %s); look at your balance in a minute." % tx)
     # nothing sent: everything given back
     del state["accounts"][acct]
+    if owner:
+        state.get("owners", {}).pop(owner, None)
     state["grants"].remove(now)
     state["clients"][t].remove(now)
     state["inflight"] = None
