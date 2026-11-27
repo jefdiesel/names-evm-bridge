@@ -48,6 +48,33 @@ jobs:
       - run: node --test scripts/check-versions.test.mjs
       - run: node scripts/check-versions.mjs
 
+  # The public demo's services (RPC filter, faucet, claim relay, attester readers, settlement,
+  # outbound updater): stdlib unittest, offline (stand-ins on loopback; real openssl and tar).
+  # The updater is not in the public copy, so its test runs where it exists.
+  public-demo-python:
+    name: Public demo services (python3 -I unittest, offline)
+    runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 --version
+      - name: proxy, faucet, relayer, fee_grants, leaves, settle (and updater where present)
+        run: |
+          set -eu
+          failed=0
+          for t in proxy/test_proxy.py faucet/test_faucet.py relayer/test_relayer.py \
+                   attester/test_fee_grants.py attester/test_leaves.py settle/test_settle.py updater/test_updater.py; do
+            f="public-demo/$t"
+            if [ ! -f "$f" ] && [ "$t" = updater/test_updater.py ]; then echo "skip $f (not in this copy)"; continue; fi
+            echo "::group::$f"
+            python3 -I "$f" || failed=1
+            echo "::endgroup::"
+          done
+          exit "$failed"
+
   vault:
     name: Vault (forge build --sizes, forge test)
     runs-on: ubuntu-latest

@@ -33,3 +33,18 @@ Known limits are written down rather than hidden: the trust model is in `DESIGN.
   can unfreeze and replace the freezer immediately. M4 adds an admin timelock.
 - **Reproducible guest builds:** local guest builds embed machine/registry paths, and reproducible
   guest builds with RISC Zero's Docker builder are not done yet (set up in M1).
+
+Public demo faucet and relay (test network, test LEZ only; found 2026-11-27, fix planned, the
+running services unchanged until then; each is pinned by a test in `public-demo/`):
+
+- **RPC filter, malformed bridge name:** a relay call whose `bridge` param is a list or an object
+  gets no answer (the handler raises, counted as `handler_error`) instead of a 400. Nothing reaches
+  a relay and the filter keeps serving.
+- **Faucet `for` is not authenticated:** anyone can name any wallet as `for` and use up that
+  wallet's one-time grant; it limits honest clients only.
+- **Faucet `for` order:** a grant for wallet W through another account, then W's own account
+  asking without `for`, pays twice; the reverse order is refused.
+- **Faucet `--release`:** releasing an uncertain transfer forgets the account but leaves the
+  wallet named by `for` marked used, so that wallet cannot ask again.
+- **Dangling reference:** the filter's and relay's `--relay-bridge` / `MAX_TX_BYTES` notes cite
+  `modules/V6-IN-WALLET.md`, which is not in this repository yet.
