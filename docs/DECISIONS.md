@@ -103,10 +103,9 @@ locally proved execution; only `Advance{prev, next}` reaches the store.**
 pairing seam into two steps when needed.**
 - Alternatives: keep only the private path; ask for a precompile first.
 - Why: measured at about 9.3M cycles for a finality update at normal participation, under the cap.
-- Trade-off: two Helios functions replaced through hooks become our audit surface; no per-key subgroup check (argued
-  from the consensus specs, see `DESIGN.md` §9.3a).
-- Built and run on branch `public-update` (2026-11-17), on our public chain since.
-- Source: `research/lc-cycles-2026-11-14.md`; `DESIGN.md` §9.3a; `docs/EVIDENCE.md` rows `lc-public`, `lc-handoff`.
+- Trade-off: two Helios functions replaced through hooks become our audit surface; no per-key subgroup check (confirmed against `ethereum/consensus-specs` `specs/altair/bls.md`, where `eth_aggregate_pubkeys` asserts `KeyValidate`; see `DESIGN.md` §9.3a).
+- Built and run on branch `public-update` (2026-11-17), on our public chain since: six committee handoffs over seven days unattended (2026-11-18 00:36 to 2026-11-25 02:51 UTC, 354 transactions, none refused; `public-demo/prove/lc-7day`).
+- Source: `research/lc-cycles-2026-11-14.md`; `DESIGN.md` §9.3a; `docs/EVIDENCE.md` rows `lc-public`, `lc-handoff`, `public-demo/prove/lc-7day`.
 
 **D14 (2026-11-14, reconstructed). Participation floor ≥ 342 of 512 in code; 427 proposed for bridge instances.**
 - Why: Helios's two-thirds rule; a higher floor raises the seats a colluding committee needs.
@@ -221,6 +220,8 @@ rejects that trust model at the week-2 gate.**
 
 **D32 (2026-11-18, reconstructed). v7 with 2 of 3 stand-in keys on three machines and a 600 s test window.**
 - Why: to run the gate with real proofs on Sepolia before real sequencer keys exist.
+- Known limit: today's v7 signers check neither privacy receipts nor public execution yet (they re-hash and re-extract
+  blocks); with our stand-in keys on our one sequencer, v7 trusts us.
 - Source: `vault/DEPLOYMENTS.md` v7; `docs/EVIDENCE.md` rows `v7`, `v7-equivocation`.
 
 **D33 (2026-11-13 design, 2026-11-17 Ethereum half, reconstructed). Failsafe: a wind-down and a reclaim proven by the
@@ -228,6 +229,10 @@ depositor, never an admin recovery.**
 - Why: RFP-022 S9's "must not become a backdoor".
 - Trade-off: covers unclaimed deposits after an inbound or release-proof bug; no compliant mechanism for a G2,
   proof-system or accounting bug on LEZ 0.4.
+- Known limit (2026-11-27): the local Ethereum-half variant (`BridgeVaultFailsafe.sol`, not deployed) fixes `finalState`
+  on the first update after `windDown()` without checking that LEZ minting has stopped, so a late exit can be paid while
+  the same deposit is reclaimed (forged mints before the final also use up reclaim room). M6's irreversible LEZ mint
+  freeze closes this limit.
 - Source: `research/failsafe-design.md`; `public-demo/prove/failsafe-20261117/README.md`.
 
 ## Proposal and process
@@ -243,3 +248,16 @@ flow: its secrets derive from the recovery phrase and the account id under a sep
 - Trade-off: whoever holds the wallet's first private account's key chain can derive the imported accounts' bridge
   values (not their funds).
 - Source: `proposal/IMPORTED-ACCOUNTS-DESIGN.md` (branch `imported-accounts`).
+
+**D37 (2026-11-27, owner's decision). Add an admin timelock in M4 on freezer changes and lifting freezes.**
+- Context and decision: today neither `BridgeVault.sol` nor the LEZ bridge has a timelock on changing the freezer
+  (`setFreezer`, `SetFreezer`) or lifting freezes (`unfreeze`/`unfreezeAll`, `Unfreeze`): the admin can do both at once.
+  This is disclosed as a known limit, and M4 adds an admin timelock.
+- Source: proposal #281 Technical Approach §6; `SECURITY.md` "Known limits".
+
+**D38 (2026-11-27, owner's decision). Reproducible guest builds with RISC Zero's Docker builder are set up in M1 (not
+done yet).**
+- Context and decision: guest image ids differ across machines today (the guests embed the cargo registry's absolute
+  path, `DESIGN.md` header). M1's acceptance includes every guest image id rebuilt identically on two machines with RISC
+  Zero's Docker builder.
+- Source: proposal #281 Milestone 1; `DESIGN.md` header; `SECURITY.md` "Known limits".

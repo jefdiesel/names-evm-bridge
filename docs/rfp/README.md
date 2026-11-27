@@ -80,7 +80,7 @@ designed or not built. *Outline*: the structure and what is known, with what mus
 | S4 | "proposals must document recommended defaults and the reasoning behind them" | `DESIGN.md` §6.1a; SECURITY-AND-TRUST §6 | Elsewhere; set and tested in M4 |
 | S7 | "User-facing documentation must state the trustless verification model and the liveness-only role of any off-chain participant" | USERS §1 | Complete |
 | S8 | "Proposals must document the migration mechanism and how in-flight deposits and burns are honoured across it" | DEPLOYERS §7; VERIFICATION-STATEMENTS S8 | Complete |
-| S9 | "Proposals must specify a failsafe strategy … or … document explicitly why a failsafe should not be implemented" | — (`research/failsafe-design.md`; record `failsafe-20261117`) | Elsewhere: Ethereum half RUN locally, LEZ half DESIGNED |
+| S9 | "Proposals must specify a failsafe strategy … or … document explicitly why a failsafe should not be implemented" | — (`research/failsafe-design.md`; record `failsafe-20261117`) | Elsewhere: Ethereum half RUN locally (variant not deployed; known limit: wind-down fixes `finalState` without checking LEZ minting stopped, so a late exit can be paid while the same deposit is reclaimed), LEZ half DESIGNED (M6's LEZ mint freeze closes it) |
 | PP4 | "Document every component that handles user data" | USERS §5 | Complete |
 | PP6 | "document precisely what that party learns" | USERS §5; SECURITY-AND-TRUST §7 | Complete (switching relay per operation: the CLI's `--relay <url>`; a wallet relay list is M5) |
 | Out of scope (network) | IP-level correlation "must be disclosed as residual leakage under Privacy Preservation #6" | USERS §2; SECURITY-AND-TRUST §7 | Complete |
@@ -93,7 +93,7 @@ designed or not built. *Outline*: the structure and what is known, with what mus
 
 All of them are fixed on this branch (`rfp-docs`): `DESIGN.md` (§0, §1, §3.6, §4, §7, §8.4, §9.3a, §9.5, §9.6, §11, §12),
 `vault/DEPLOYMENTS.md` (v5) and `docs/REQUIREMENTS.md` (every row brought to `docs/EVIDENCE.md` on main; counts on
-2026-11-18: PUB 30, LOC 30, TST 25, DES 23, NS 19, against 16, 38, 26, 26, 21 on 2026-11-16). Line numbers below are
+2026-11-18: **60 of 127** run — PUB 30, LOC 30 — and **67** not yet run — TST 25, DES 23, NS 19, against 16, 38, 26, 26, 21 on 2026-11-16). Line numbers below are
 those of `main` `5322a30`, before the fixes.
 
 1. `DESIGN.md:539` (§7, Admin row) lists what the admin can do without the LEZ bridge admin's `SetAttestor`
@@ -113,8 +113,10 @@ those of `main` `5322a30`, before the fixes.
    picks the wrong update after two boundaries; the catch-up record says the CLI alone drove a three-period catch-up.
 6. `DESIGN.md:550` says the public update is "Measured in the executor only; not built"; it runs on our public chain
    (`lc-public`, `lc-handoff`).
-7. `DESIGN.md:739` says the dropped per-key subgroup check is to be confirmed against the specs in M3; the proposal
-   form (§1) states it as settled.
+7. `DESIGN.md:739` previously said the dropped per-key subgroup check was to be confirmed against the specs in M3 while
+   the proposal form (§1) stated it as settled. Resolved (2026-11-27): confirmed in `ethereum/consensus-specs`
+   `specs/altair/bls.md` (`eth_aggregate_pubkeys`: `assert all(bls.KeyValidate(pubkey) for pubkey in pubkeys)`);
+   `DESIGN.md` §9.3a and `LIGHT-CLIENT-SPEC.md` §3 now quote the spec line.
 8. `DESIGN.md:619` cites `lez-bridge/token/src/lib.rs:370-387` for "minted amounts are public"; those lines are now
    `definition_fields` / `definition_state`; `mint` is at 393-410.
 9. `docs/REQUIREMENTS.md:112`, `:114`, `:121`, `:128`, `:131`, `:132`, `:139` (RFP-021 F1, F3, F10, U2, U5, U6, R7) give

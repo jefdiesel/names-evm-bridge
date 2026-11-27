@@ -57,9 +57,10 @@ are the only operator of each on our public chain ([SECURITY-AND-TRUST.md](SECUR
 ## 2. Light-client follower (RFP-021 U3, Sup7, R4, R5, R9, R10)
 
 - **Today on our public chain:** a shell loop, `public-demo/prove/lc-handoff.sh` (branch `v6-lc`), every 30 minutes,
-  for the instance behind v6 and v7 (`0xe4b7d26a…3600`, program `9Wb7sBxs…uhNR`). It crossed one committee handoff on
-  2026-11-18 (`lc-handoff`). The finality-only loop `public-demo/prove/lc-public-loop.sh` (branch `lc-public`) ran from
-  2026-11-17 until period 1416 ended.
+  for the instance behind v6 and v7 (`0xe4b7d26a…3600`, program `9Wb7sBxs…uhNR`). It crossed six committee handoffs over
+  seven days unattended (`2026-11-18 00:36` to `2026-11-25 02:51 UTC`, 354 transactions, none refused; `lc-handoff`,
+  `public-demo/prove/lc-7day`). The finality-only loop `public-demo/prove/lc-public-loop.sh` (branch `lc-public`) ran
+  from 2026-11-17 until period 1416 ended.
 - **By hand** (CLI of branch `public-update`):
   ```sh
   lez-bridge attest show --json [--program P --instance I]           # read the config and the store
@@ -127,8 +128,9 @@ are the only operator of each on our public chain ([SECURITY-AND-TRUST.md](SECUR
   file). That file also holds the plan for a second updater instance for v6. **Only the gate's submitter key can submit**, so only we can run it
   for v4–v6. v6 has no standing updater (its one update ran by hand).
 - **v7:** `SeqSigGate.submit` is open; the proof must carry 2 of 3 signatures. The signers use `seqsig attest` (branch
-  `seq-sig`: replays the range natively, signs only blocks a set depth under the head, keeps a sign-once record; it does
-  not check privacy receipts). The conductor's runner is `public-demo/v7/update-v7.sh` (branches `v7-seqsig`,
+  `seq-sig`: re-reads — re-hashes and re-extracts — the range natively, signs only blocks a set depth under the head,
+  keeps a sign-once record; **it checks neither privacy receipts nor public execution yet**, so with our stand-in keys
+  on our one sequencer v7 trusts us). The conductor's runner is `public-demo/v7/update-v7.sh` (branches `v7-seqsig`,
   `v7-in-wallet`). Watchers contest with `seqsig evidence` and `SeqSigGate.contest` inside the window.
 - **Cost:** a proof grows with the LEZ blocks it covers, about 20,000 cycles a block; 494 blocks took 2,412.6 s on a
   16 GB desktop and 480 blocks 7,925.9 s on an 8 GB one (`two-machines` row); the wrap 164 s on a GitHub-hosted runner;

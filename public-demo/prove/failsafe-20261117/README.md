@@ -195,16 +195,18 @@ deploy transactions.
 
 ## Known limits of this demo (written down, not fixed)
 
-- **LEZ minting is NOT frozen for good on LEZ 0.4 here.** The wind-down uses the existing global
+- **LEZ minting is NOT frozen for good on LEZ 0.4 here, and `windDown()` fixes `finalState` without checking LEZ minting has stopped.** The wind-down uses the existing global
   mint freeze, and the LEZ admin can undo it (`lez-bridge/bridge/src/lib.rs:1226`). G2 does not track
   freezes (`lez-bridge/outbound/core/src/view.rs:30-33`), so the vault cannot check one.
-  - A LEZ unfreeze after the final would let a depositor claim AND reclaim. The wrapped tokens it
-    mints are unbacked and compete with other holders' exits.
-  - The vault stays solvent: claims count nowhere after the final, and burned value ≤ claimed
-    value.
-  - The design's fix needs a new bridge program version and a new G2 image, both out of scope
-    here: an irreversible LEZ flag set by a proof of the vault's `windDownAt` (§2.5), and G2 fixing
-    the final from the LEZ event (§2.6 R5).
+  - If LEZ minting is not frozen before `finalState` is fixed, or if a LEZ unfreeze occurs after the
+    final, a depositor can claim on LEZ, burn, and have the late exit paid while **also** reclaiming
+    the same deposit on Ethereum (later updates still insert exits while `burnedValue <= claimedValue`,
+    so the late exit drains backing from other holders' exits, which are then dropped as `ExitUnbacked`).
+  - The vault stays solvent (`released + reclaimed <= deposited`): claims count nowhere after the
+    final, and `burnedValue <= claimedValue`.
+  - **This variant is not deployed.** The design's fix (M6) needs a new bridge program version and a
+    new G2 image: an irreversible LEZ mint freeze set by a proof of the vault's `windDownAt` (§2.5),
+    and G2 fixing the final from the LEZ event (§2.6 R5), which closes this limit.
 - **The final's timing is the operator's.** The first update after `windDown` must reach past the
   LEZ freeze block, and the vault cannot check that. Runbook:
   1. Freeze minting on LEZ.

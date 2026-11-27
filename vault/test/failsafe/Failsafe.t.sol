@@ -406,6 +406,89 @@ contract FailsafeTest is FailsafeBase {
         v.reclaim(s, root, keccak256("nf2"), address(usdc), 0, b, address(0), 0);
         assertEq(usdc.balanceOf(b), 100e6);
     }
+
+    /// KNOWN LIMIT (demo failsafe; public-demo/prove/failsafe-20261117/README.md "Known limits"):
+    /// `BridgeVaultFailsafe.update` fixes `finalState` on the first update after `windDown` without
+    /// checking that LEZ minting has stopped (lines 536-541). Later claim deltas are ignored
+    /// (`ClaimsIgnored`, lines 489-493), yet exits are still inserted while `burnedValue <=
+    /// claimedValue` (lines 512-529), and `reclaim` only checks `claims + reclaims <= deposits`
+    /// (line 588). If `finalState` is fixed while LEZ minting is still open (or later unfrozen), an
+    /// unclaimed depositor (Bob) can claim on LEZ after `finalState`, burn and `release` against
+    /// Alice's claim budget (99.5 USDC), and also `reclaim` his deposit (100 USDC) against
+    /// `finalState` where his nullifier is absent — collecting 199.5 USDC on a 100 USDC deposit
+    /// while Alice's honest exit is dropped (`ExitUnbacked`).
+    ///
+    /// M6's irreversible LEZ mint freeze (a permanent LEZ wind-down flag attested by G2 so
+    /// `finalState` is fixed only from the batch carrying that freeze, `research/failsafe-design.md`
+    /// §2.5/§2.6) closes this limit: once LEZ cannot mint after the final snapshot, no deposit
+    /// absent from `finalState` can ever be claimed and burned.
+    function test_KnownLimit_DoubleDipReleaseAndReclaimIfLezMintNotFrozen() public {
+        address bob = makeAddr("bob");
+        address bobRelease = makeAddr("bobRelease");
+        address bobReclaim = makeAddr("bobReclaim");
+        usdc.mint(bob, 101e6);
+        vm.prank(bob);
+        usdc.approve(address(v), 101e6);
+
+        // 1. Alice and Bob each deposit 100 USDC (+1 USDC deposit fee each).
+        _deposit(0, keccak256("alice-dep"));
+        vm.prank(bob);
+        v.deposit(address(usdc), 0, keccak256("bob-dep"));
+        bytes32 depRoot = v.depositRoot();
+        assertEq(_principal(), 200e6);
+
+        // 2. Alice claims on LEZ; G2 records her claim before wind-down.
+        _update(_claims(address(usdc), 0, 1), _noExits());
+        assertEq(v.claimedValue(address(usdc)), 100e6);
+
+        // 3. Operator winds down and fixes `finalState` without LEZ minting irreversibly frozen.
+        vm.prank(admin);
+        v.windDown();
+        _update(_none(), _noExits());
+        assertTrue(v.finalState() != bytes32(0), "finalState fixed");
+
+        // 4. Bob claims on LEZ AFTER `finalState` and burns to an exit commitment.
+        //    The vault ignores the late claim delta (`ClaimsIgnored`), yet admits Bob's exit
+        //    because `burnedValue (100) <= claimedValue (100)` (Alice's claim budget).
+        bytes32 bobExit = keccak256("bob-late-exit");
+        vm.expectEmit(true, false, false, true, address(v));
+        emit V.ClaimsIgnored(address(usdc), 0, 1);
+        _update(_claims(address(usdc), 0, 1), _exit(address(usdc), 0, bobExit));
+        bytes32 exitRoot = v.exitRoot();
+        assertEq(v.exitCount(), 1, "late exit admitted against Alice's claim budget");
+        assertEq(v.burnedValue(address(usdc)), 100e6);
+
+        // 5. Bob releases the exit (100 - 0.5 withdraw fee = 99.5 USDC).
+        bytes32 bobRelNf = keccak256("bob-release-nf");
+        bytes memory relSeal = mv.sealFor(
+            G3,
+            sha256(abi.encode(v.cfgId(), exitRoot, bobRelNf, address(usdc), uint256(100e6), bobRelease, address(0), uint256(0)))
+        );
+        v.release(relSeal, exitRoot, bobRelNf, address(usdc), 0, bobRelease, address(0), 0);
+        assertEq(usdc.balanceOf(bobRelease), 99.5e6);
+
+        // 6. Because Bob's claim happened after `finalState`, his claim nullifier is absent from
+        //    `finalState`'s accumulator, so he also reclaims his original 100 USDC deposit.
+        //    `claims (1) + reclaims (1) <= deposits (2)` passes.
+        _reclaim(depRoot, keccak256("bob-reclaim-nf"), 0, 100e6, bobReclaim);
+        assertEq(usdc.balanceOf(bobReclaim), 100e6);
+
+        // Current behaviour: Bob extracted 199.5 USDC on a 100 USDC deposit, exhausting principal.
+        assertEq(usdc.balanceOf(bobRelease) + usdc.balanceOf(bobReclaim), 199.5e6);
+        assertEq(_principal(), 0, "vault principal exhausted by double-dip");
+        (, uint64 claims, uint64 burns, uint64 releases) = v.counters(address(usdc), 0);
+        assertEq(claims, 1);
+        assertEq(burns, 1);
+        assertEq(releases, 1);
+        assertEq(v.reclaims(address(usdc), 0), 1);
+
+        // 7. Alice's honest exit is now unbacked (`burnedValue + 100 > claimedValue`) and dropped.
+        bytes32 aliceExit = keccak256("alice-honest-exit");
+        vm.expectEmit(true, false, false, true, address(v));
+        emit V.ExitUnbacked(address(usdc), 0, aliceExit);
+        _update(_none(), _exit(address(usdc), 0, aliceExit));
+        assertEq(v.exitCount(), 1, "Alice's exit dropped");
+    }
 }
 
 /// Nothing gives the admin or the freezer a way to pay out, and nothing undoes the wind-down.

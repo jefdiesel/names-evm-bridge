@@ -197,7 +197,9 @@ class Limits:
             if entry is not None:
                 self.clients.move_to_end(ip)
             elif method is not None and method != "*preflight":
-                return None  # evicted since this request's first check, which charged it
+                # Evicted since this request's first check: fail closed rather than bypassing
+                # the per-method or batch bucket.
+                return "client"
             else:
                 # A new client: charged to the global bucket first, so requests the global bucket
                 # refuses never create entries; a full table evicts the least recently seen client

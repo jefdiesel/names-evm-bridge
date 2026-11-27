@@ -15,11 +15,11 @@
 
 [`DESIGN.md`](DESIGN.md) is the design as built: refusals, gas, privacy, deviations, and requirement matrices with test names. Where it and the code disagree, the code wins.
 
-Security problems: report them privately as [`SECURITY.md`](SECURITY.md) says. Everything deployed is on test networks with test coins, and nothing has been audited.
+Security problems: report them privately as [`SECURITY.md`](SECURITY.md) says. Everything deployed is on test networks with test coins, and nothing has been audited. Known limits (the undeployed failsafe variant's wind-down, v7's signers, no admin timelock yet, no reproducible guest builds yet): [`SECURITY.md`](SECURITY.md) "Known limits".
 
 ## Current status (2026-11-17)
 
-Every result, with where it ran, what kind of proof it used and its record: [docs/EVIDENCE.md](docs/EVIDENCE.md). Work of 2026-11-17 is on branches beside `main` (`public-update`, `lc-public`, `seq-sig`, `privacy-test`, `open-relay`, `failsafe`).
+Every result, with where it ran, what kind of proof it used and its record: [docs/EVIDENCE.md](docs/EVIDENCE.md). Work of 2026-11-17 is on branches beside `main` (`public-update`, `lc-public`, `seq-sig`, `privacy-test`, `open-relay`, `failsafe`). Later results (vaults v6 and v7 on Sepolia, the light client's seven days unattended on our public chain with six committee handoffs, `public-demo/prove/lc-7day/`) are rows of `docs/EVIDENCE.md`; this section is as of 2026-11-17.
 
 **Where things have run:**
 - **Ethereum:** demo vaults on the **public Sepolia testnet** (`vault/DEPLOYMENTS.md`).
@@ -46,7 +46,7 @@ States used below and in `DESIGN.md`: **(1)** run on a chain (which one is named
 | One claim refusal (`claim refused`), local diagnosis in the CLI | `lez-bridge/bridge`, `lez-bridge/cli` | 1 |
 | One-time recipient address and fee float for private claims | `lez-bridge/bridge`, `lez-bridge/cli` | 1 (local) |
 | RFP-021 attestation program, consumer library, reference consumer, CLI client: `Init` at a real Sepolia checkpoint, **a proved finality update**, statements | `lez-bridge/attest`, `lez-bridge/cli/src/attest.rs` | 1 (local LEZ: rc3, and earlier rc1) |
-| RFP-021 period update (committee handoff) | `lez-bridge/attest` | 2 (verified natively, dry run only) |
+| RFP-021 period update (committee handoff) | `lez-bridge/attest` | 2 on `main` (verified natively, dry run only); 1 on our public chain as public transactions from branch `public-update` (six handoffs over seven days, `public-demo/prove/lc-7day/`); never proved |
 | Burn on LEZ (exit commitment) | `lez-bridge/bridge` | 1 (public demo chain, self-paid and relayed; local) |
 | Recovery from the wallet: seed-derived deposit and exit secrets, scan of both chains, `recover` | `lez-bridge/client`, `lez-bridge/cli/src/recover.rs`, `lez-bridge/scripts/e2e-recovery*.sh` | 1 (local, public accounts); private path dry run only |
 | Release proof (G3) guest | `lez-bridge/release`, `lez-bridge/methods/release_guest` | 1: proved (20.9 s, CPU), wrapped and paid on Sepolia (v4) |
@@ -54,17 +54,17 @@ States used below and in `DESIGN.md`: **(1)** run on a chain (which one is named
 | Round trip deposit → claim → burn → update → release | `lez-bridge/scripts/e2e-roundtrip.sh`; `public-demo/prove/receipts/v4-*/` | 1 on Sepolia + the public demo chain with real proofs (once, v4, **LEZ finality trusted**); 1 on local chains, mock-verified |
 | Logos Blockchain finality for G2 (the trustless outbound proof) | | 4 |
 | Groth16 wrap of update and release proofs | `lez-bridge/outbound/wrap`, `.github/workflows/wrap-outbound.yml`, `wrap-private.yml` | 1, by hand on a GitHub-hosted runner (about 164 s per update, 243 s per release) |
-| Contest window for competing G2 chains | | 4 |
-| Failsafe (wind-down and reclaim) | `research/failsafe-design.md` | 3 |
+| Contest window for competing G2 chains | `vault/src/SeqSigGate.sol` | 1 in the threshold-signature gate (branch `seq-sig`; Sepolia vault v7, a 10-minute test window, signer keys ours); on the deployed route 4 (M4) |
+| Failsafe (wind-down and reclaim) | `research/failsafe-design.md`, `vault/src/failsafe/`, `lez-bridge/reclaim/` | Ethereum half 1 on local chains (executed; not deployed; known limit in `SECURITY.md`); LEZ half 3 |
 | Relay (co-signing LEZ fee payer for public claims and burns) | `lez-bridge/cli/src/relay.rs`, `public-demo/relayer/`, `DESIGN.md` §3.6 | 1 on the public demo chain, one operator (the team's) |
 | Open, fee-paid settlement roles (update rewards, open claim relays, G2 update rewards); release relayer daemon | `research/open-settlement.md` | 3 |
 | Logos core module and mini-app (Names Wallet mode by default) | `modules/` | 1 once: "Claim a deposit" from a team test Basecamp with an unreleased Names Wallet build, into a never-used account, the relay paying (public demo chain, LEZ block 4852, 2026-11-14); otherwise 2 (unit tests, offscreen renders); not released |
 | Deposit page for ordinary Ethereum wallets | `web/deposit/` | 2 (102 offline tests); live read-only checks on Sepolia |
 | SPEL IDL, catalog release, update daemon, wrap service | | 4 |
 | Deployment on LEZ testnet 0.4 | | 4 (not live) |
-| CI (`.github/workflows/ci.yml`) | | version alignment; 198 forge tests (1 fork test skipped); 214 LEZ-side Rust tests (no guest build) |
+| CI (`.github/workflows/ci.yml`) | | version alignment; 257 forge tests (1 fork test skipped) and 214 LEZ-side Rust tests (no guest build) in CI run 45681551916 (2026-11-25); since 2026-11-27 also a failsafe known-limit forge test and the native tests of `claim_acc`, `seqsig_core` and `reclaim_core` (and builds `outbound_core`, which has no tests of its own) |
 
-Releases with real proofs have run on Sepolia (v4). LEZ finality is trusted in every outbound run: no outbound proof here is trustless.
+Releases with real proofs have run on Sepolia (v4 to v7, `docs/EVIDENCE.md`). LEZ finality is trusted in every outbound run: no outbound proof here is trustless.
 
 ## Layout
 
@@ -95,7 +95,7 @@ The first build fetches LEZ, Helios and the RISC Zero crypto forks from GitHub. 
 git submodule update --init      # forge-std and OpenZeppelin, pinned (see the end of this file)
 cd vault
 forge build --sizes              # fails if a contract exceeds EIP-170
-forge test                       # 198 tests (1 fork test skipped without SEPOLIA_FORK_RPC): unit, fuzz, stateful invariants, gas, vectors, desk, demo verifier
+forge test                       # 258 tests (1 fork test skipped without SEPOLIA_FORK_RPC): unit, fuzz, stateful invariants, gas, vectors, desk, demo verifier, gate, failsafe
 FOUNDRY_PROFILE=ci forge test    # what CI runs
 ```
 
@@ -106,9 +106,12 @@ cd lez-bridge
 RISC0_SKIP_BUILD=1 cargo test -j 4 -p bridge_token_core -p bridge_core -p eth_attest_core -p eth_attest -p eth_attest_probe
 RISC0_SKIP_BUILD=1 cargo test -j 4 -p bridge_client --no-fail-fast
 (cd release && RISC0_SKIP_BUILD=1 cargo test -j 4 -p release_core)
+(cd outbound && RISC0_SKIP_BUILD=1 cargo test -j 4 -p claim_acc -p outbound_core --all-features)
+(cd outbound-seqsig && RISC0_SKIP_BUILD=1 cargo test -j 4 -p seqsig_core)
+(cd reclaim && RISC0_SKIP_BUILD=1 cargo test -j 4 -p reclaim_core)
 ```
 
-These are what CI runs: 149 tests (token 27, bridge 78, attestation 44), `bridge_client` 32, `release_core` 3. They run the programs natively against LEZ's whole-transaction simulator. The attestation tests verify real Sepolia (Gloas) and mainnet (Fulu) light-client updates from `lez-bridge/attest/fixtures/`.
+These are what CI runs: the first three lines passed 214 tests in CI run 45681551916 (2026-11-25); the last three joined CI on 2026-11-27. They run the programs natively against LEZ's whole-transaction simulator. The attestation tests verify real Sepolia (Gloas) and mainnet (Fulu) light-client updates from `lez-bridge/attest/fixtures/`.
 
 ### Guests, CLI, release and outbound tests
 
@@ -188,7 +191,7 @@ It checks its prerequisites first and prints the exact install command for each 
 | RISC Zero Groth16 verification (to add to `update` and `release`) | about 230k execution gas | `research/gas-sepolia-vs-local.md` |
 | One Logos Blockchain leader-proof check in a RISC Zero guest | 49.2M cycles; 9,778 s to prove, 4.85 GB | `research/spike-pol-cycles.md` |
 
-**Not measured:** proof size for any action; the Groth16 wrap; `update` or `release` with a real seal; a period update (committee handoff) proved; more than one run of each rc3 proof; proving on a laptop, on a GPU, or a stated minimum spec.
+**Not measured:** proof size for any action; a period update (committee handoff) proved; more than one run of each rc3 proof; proving on a laptop, on a GPU, or a stated minimum spec.
 
 ## Trust model (summary of `DESIGN.md` §0, §5, §7)
 

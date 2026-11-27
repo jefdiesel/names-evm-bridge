@@ -14,7 +14,11 @@ Revision 3 follows two independent reviews:
 forge and Rust tests. **Mock-verified: proofs executed, not proved.**
 - The vault's verifier is the gate, in front of the test `MockVerifier`.
 - Every G2, evidence and G3 journal below comes out of RISC Zero's executor.
-- Nothing was proved, and nothing ran on Sepolia or the public demo chain.
+- Nothing in this 2026-11-17 local run was proved, or ran on Sepolia or the public demo chain. (A later 2026-11-18 run on
+  branch `v7-seqsig` ran this gate with real proofs on Sepolia as vault v7 using 2 of 3 stand-in
+  keys of ours; its signers likewise check neither privacy receipts nor public execution yet, so
+  with our stand-in keys on our one sequencer, v7 trusts us. See `docs/EVIDENCE.md` rows `v7`,
+  `v7-equivocation`.)
 
 **The signers are STAND-INS.** They are five Ed25519 keys of ours, made by `seqsig keygen`: four
 form the set and one is an outsider. They sign a checkpoint with the attestor command. They are not
@@ -31,21 +35,21 @@ one block producer's made-up private burn through.
 
 A signer must re-execute blocks `prev+1..N` and check every privacy receipt before it signs.
 
-`seqsig attest` refuses to sign unless it has replayed the range itself. The replay is
-`outbound_host::prepare` run natively:
+`seqsig attest` refuses to sign unless it has re-read (re-hashed and re-extracted) the range itself.
+This re-read is `outbound_host::prepare` run natively:
 - it recomputes every block hash and checks the `prev_block_hash` chain;
 - it extracts every claim, burn, root and registry change as the bridge program would, and builds
   the claim accumulator;
-- the replay's cfgId must equal the one it signs for, and it must end at block N.
+- the re-read's cfgId must equal the one it signs for, and it must end at block N.
 
-It writes the replay's result (claims, exits, new G2 state) next to the signature. What it still
-does NOT check:
+It writes the extraction result (claims, exits, new G2 state) next to the signature. **Today's signers
+check neither privacy receipts nor public execution yet:**
 - **Privacy receipts.** LEZ rc3 makes them with risc0 3.0.5, which this risc0 3.1 host refuses
   (advisory GHSA-g6qg-9j8p-7j87).
 - **Public execution.** LEZ never proves it.
 
-A production signer must cover both, for example by being a sequencer that verified each
-transaction on admission.
+With stand-in keys of ours on our one sequencer, v7 therefore still trusts us. A production signer
+must cover both, for example by being a sequencer that verified each transaction on admission.
 
 Two more rules hold before the attestor signs:
 - **Finality.** These chains have no Bedrock finality, so the rule is depth: block N must be at
@@ -135,7 +139,7 @@ from signing two hashes for one (cfgId, previous tip, block id).
 | Part | Where | What it does |
 |---|---|---|
 | Checkpoint format and checks | `lez-bridge/outbound-seqsig/core` (`seqsig_core`) | Builds the message `SHA256("RFP022/seqsig/checkpoint/v1" \| cfgId \| u64be(prevId) \| prevHash \| u64be(blockId) \| blockHash)`. Builds the set hash `SHA256("RFP022/seqsig/set/v1" \| u32be(n) \| keys)` over keys that are strictly ascending, canonical and of large order. Checks the threshold rule n/2 < T ≤ n, counts distinct non-ejected signers, and builds the evidence journal. Ed25519 is `ed25519-dalek` 2.2.0 `verify_strict`, which also refuses a non-canonical S |
-| Attestor and driver | `lez-bridge/outbound-seqsig/host` (`seqsig`) | `keygen` (mode-600 key file; prints only the public key), `set`, `attest` (replays, then signs), `update` (native G2, the native check, then the seq-sig guest and the TrustedTip guest in the executor; `--ejected` mask), `evidence` (one or more signatures over one checkpoint) |
+| Attestor and driver | `lez-bridge/outbound-seqsig/host` (`seqsig`) | `keygen` (mode-600 key file; prints only the public key), `set`, `attest` (re-reads — re-hashes and re-extracts — then signs; checks neither privacy receipts nor public execution yet), `update` (native G2, the native check, then the seq-sig guest and the TrustedTip guest in the executor; `--ejected` mask), `evidence` (one or more signatures over one checkpoint) |
 | Update guest | `lez-bridge/methods/outbound_guest_seqsig` (new image) | Does exactly what the TrustedTip guest does (`update::<TrustedTip>`), then the signature check over the checkpoint it derives from its own input. Journal: the vault's `abi.encode(UpdateJournal)` followed by `abi.encode(signerSetHash, threshold, ejectedMask, signerBitmap, prevId, prevHash, blockId, blockHash)` (256 bytes). Its G2 states keep TrustedTip's finality kind (1): only the vault's pinned image id tells the two routes apart |
 | Evidence guest | `lez-bridge/methods/seqsig_evidence_guest` (new image) | Checks that every given signature by a set key over one checkpoint verifies. Journal: `abi.encode(cfgId, signerSetHash, signerBitmap, prevId, prevHash, blockId, blockHash)` (224 bytes) |
 | Ethereum gate | `vault/src/SeqSigGate.sol` | Bound to one vault (immutable `VAULT`, `CFG_ID`). `submit`, `contest`, `finalize`, as above. The constructor takes the keys, recomputes the set hash, and refuses unsorted keys, non-canonical encodings (y ≥ p) and the y values of the small-order points; it also requires n/2 < T ≤ n − 1 and a window of at least `MIN_CONTEST_WINDOW` (6 h); T = n and a shorter window are allowed only with the immutable `TEST_ONLY_SHORT_WINDOW` (visible on chain; the run sets it). `verify` passes the update image only through its own transient mark, passes `RELEASE_IMAGE_ID` to the verifier, and refuses any other image. Runtime 7,999 bytes |
@@ -225,7 +229,7 @@ Each signature adds about 0.89M user cycles: 3,879,962 − 2,988,695 = 891,267.
 the vault landed there with the gate's `CFG_ID`. The gate computed the set hash from the keys, and it
 equals `seqsig set`'s.
 
-**Attestors.** Every checkpoint was signed only after the attestor replayed the range, waited until
+**Attestors.** Every checkpoint was signed only after the attestor re-read (re-hashed and re-extracted) the range, waited until
 the block was 3 under the head (`--final-depth 3`), and wrote it to its sign-once record.
 
 **Accounts** are anvil's public test accounts:

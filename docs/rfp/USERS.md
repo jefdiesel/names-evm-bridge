@@ -47,7 +47,8 @@
   - **v6:** no key on the way in. LEZ checks Ethereum itself through the light client, which trusts Ethereum's sync
     committee (two thirds of 512 validators) and the checkpoint it started from. The way out is as v5.
   - **v7:** the way in as v6; on the way out 2 of 3 signer keys, all three ours, and a waiting window in which a
-    double-signing key can be thrown out.
+    double-signing key can be thrown out. Today's signers check neither privacy receipts nor public execution yet, so
+    with our stand-in keys on our one sequencer, v7 still trusts us.
   - **All of them:** we run the only LEZ sequencer; the chain is our test chain, not a Logos network, and not anchored
     to the Logos Blockchain. Nothing is audited. Test funds only.
 - **What limits a mistake or an attack:** a vault never pays out more than was deposited, per token; caps limit what
@@ -92,8 +93,9 @@ chains and to exactly our public endpoint.
 ### Deposit (Ethereum)
 
 - **The deposit page** (`https://nameswallet.app/bridge/`, `web/deposit/`): connect an Ethereum wallet, pick token and
-  denomination, give your LEZ destination (an account or an LNS name such as `alice`). The page makes the secret in your
-  browser tab and gives you a **claim file**: keep it, it is the only copy (§4). RUN on Sepolia.
+  denomination, give your LEZ destination (an account or an LNS name such as `alice`; note that an LNS name resolves to
+  its holder's published **public** account, so claiming an LNS-name deposit is linkable by construction). The page makes
+  the secret in your browser tab and gives you a **claim file**: keep it, it is the only copy (§4). RUN on Sepolia.
 - **From the Names Wallet:** "Receive from Ethereum" gives a deposit code (`logosdep1…`) whose secret your wallet
   derives from your phrase; paste it on the page. RUN on our public network with test builds (`modules/NAMES-RECEIVE.md`).
 - **From the CLI:** `lez-bridge deposit-request --bridge … --from … --eth-token … --denom-index …` prints the commitment

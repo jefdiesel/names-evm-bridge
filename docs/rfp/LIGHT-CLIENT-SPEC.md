@@ -30,11 +30,12 @@
 - **Public path (branch `public-update`; the program behind vaults v6 and v7, deployed on our public chain as
   `9Wb7sBxs…uhNR`):** `UpdatePublic`, `PeriodBegin`/`PeriodFinish`, `FinalityBegin`/`FinalityFinish`, `CloseJob`, the
   weak-subjectivity rule, typed codes `RFP021-E01`…`E13`, account and receipt-log statements. RUN on our public chain:
-  finality updates (`lc-public`) and one committee handoff, period 1416 → 1417, run by the follower loop (`lc-handoff`).
+  finality updates (`lc-public`) and six committee handoffs over seven days unattended (`2026-11-18 00:36` to
+  `2026-11-25 02:51 UTC`, 354 transactions, none refused; `lc-handoff`, `public-demo/prove/lc-7day`).
   RUN on local chains: a three-period catch-up, low participation in two steps (synthetic committee), statements and
   both reference consumers (records on `public-update`). Reviewed once by a separate AI agent; not audited.
-- **Not built:** the checkpoint-verification API in the Logos Ethereum core module [ext]; a public-path run past more
-  than one handoff on a public chain; a deliberate multi-period stall on a public chain (M3); any LEZ testnet 0.4 run.
+- **Not built:** the checkpoint-verification API in the Logos Ethereum core module [ext]; a deliberate multi-period
+  stall on a public chain (M3); any LEZ testnet 0.4 run.
 
 ## 1. Objects
 
@@ -91,9 +92,10 @@ no role, v6 record).
      cap). One transaction is estimated to fit down to about 442 signers; below that a finality update is split at the
      pairing seam (`FinalityBegin` / `FinalityFinish`), run on a local chain at 427 and 342 signers of a synthetic
      committee (finality-split record).
-     **Open:** whether skipping a per-key G1 subgroup check is sound rests on every sync-committee key having been
-     validated when the committee was formed; `DESIGN.md` §9.3a says M3 confirms this against the specs, while the
-     proposal form states it as settled (see the index's contradictions list).
+     **Subgroup check:** skipping the per-key G1 subgroup check rests on `ethereum/consensus-specs` `specs/altair/bls.md`
+     (`eth_aggregate_pubkeys`: `assert all(bls.KeyValidate(pubkey) for pubkey in pubkeys)`), which validates every
+     sync-committee key when the aggregate is formed; M3 writes up the key-validation argument for the auditor (not yet
+     audited).
 
 ## 4. Sync-committee handoffs
 
@@ -109,9 +111,10 @@ no role, v6 record).
 - **Catch-up after a stall:** submit, in order, the period update of the store's period (if the next committee is
   unknown), the update of each later period up to Ethereum's, then a current finality update. Each step verifies the
   handoff before it; nothing is skipped; anchors recorded before the stall stay valid (R3, R7).
-- **Run:** one handoff on our public chain, 2026-11-18 (LEZ blocks 27862, 27983–27985; `lc-handoff`); a catch-up over
-  periods 1413 → 1416 with three handoffs on a local chain (catch-up record, `public-update`). Not run: a deliberate
-  stall of several periods on a public chain (M3).
+- **Run:** six committee handoffs over seven days unattended on our public chain (`2026-11-18 00:36` to `2026-11-25
+  02:51 UTC`, 354 transactions, none refused; first handoff `lc-handoff` LEZ blocks 27862, 27983–27985; seven-day record
+  `public-demo/prove/lc-7day`); a catch-up over periods 1413 → 1416 with three handoffs on a local chain (catch-up
+  record, `public-update`). Not run: a deliberate stall of several periods on a public chain (M3).
 - **A period with no qualifying update** (finalized header outside the attested header's period) would block a
   catch-up; we have not seen one and have no test for it (`DESIGN.md` §9.6).
 

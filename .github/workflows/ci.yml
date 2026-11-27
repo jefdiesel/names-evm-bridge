@@ -77,8 +77,9 @@ jobs:
       - run: forge test -vv
 
   # LEZ v0.4.0-rc3 (bafd07be): the tag is pinned in lez-bridge/Cargo.toml and in the tracked locks
-  # lez-bridge/Cargo.lock (since 2026-11-14: the one the passing judge-demo run resolved) and
-  # lez-bridge/release/Cargo.lock.
+  # lez-bridge/Cargo.lock (since 2026-11-14: the one the passing judge-demo run resolved),
+  # lez-bridge/release/Cargo.lock, lez-bridge/outbound/Cargo.lock,
+  # lez-bridge/outbound-seqsig/Cargo.lock and lez-bridge/reclaim/Cargo.lock.
   lez-programs:
     name: LEZ programs on LEZ v0.4.0-rc3 (cargo test, no zkVM guest build)
     runs-on: ubuntu-latest
@@ -101,6 +102,9 @@ jobs:
           workspaces: |
             lez-bridge
             lez-bridge/release
+            lez-bridge/outbound
+            lez-bridge/outbound-seqsig
+            lez-bridge/reclaim
       - name: Token, bridge and attestation programs (native, LEZ simulator)
         working-directory: lez-bridge
         run: cargo test --locked -j 4 -p bridge_token_core -p bridge_core -p eth_attest_core -p eth_attest -p eth_attest_probe --no-fail-fast
@@ -111,3 +115,12 @@ jobs:
       - name: Release statement (release_core, native)
         working-directory: lez-bridge/release
         run: cargo test --locked -j 4 -p release_core
+      - name: Outbound statement and claim accumulator (claim_acc, outbound_core, native)
+        working-directory: lez-bridge/outbound
+        run: cargo test --locked -j 4 -p claim_acc -p outbound_core --all-features --no-fail-fast
+      - name: Sequencer-signature checkpoint statement (seqsig_core, native)
+        working-directory: lez-bridge/outbound-seqsig
+        run: cargo test --locked -j 4 -p seqsig_core --no-fail-fast
+      - name: Failsafe reclaim statement (reclaim_core, native)
+        working-directory: lez-bridge/reclaim
+        run: cargo test --locked -j 4 -p reclaim_core --no-fail-fast

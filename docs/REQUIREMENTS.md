@@ -28,6 +28,8 @@ Every numbered requirement of Logos RFP-022 (private wrapped ERC-20 and ETH brid
 | DES, designed (or a document written) | 23 | 26 |
 | NS, not started | 19 | 21 |
 
+**Summary:** **60 of 127** hard requirements have run on a chain (30 PUB, 30 LOC) and **67** have not yet run on any chain (25 TST, 23 DES, 19 NS), as of 2026-11-18.
+
 Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path only, Soft3, Soft4, Soft5; RFP-021 Soft5), 5 not offered (RFP-022 Soft2; RFP-021 Soft1–4).
 
 ## RFP-022
@@ -40,14 +42,14 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | F4 | "both a private LEZ account and a public LEZ account" | In | 1 | PUB our public chain: private (LEZ 3069, 15255, 23909), public (23408) |
 | F5 | burn "must not … reveal its Ethereum destination" | In | 1 | PUB our public chain (public burns; private burns LEZ 15395 on v5, 24073 on v6) |
 | F6 | burn from "either a private or a public LEZ account" | In | 1 | PUB our public chain (public, self-paid and relayed; private on v5 and v6) |
-| F7 | vault releases "on cryptographic verification of a valid LEZ burn" | Cond | 4, 6 | PUB Sepolia + our public chain, real proofs, RISC Zero verifier 3.1.0: v4, v5 and v6 with one submitter key's word on which LEZ blocks count; v7 (branch `v7-seqsig`) on 2 of 3 stand-in signer keys of ours with a contest window; LEZ blocks never proved final; trustless G2 Cond |
+| F7 | vault releases "on cryptographic verification of a valid LEZ burn" | Cond | 4, 6 | PUB Sepolia + our public chain, real proofs, RISC Zero verifier 3.1.0: v4, v5 and v6 with one submitter key's word on which LEZ blocks count; v7 (branch `v7-seqsig`) on 2 of 3 stand-in signer keys of ours with a contest window (signers check neither privacy receipts nor public execution yet, so on our one sequencer v7 trusts us); LEZ blocks never proved final; trustless G2 Cond |
 | F8 | amounts "must not identify"; "effect on anonymity-set size" | In | 1, 7 | PUB denominations; LOC pairing measured over 20 users (`privacy-test-20261117`, development receipts); set-size analysis NS |
 | F9 | "recover every one of their own unclaimed deposits and unreleased burns" | In | 1, 5 | LOC public and private accounts, 45/45 deposits and 30/30 exits from the phrase alone (`privacy-test-20261117`, development receipts); web-page deposits not seed-derived. Branch `imported-accounts`: imported Names accounts, TST |
 | F10 | admin "can register … and deregister a token"; delisting docs | In-dev (own admin) | 1, 7 | PUB register; TST deregister; delisting doc `docs/rfp/DEPLOYERS.md` §4 |
 | F11 | "Global and per-token deposit and redemption caps" | In-dev (no LEZ cap) | 4 | TST; set on Sepolia |
 | F12 | finality depth "configurable by the admin authority per deployment" | In-dev; outbound Cond | 4, 6 | inbound PUB (v6, v7: Ethereum finality through the light client, fixed per instance); outbound NS (not configurable) |
 | F13 | "protocol fee … on both minting and burning … on LEZ" | In-dev (Ethereum side) | 1 | TST |
-| F14 | freeze "globally or for a single registered token … independently" | In-dev (own code) | 1 | TST; LEZ global freeze LOC |
+| F14 | freeze "globally or for a single registered token … independently" | In-dev (own code) | 1, 4 | TST; LEZ global freeze LOC; no admin timelock today on freezer changes or lifting freezes (M4 adds one) |
 | F15 | each deployment "refers to a specific" deployment on the other chain | In | 1, 4 | Ethereum side PUB; LEZ side PUB our public chain (v3 onward; v6, v7 bind the light-client instance in `zoneId`) |
 | F16 | "multiple entities each operate under their own independent configuration" | In-dev (one config per program) | 1, 7 | TST |
 | F17 | ERC-20s whose transfer "do not return a boolean (USDT)" | In | 1 | TST. Branch `erc20-path`: USDT in a four-token matrix, TST |
@@ -90,11 +92,11 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | S2 | both sides "must reject invalid proofs" | In | 1, 4 | PUB a changed seal refused by Sepolia's verifier (v4 round trip) and the attester's root refused by the v6 bridge (LEZ 23349); LOC; TST |
 | S3 | a submitter cannot "redirect funds, inflate their fee, or replay" | In | 1, 4 | TST (H2 fix, v3) |
 | S4 | caps: "document recommended defaults and the reasoning" | In | 4 | DES (`DESIGN.md` §6.1a) |
-| S5 | freeze "exercisable independently on each half" | In | 1 | LOC; TST |
+| S5 | freeze "exercisable independently on each half" | In | 1, 4 | LOC; TST; no admin timelock today on freezer changes or lifting freezes (M4 adds one) |
 | S6 | "total wrapped supply on LEZ must never exceed the vault's holdings" | In | 1, 4 | LOC; TST (C1 fix, v3) |
 | S7 | user docs state "the trustless verification model" | In | 7 | DES (`docs/rfp/USERS.md` §1) |
 | S8 | "The verification logic cannot be swapped" | In | 1 | PUB immutable LEZ programs on our public chain; v4 still releasing beside v5 (a migration); TST |
-| S9 | failsafe that "must not become a backdoor" | Cond (built in M6; with no-go, documented only) | 6 | LOC Ethereum half (`failsafe-20261117`, executed); LEZ half DES |
+| S9 | failsafe that "must not become a backdoor" | Cond (built in M6; with no-go, documented only) | 6 | LOC Ethereum half (`failsafe-20261117`, executed; variant not deployed; known limit: wind-down fixes `finalState` without checking LEZ minting stopped, so a late exit can be paid while the same deposit is reclaimed); LEZ half DES (M6's LEZ mint freeze closes it) |
 | PP1 | "Inbound unlinkability" | In | 7 | LOC pairing measured, 1/20 against 1 by chance (`privacy-test-20261117`, development receipts); leak checks |
 | PP2 | "Outbound unlinkability" | Cond | 6, 7 | LOC pairing measured, 0/20 (same record; releases executed, not proved) |
 | PP3 | no destination revealed "over full event and state diffs for a complete round trip" | In; round trip Cond | 7 | LOC full capture of complete round trips, storage diffs included (same record, development receipts); with real proofs NS |
@@ -112,7 +114,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 
 | Id | RFP words | Scope | M | Today |
 |---|---|---|---|---|
-| F1 | "Run the Ethereum light client inside the LEZ program" | In | 1 | PUB our public chain: finality updates as public transactions and one committee handoff (`lc-public`, `lc-handoff`; code on branch `public-update`); LOC proved private update |
+| F1 | "Run the Ethereum light client inside the LEZ program" | In | 1 | PUB our public chain: finality updates as public transactions and six committee handoffs over seven days unattended (2026-11-18 00:36 to 2026-11-25 02:51 UTC: 354 transactions, none refused; `lc-public`, `lc-handoff`, `public-demo/prove/lc-7day`; code on branch `public-update`); LOC proved private update |
 | F2 | "reject any header that is not" finalised | In | 1 | TST (incl. the consensus-specs vectors, branch `public-update`) |
 | F3 | inclusion of "an account, a contract storage slot, and an event log" | In | 1, 3 | PUB storage slot (v6 and v7 claims); LOC account and receipt-log statements on real Sepolia data (`statements-20261117`, branch `public-update`) |
 | F4 | predicates "at least equality and inequality" | In | 1 | TST (`Eq`, `Ne`; ordering comparisons not built) |
@@ -139,7 +141,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | R4 | "Committee handoff tracking survives interruption" | In | 1, 3 | TST program; daemon NS. Branch `lc-daemon`: the daemon half, TST |
 | R5 | RPC failure: "able to resume without duplicating work" | In | 3 | NS. Branch `lc-daemon`: TST |
 | R6 | "stating what is reused, what is rewritten, and the cost and audit-surface consequences" | In | 1, 3 | TST; statement `docs/rfp/REUSE.md` (whether r0vm-helios's audit covers our Helios revision: not checked) |
-| R7 | "a stalled instance resumes correctly … no gap in the verified handoff chain" | In | 3 | PUB one handoff on our public chain (`lc-handoff`); LOC three-period catch-up (`catchup-20261117`); a deliberate stall on a public chain NS |
+| R7 | "a stalled instance resumes correctly … no gap in the verified handoff chain" | In | 3 | PUB six committee handoffs over seven days on our public chain (`lc-handoff`, `public-demo/prove/lc-7day`); LOC three-period catch-up (`catchup-20261117`); a deliberate stall on a public chain NS |
 | R8 | "a duplicate or already-applied update is rejected cleanly" | In | 1 | TST |
 | R9 | "checks whether an update is still needed immediately before submitting" | In | 3 | NS. Branch `lc-daemon`: TST |
 | R10 | "defers submission by an interval it varies per instance" | In | 3 | NS. Branch `lc-daemon`: TST |
