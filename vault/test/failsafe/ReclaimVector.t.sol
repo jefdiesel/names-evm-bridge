@@ -47,19 +47,24 @@ contract ReclaimVectorTest is Test {
         for (uint256 i; i < c.length; ++i) v.deposit(RV.USDC, 0, c[i]);
     }
 
-    function _update(bytes32 next, uint64 claims) internal {
+    function _update(bytes32 next, uint64 claims, uint64 stoppedBlock) internal {
         V.ClaimDelta[] memory cl = new V.ClaimDelta[](claims == 0 ? 0 : 1);
         if (claims != 0) cl[0] = V.ClaimDelta(RV.USDC, 0, claims);
-        bytes memory j = abi.encode(V.UpdateJournal(v.cfgId(), v.g2State(), next, new bytes32[](0), cl, new V.Exit[](0)));
+        address[] memory wd = new address[](stoppedBlock == 0 ? 0 : 1);
+        if (stoppedBlock != 0) wd[0] = address(type(uint160).max);
+        bytes memory j = abi.encode(
+            V.UpdateJournal(v.cfgId(), v.g2State(), next, new bytes32[](0), cl, new V.Exit[](0), bytes32(0), 0, wd, stoppedBlock)
+        );
         v.update(j, mv.sealFor(G2, sha256(j)));
     }
 
-    /// Deposit 1's claim lands; wind-down; the next update reaches the fixture's final state.
+    /// Deposit 1's claim lands; wind-down; the update carrying the LEZ mint-stop proof reaches the fixture's final state.
     function _toFinal() internal {
-        _update(keccak256("after the claim"), 1);
+        _update(keccak256("after the claim"), 1, 0);
         v.windDown();
-        _update(RV.FINAL_STATE, 0);
+        _update(RV.FINAL_STATE, 0, 4242);
         assertEq(v.finalState(), RV.FINAL_STATE);
+        assertEq(v.mintStoppedBlock(), 4242);
     }
 
     function test_GuestJournalsReclaimOnTheVault() public {
@@ -82,12 +87,16 @@ contract ReclaimVectorTest is Test {
         bytes memory seal = mv.sealFor(G4, r[1].journalDigest);
         vm.expectRevert(V.NotWoundDown.selector);
         v.reclaim(seal, r[1].depositRoot, r[1].nullifier, RV.USDC, 0, r[1].recipient, r[1].relayer, r[1].relayFee);
-        _update(keccak256("after the claim"), 1);
+        _update(keccak256("after the claim"), 1, 0);
         v.windDown();
         vm.expectRevert(V.NotFinal.selector);
         v.reclaim(seal, r[1].depositRoot, r[1].nullifier, RV.USDC, 0, r[1].recipient, r[1].relayer, r[1].relayFee);
+        // an update without the stop proof does not finalise
+        _update(keccak256("no stop proof yet"), 0, 0);
+        vm.expectRevert(V.NotFinal.selector);
+        v.reclaim(seal, r[1].depositRoot, r[1].nullifier, RV.USDC, 0, r[1].recipient, r[1].relayer, r[1].relayFee);
         // a final state other than the one the guest proved against: the digest differs
-        _update(keccak256("some other final"), 0);
+        _update(keccak256("some other final"), 0, 4242);
         vm.expectRevert(MockVerifier.BadSeal.selector);
         v.reclaim(seal, r[1].depositRoot, r[1].nullifier, RV.USDC, 0, r[1].recipient, r[1].relayer, r[1].relayFee);
     }

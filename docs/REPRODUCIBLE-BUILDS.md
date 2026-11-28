@@ -2,6 +2,8 @@
 
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 
+**M6 (2026-11-28, later):** the M6 mint freeze changed the source of `bridge_guest`, `outbound_guest`, `outbound_guest_trusted_tip` and `outbound_guest_seqsig`; their Docker ids below are the pre-M6 ones and are marked stale in `VERSIONS.toml` until `repro-guest-builds` runs again. `token_guest`, `release_guest`, `reclaim_guest` and `seqsig_evidence_guest` built natively to the same id before and after (Colab, same path); the attestation guests link neither changed crate. The new `outbound_guest_failsafe` is not in the deployable list yet.
+
 **Status (2026-11-28):** every deployable guest (10) builds in RISC Zero's Docker builder with the same image id and the same ELF sha256 on two clean machines: two fresh GitHub-hosted `ubuntu-latest` runners, no cache of any kind (CI job `repro-guest-builds`, pre-merge run 46095730461 on a test branch of the public repository, the same guest inputs as this commit; about 39 minutes per build). The ids are pinned in `VERSIONS.toml` `[[repro_guest]]` and listed below. **No deployed image id reproduces:** every deployed guest (v2–v7) was built natively before this, and its id differs from the Docker one even where the guest's source and lock have not changed since the deploy (table at the end). Not yet checked: a third machine outside GitHub (an arm64 Mac running the amd64 builder under emulation).
 
 ## Docker image ids (main, 2026-11-28)

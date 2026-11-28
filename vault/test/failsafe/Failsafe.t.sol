@@ -65,14 +65,52 @@ contract FailsafeBase is Test {
         v.depositETH{value: 1 ether}(0, c);
     }
 
-    function _journal(V.ClaimDelta[] memory cl, V.Exit[] memory ex) internal returns (bytes memory j) {
+    function _woundDown(bool stopped) internal pure returns (address[] memory wd) {
+        if (stopped) {
+            wd = new address[](1);
+            wd[0] = address(type(uint160).max);
+        } else {
+            wd = new address[](0);
+        }
+    }
+
+    function _journalWith(
+        V.ClaimDelta[] memory cl,
+        V.Exit[] memory ex,
+        address[] memory wd,
+        uint64 stoppedBlock
+    ) internal returns (bytes memory j) {
         bytes32 next = keccak256(abi.encode("state", ++stateNonce));
-        V.UpdateJournal memory u = V.UpdateJournal(v.cfgId(), v.g2State(), next, new bytes32[](0), cl, ex);
+        V.UpdateJournal memory u = V.UpdateJournal(
+            v.cfgId(), v.g2State(), next, new bytes32[](0), cl, ex, bytes32(0), 0, wd, stoppedBlock
+        );
         j = abi.encode(u);
+    }
+
+    /// What G2 emits next: GLOBAL kept once the final is fixed, no stop block (that is only in the
+    /// update whose batch holds the LEZ wind-down, `_journalStop`).
+    function _journal(V.ClaimDelta[] memory cl, V.Exit[] memory ex) internal returns (bytes memory j) {
+        j = _journalWith(cl, ex, _woundDown(v.finalState() != bytes32(0)), 0);
+    }
+
+    function _journalStop(V.ClaimDelta[] memory cl, V.Exit[] memory ex, uint64 stoppedBlock)
+        internal
+        returns (bytes memory j)
+    {
+        j = _journalWith(cl, ex, _woundDown(true), stoppedBlock);
     }
 
     function _update(V.ClaimDelta[] memory cl, V.Exit[] memory ex) internal returns (bytes32 newState) {
         bytes memory j = _journal(cl, ex);
+        v.update(j, mv.sealFor(G2, sha256(j)));
+        return v.g2State();
+    }
+
+    function _updateStop(V.ClaimDelta[] memory cl, V.Exit[] memory ex, uint64 stoppedBlock)
+        internal
+        returns (bytes32 newState)
+    {
+        bytes memory j = _journalStop(cl, ex, stoppedBlock);
         v.update(j, mv.sealFor(G2, sha256(j)));
         return v.g2State();
     }
@@ -108,15 +146,16 @@ contract FailsafeBase is Test {
         v.reclaim(_seal(v.finalState(), root, nf, address(usdc), denom, to, address(0), 0), root, nf, address(usdc), di, to, address(0), 0);
     }
 
-    /// Three USDC 100 deposits, one claimed on LEZ, wind-down, the final update.
+    /// Three USDC 100 deposits, one claimed on LEZ, wind-down, the final update carrying the LEZ mint-stop proof.
     function _threeDepositsOneClaimedFinal() internal returns (bytes32 root) {
         for (uint256 i; i < 3; ++i) _deposit(0, keccak256(abi.encode("c", i)));
         root = v.depositRoot();
         _update(_claims(address(usdc), 0, 1), _noExits());
         vm.prank(admin);
         v.windDown();
-        _update(_none(), _noExits());
+        _updateStop(_none(), _noExits(), 100);
         assertTrue(v.finalState() != bytes32(0), "final fixed");
+        assertEq(v.mintStoppedBlock(), 100);
     }
 
     function _principal() internal view returns (uint256 p) {
@@ -155,17 +194,83 @@ contract FailsafeTest is FailsafeBase {
         v.windDown();
         vm.expectRevert(V.NotFinal.selector);
         v.reclaim(s0, root, keccak256("nf"), address(usdc), 0, r, address(0), 0);
-        // the next update fixes the final; a proof made against the state before it is refused
+        // an update after windDown WITHOUT the LEZ mint-stop proof advances g2State but does not fix finalState
         bytes32 before = v.g2State();
         assertEq(v.windDownState(), before);
-        bytes32 fin = _update(_none(), _noExits());
+        bytes32 intermediate = _update(_none(), _noExits());
+        assertEq(v.g2State(), intermediate);
+        assertEq(v.finalState(), bytes32(0), "no stop proof: still not final");
+        assertEq(v.mintStoppedBlock(), 0);
+        vm.expectRevert(V.NotFinal.selector);
+        v.reclaim(s0, root, keccak256("nf"), address(usdc), 0, r, address(0), 0);
+        // the update carrying the LEZ mint-stop proof fixes finalState; a proof made against an earlier state is refused
+        bytes32 fin = _updateStop(_none(), _noExits(), 250);
         assertEq(v.finalState(), fin);
         assertEq(v.finalAt(), block.timestamp);
-        bytes memory sOld = _seal(before, root, keccak256("nf"), address(usdc), 100e6, r, address(0), 0);
+        assertEq(v.mintStoppedBlock(), 250);
+        bytes memory sOld = _seal(intermediate, root, keccak256("nf"), address(usdc), 100e6, r, address(0), 0);
         vm.expectRevert(MockVerifier.BadSeal.selector);
         v.reclaim(sOld, root, keccak256("nf"), address(usdc), 0, r, address(0), 0);
         _reclaim(root, keccak256("nf"), 0, 100e6, r);
         assertEq(usdc.balanceOf(r), 100e6);
+    }
+
+    function test_FinaliseWithoutStopProofRefused() public {
+        _deposit(0, keccak256("c0"));
+        bytes32 root = v.depositRoot();
+        address r = makeAddr("r");
+
+        // A journal that says LEZ minting stopped, before the vault is wound down, is refused.
+        bytes memory jEarly = _journalStop(_none(), _noExits(), 42);
+        bytes memory sEarly = mv.sealFor(G2, sha256(jEarly));
+        vm.expectRevert(V.NotWoundDown.selector);
+        v.update(jEarly, sEarly);
+
+        vm.prank(admin);
+        v.windDown();
+
+        // An update without GLOBAL does not finalise (a stop block alone means nothing): reclaim stays NotFinal.
+        bytes memory jOnlyBlock = _journalWith(_none(), _noExits(), _woundDown(false), 50);
+        v.update(jOnlyBlock, mv.sealFor(G2, sha256(jOnlyBlock)));
+        _update(_none(), _noExits());
+        assertEq(v.finalState(), bytes32(0));
+        assertEq(v.mintStoppedBlock(), 0);
+        bytes memory rs0 = _seal(v.g2State(), root, keccak256("nf0"), address(usdc), 100e6, r, address(0), 0);
+        vm.expectRevert(V.NotFinal.selector);
+        v.reclaim(rs0, root, keccak256("nf0"), address(usdc), 0, r, address(0), 0);
+
+        // The update whose journal holds GLOBAL fixes finalState and records the LEZ stop block.
+        bytes32 fin = _updateStop(_none(), _noExits(), 50);
+        assertEq(v.finalState(), fin);
+        assertEq(v.mintStoppedBlock(), 50);
+
+        // After the final: dropping GLOBAL is refused; later updates move neither the final nor the block.
+        bytes memory jDrop = _journalWith(_none(), _noExits(), _woundDown(false), 0);
+        bytes memory sDrop = mv.sealFor(G2, sha256(jDrop));
+        vm.expectRevert(V.MintNotStopped.selector);
+        v.update(jDrop, sDrop);
+        bytes32 later = _update(_none(), _noExits());
+        assertEq(v.g2State(), later);
+        assertEq(v.finalState(), fin);
+        assertEq(v.mintStoppedBlock(), 50);
+        _reclaim(root, keccak256("nf0"), 0, 100e6, r);
+        assertEq(usdc.balanceOf(r), 100e6);
+    }
+
+    /// The slot LEZ proves (`bridge_core::VAULT_WIND_DOWN_SLOT`, same literal) is 0 until `windDown`
+    /// and 1 after; nothing else writes it.
+    function test_WindDownSlotIsSetOnlyByWindDown() public {
+        bytes32 slot = v.WIND_DOWN_SLOT();
+        assertEq(slot, keccak256("RFP022/failsafe/wind-down/v1"));
+        assertEq(slot, hex"ff8e2141d8c61db31c3e41b019a732dd9999566db05bed245db5a1f33a703c1f");
+        assertEq(vm.load(address(v), slot), bytes32(0), "zero before windDown");
+        vm.prank(freezer);
+        v.freezeReclaims();
+        _update(_none(), _noExits());
+        assertEq(vm.load(address(v), slot), bytes32(0), "still zero after other writes");
+        vm.prank(admin);
+        v.windDown();
+        assertEq(vm.load(address(v), slot), bytes32(uint256(1)), "one after windDown");
     }
 
     function test_DepositsRefusedForGoodAfterWindDown() public {
@@ -204,7 +309,7 @@ contract FailsafeTest is FailsafeBase {
         _update(_claims(address(usdc), 0, 2), _noExits());
         vm.prank(admin);
         v.windDown();
-        _update(_none(), _noExits());
+        _updateStop(_none(), _noExits(), 100);
         _reclaim(root, keccak256("nfA"), 0, 100e6, makeAddr("a"));
         bytes32 fs = v.finalState();
         address b = makeAddr("b");
@@ -287,18 +392,21 @@ contract FailsafeTest is FailsafeBase {
         v.reclaim(so, root, keccak256("nf"), address(usdc), 0, to, address(0), 0);
     }
 
-    function test_ClaimsAfterTheFinalCountNowhere() public {
+    function test_ClaimsAfterTheFinalAreRefused() public {
         bytes32 root = _threeDepositsOneClaimedFinal();
         bytes32 fs = v.finalState();
+        bytes32 g2Before = v.g2State();
         (, uint64 claimsBefore,,) = v.counters(address(usdc), 0);
         uint256 cvBefore = v.claimedValue(address(usdc));
-        vm.expectEmit(true, false, false, true, address(v));
-        emit V.ClaimsIgnored(address(usdc), 0, 2);
-        _update(_claims(address(usdc), 0, 2), _noExits());
+        bytes memory j = _journal(_claims(address(usdc), 0, 2), _noExits());
+        bytes memory s = mv.sealFor(G2, sha256(j));
+        vm.expectRevert(V.ClaimsAfterMintStop.selector);
+        v.update(j, s);
         (, uint64 claimsAfter,,) = v.counters(address(usdc), 0);
         assertEq(claimsAfter, claimsBefore, "claims frozen at the final");
         assertEq(v.claimedValue(address(usdc)), cvBefore);
-        assertEq(v.finalState(), fs, "a later update never moves the final");
+        assertEq(v.finalState(), fs, "a refused update never moves the final");
+        assertEq(v.g2State(), g2Before);
         // so both unclaimed deposits still reclaim
         _reclaim(root, keccak256("nf0"), 0, 100e6, makeAddr("x"));
         _reclaim(root, keccak256("nf2"), 0, 100e6, makeAddr("y"));
@@ -308,19 +416,22 @@ contract FailsafeTest is FailsafeBase {
     function test_OverMintRevertsWhileActiveClampsAfterWindDown() public {
         for (uint256 i; i < 2; ++i) _deposit(0, keccak256(abi.encode("c", i)));
         bytes32 root = v.depositRoot();
-        bytes memory j = _journal(_claims(address(usdc), 0, 5), _noExits());
-        bytes memory s = mv.sealFor(G2, sha256(j));
+        bytes memory jActive = _journal(_claims(address(usdc), 0, 5), _noExits());
+        bytes memory sActive = mv.sealFor(G2, sha256(jActive));
         vm.expectRevert(V.ClaimsExceedDeposits.selector);
-        v.update(j, s);
+        v.update(jActive, sActive);
         vm.prank(admin);
         v.windDown();
-        // the same batch now lands (clamped) and is the final
+        // after wind-down, the batch carrying the stop proof lands (clamped) and fixes the final
+        bytes memory jStop = _journalStop(_claims(address(usdc), 0, 5), _noExits(), 200);
+        bytes memory sStop = mv.sealFor(G2, sha256(jStop));
         vm.expectEmit(true, false, false, true, address(v));
         emit V.ClaimsClamped(address(usdc), 0, 3);
-        v.update(j, s);
+        v.update(jStop, sStop);
         (uint64 dep, uint64 cl,,) = v.counters(address(usdc), 0);
         assertEq(cl, dep);
         assertEq(v.claimedValue(address(usdc)), 200e6);
+        assertEq(v.mintStoppedBlock(), 200);
         // forged mints used up the room: no reclaim fits (the reclaimers bear it, the vault stays solvent)
         address to = makeAddr("to");
         bytes memory rs = _seal(v.finalState(), root, keccak256("nf"), address(usdc), 100e6, to, address(0), 0);
@@ -332,15 +443,17 @@ contract FailsafeTest is FailsafeBase {
         _deposit(0, keccak256("c0"));
         _update(_claims(address(usdc), 0, 1), _noExits());
         // active: an exit above claims reverts the update
-        bytes memory j = _journal(_none(), _exit(address(usdc), 1, keccak256("e1000")));
-        bytes memory s = mv.sealFor(G2, sha256(j));
+        bytes memory jActive = _journal(_none(), _exit(address(usdc), 1, keccak256("e1000")));
+        bytes memory sActive = mv.sealFor(G2, sha256(jActive));
         vm.expectRevert(V.BurnsExceedClaims.selector);
-        v.update(j, s);
+        v.update(jActive, sActive);
         vm.prank(admin);
         v.windDown();
+        bytes memory jStop = _journalStop(_none(), _exit(address(usdc), 1, keccak256("e1000")), 300);
+        bytes memory sStop = mv.sealFor(G2, sha256(jStop));
         vm.expectEmit(true, false, false, true, address(v));
         emit V.ExitUnbacked(address(usdc), 1, keccak256("e1000"));
-        v.update(j, s);
+        v.update(jStop, sStop);
         assertEq(v.exitCount(), 0, "not inserted");
         (,, uint64 burns,) = v.counters(address(usdc), 1);
         assertEq(burns, 0, "not counted");
@@ -353,14 +466,17 @@ contract FailsafeTest is FailsafeBase {
         _deposit(0, keccak256("c0"));
         vm.prank(freezer);
         v.freezeAll(true, true);
-        bytes memory j = _journal(_none(), _noExits());
-        bytes memory s = mv.sealFor(G2, sha256(j));
+        bytes memory jActive = _journal(_none(), _noExits());
+        bytes memory sActive = mv.sealFor(G2, sha256(jActive));
         vm.expectRevert(V.IsFrozen.selector);
-        v.update(j, s);
+        v.update(jActive, sActive);
         vm.prank(admin);
         v.windDown();
-        v.update(j, s);
+        bytes memory jStop = _journalStop(_none(), _noExits(), 400);
+        bytes memory sStop = mv.sealFor(G2, sha256(jStop));
+        v.update(jStop, sStop);
         assertTrue(v.finalState() != bytes32(0));
+        assertEq(v.mintStoppedBlock(), 400);
     }
 
     function test_ReclaimFreezeIsLivenessOnly() public {
@@ -385,7 +501,7 @@ contract FailsafeTest is FailsafeBase {
         bytes32 root = v.depositRoot();
         vm.prank(admin);
         v.windDown();
-        _update(_none(), _noExits());
+        _updateStop(_none(), _noExits(), 100);
         address payable to = payable(makeAddr("ethTo"));
         bytes32 nf = keccak256("nfe");
         v.reclaim(_seal(v.finalState(), root, nf, ETH, 1 ether, to, address(0), 0), root, nf, ETH, 0, to, address(0), 0);
@@ -407,24 +523,19 @@ contract FailsafeTest is FailsafeBase {
         assertEq(usdc.balanceOf(b), 100e6);
     }
 
-    /// KNOWN LIMIT (demo failsafe; public-demo/prove/failsafe-20261117/README.md "Known limits"):
-    /// `BridgeVaultFailsafe.update` fixes `finalState` on the first update after `windDown` without
-    /// checking that LEZ minting has stopped (lines 536-541). Later claim deltas are ignored
-    /// (`ClaimsIgnored`, lines 489-493), yet exits are still inserted while `burnedValue <=
-    /// claimedValue` (lines 512-529), and `reclaim` only checks `claims + reclaims <= deposits`
-    /// (line 588). If `finalState` is fixed while LEZ minting is still open (or later unfrozen), an
-    /// unclaimed depositor (Bob) can claim on LEZ after `finalState`, burn and `release` against
-    /// Alice's claim budget (99.5 USDC), and also `reclaim` his deposit (100 USDC) against
-    /// `finalState` where his nullifier is absent — collecting 199.5 USDC on a 100 USDC deposit
-    /// while Alice's honest exit is dropped (`ExitUnbacked`).
-    ///
-    /// M6's irreversible LEZ mint freeze (a permanent LEZ wind-down flag attested by G2 so
-    /// `finalState` is fixed only from the batch carrying that freeze, `research/failsafe-design.md`
-    /// §2.5/§2.6) closes this limit: once LEZ cannot mint after the final snapshot, no deposit
-    /// absent from `finalState` can ever be claimed and burned.
-    function test_KnownLimit_DoubleDipReleaseAndReclaimIfLezMintNotFrozen() public {
+    /// M6 mint freeze (closes REDTEAM-VERIFIED B1.2 A / BID-281 known limit (a)):
+    /// `BridgeVaultFailsafe.update` refuses to fix `finalState` until the G2 journal proves LEZ
+    /// minting irreversibly stopped (`GLOBAL` in `woundDown` and `mintStoppedBlock != 0`), and
+    /// refuses any post-final update carrying new claims (`ClaimsAfterMintStop`). Together with
+    /// the LEZ bridge's irreversible `WindDownAttested` and G2's refusal of claims after wind-down,
+    /// Bob can no longer claim-and-release against Alice's budget while also reclaiming his deposit:
+    /// - before the LEZ stop proof lands, `finalState` is not fixed (`reclaim` reverts `NotFinal`);
+    /// - after the LEZ stop proof fixes `finalState`, a post-final update carrying a late claim and
+    ///   exit reverts (`ClaimsAfterMintStop`), so Bob can only reclaim his own 100 USDC while
+    ///   Alice's honest exit stays backed and pays out.
+    function test_DoubleDipReleaseAndReclaimRefused() public {
         address bob = makeAddr("bob");
-        address bobRelease = makeAddr("bobRelease");
+        address aliceRelease = makeAddr("aliceRelease");
         address bobReclaim = makeAddr("bobReclaim");
         usdc.mint(bob, 101e6);
         vm.prank(bob);
@@ -441,53 +552,134 @@ contract FailsafeTest is FailsafeBase {
         _update(_claims(address(usdc), 0, 1), _noExits());
         assertEq(v.claimedValue(address(usdc)), 100e6);
 
-        // 3. Operator winds down and fixes `finalState` without LEZ minting irreversibly frozen.
+        // 3. Admin calls `windDown()`. An update WITHOUT the LEZ mint-stop proof does NOT fix
+        //    `finalState`, so Bob cannot reclaim before LEZ minting has stopped.
         vm.prank(admin);
         v.windDown();
         _update(_none(), _noExits());
-        assertTrue(v.finalState() != bytes32(0), "finalState fixed");
+        assertEq(v.finalState(), bytes32(0), "not finalised without LEZ mint-stop proof");
+        bytes memory earlyReclaimSeal = _seal(v.g2State(), depRoot, keccak256("bob-reclaim-nf"), address(usdc), 100e6, bobReclaim, address(0), 0);
+        vm.expectRevert(V.NotFinal.selector);
+        v.reclaim(earlyReclaimSeal, depRoot, keccak256("bob-reclaim-nf"), address(usdc), 0, bobReclaim, address(0), 0);
 
-        // 4. Bob claims on LEZ AFTER `finalState` and burns to an exit commitment.
-        //    The vault ignores the late claim delta (`ClaimsIgnored`), yet admits Bob's exit
-        //    because `burnedValue (100) <= claimedValue (100)` (Alice's claim budget).
+        // 4. LEZ sees `windDownAt != 0` via the light client and stops minting at LEZ block 500;
+        //    G2 delivers the stop proof (`GLOBAL` in `woundDown`, `mintStoppedBlock = 500`),
+        //    fixing `finalState`.
+        _updateStop(_none(), _noExits(), 500);
+        assertTrue(v.finalState() != bytes32(0), "finalState fixed with stop proof");
+        assertEq(v.mintStoppedBlock(), 500);
+
+        // 5. Bob's double-dip attempt: a post-final update carrying a late claim + late exit is
+        //    REFUSED (`ClaimsAfterMintStop`), so Bob's exit is never inserted and cannot be released.
         bytes32 bobExit = keccak256("bob-late-exit");
-        vm.expectEmit(true, false, false, true, address(v));
-        emit V.ClaimsIgnored(address(usdc), 0, 1);
-        _update(_claims(address(usdc), 0, 1), _exit(address(usdc), 0, bobExit));
-        bytes32 exitRoot = v.exitRoot();
-        assertEq(v.exitCount(), 1, "late exit admitted against Alice's claim budget");
-        assertEq(v.burnedValue(address(usdc)), 100e6);
+        bytes memory lateJ = _journal(_claims(address(usdc), 0, 1), _exit(address(usdc), 0, bobExit));
+        bytes memory lateS = mv.sealFor(G2, sha256(lateJ));
+        vm.expectRevert(V.ClaimsAfterMintStop.selector);
+        v.update(lateJ, lateS);
+        assertEq(v.exitCount(), 0, "no late exit admitted");
+        assertEq(v.burnedValue(address(usdc)), 0);
 
-        // 5. Bob releases the exit (100 - 0.5 withdraw fee = 99.5 USDC).
-        bytes32 bobRelNf = keccak256("bob-release-nf");
-        bytes memory relSeal = mv.sealFor(
-            G3,
-            sha256(abi.encode(v.cfgId(), exitRoot, bobRelNf, address(usdc), uint256(100e6), bobRelease, address(0), uint256(0)))
-        );
-        v.release(relSeal, exitRoot, bobRelNf, address(usdc), 0, bobRelease, address(0), 0);
-        assertEq(usdc.balanceOf(bobRelease), 99.5e6);
-
-        // 6. Because Bob's claim happened after `finalState`, his claim nullifier is absent from
-        //    `finalState`'s accumulator, so he also reclaims his original 100 USDC deposit.
-        //    `claims (1) + reclaims (1) <= deposits (2)` passes.
+        // 6. Bob can only reclaim his own unclaimed 100 USDC deposit (once).
         _reclaim(depRoot, keccak256("bob-reclaim-nf"), 0, 100e6, bobReclaim);
         assertEq(usdc.balanceOf(bobReclaim), 100e6);
 
-        // Current behaviour: Bob extracted 199.5 USDC on a 100 USDC deposit, exhausting principal.
-        assertEq(usdc.balanceOf(bobRelease) + usdc.balanceOf(bobReclaim), 199.5e6);
-        assertEq(_principal(), 0, "vault principal exhausted by double-dip");
-        (, uint64 claims, uint64 burns, uint64 releases) = v.counters(address(usdc), 0);
-        assertEq(claims, 1);
-        assertEq(burns, 1);
-        assertEq(releases, 1);
-        assertEq(v.reclaims(address(usdc), 0), 1);
-
-        // 7. Alice's honest exit is now unbacked (`burnedValue + 100 > claimedValue`) and dropped.
+        // 7. Alice's honest exit is still backed (`burnedValue 100 <= claimedValue 100`) and pays out.
         bytes32 aliceExit = keccak256("alice-honest-exit");
-        vm.expectEmit(true, false, false, true, address(v));
-        emit V.ExitUnbacked(address(usdc), 0, aliceExit);
         _update(_none(), _exit(address(usdc), 0, aliceExit));
-        assertEq(v.exitCount(), 1, "Alice's exit dropped");
+        assertEq(v.exitCount(), 1, "Alice's honest exit admitted");
+        bytes32 exitRoot = v.exitRoot();
+        bytes32 aliceRelNf = keccak256("alice-release-nf");
+        bytes memory relSeal = mv.sealFor(
+            G3,
+            sha256(abi.encode(v.cfgId(), exitRoot, aliceRelNf, address(usdc), uint256(100e6), aliceRelease, address(0), uint256(0)))
+        );
+        v.release(relSeal, exitRoot, aliceRelNf, address(usdc), 0, aliceRelease, address(0), 0);
+        assertEq(usdc.balanceOf(aliceRelease), 99.5e6);
+        assertEq(_principal(), 0, "Alice and Bob each recovered their own deposit, no double-dip");
+    }
+
+    /// Second branch of the double-dip: if Bob claims on LEZ BEFORE LEZ sees `windDown()`, his
+    /// claim is counted in the pre-final / stop batch (not ignored) and sits in `finalState`'s
+    /// accumulator, so he can release his burn OR attempt to reclaim — never both.
+    function test_PreStopClaimCountsAndCannotAlsoReclaim() public {
+        address bob = makeAddr("bob");
+        address bobReclaim = makeAddr("bobReclaim");
+        usdc.mint(bob, 101e6);
+        vm.prank(bob);
+        usdc.approve(address(v), 101e6);
+
+        _deposit(0, keccak256("alice-dep"));
+        vm.prank(bob);
+        v.deposit(address(usdc), 0, keccak256("bob-dep"));
+        bytes32 depRoot = v.depositRoot();
+
+        // Alice claims before windDown.
+        _update(_claims(address(usdc), 0, 1), _noExits());
+        vm.prank(admin);
+        v.windDown();
+
+        // Bob races and claims on LEZ before `WindDownAttested` lands at block 500:
+        // his claim IS counted in the stop batch (`claims = 2`), so both deposits are claimed.
+        _updateStop(_claims(address(usdc), 0, 1), _noExits(), 500);
+        (, uint64 claims,,) = v.counters(address(usdc), 0);
+        assertEq(claims, 2);
+        assertEq(v.claimedValue(address(usdc)), 200e6);
+
+        // Even with a mocked G4 seal, reclaiming reverts `ReclaimsExceedDeposits` (and G4 itself
+        // refuses because Bob's nullifier is in `finalState`'s accumulator).
+        bytes memory rs = _seal(v.finalState(), depRoot, keccak256("bob-reclaim-nf"), address(usdc), 100e6, bobReclaim, address(0), 0);
+        vm.expectRevert(V.ReclaimsExceedDeposits.selector);
+        v.reclaim(rs, depRoot, keccak256("bob-reclaim-nf"), address(usdc), 0, bobReclaim, address(0), 0);
+        assertEq(usdc.balanceOf(bobReclaim), 0);
+    }
+}
+
+/// The V2 journal as `outbound_core` encodes it: the same bytes are pinned in
+/// `lez-bridge/outbound/core/tests/wind_down.rs` (`journal_v2_matches_the_vaults_abi`).
+contract FailsafeJournalVectorTest is Test {
+    function test_V2JournalVectorIsOutboundCores() public pure {
+        bytes memory b =
+            hex"00000000000000000000000000000000000000000000000000000000000000200101010101010101010101010101010101010101010101010101010101010101"
+            hex"02020202020202020202020202020202020202020202020202020202020202020303030303030303030303030303030303030303030303030303030303030303"
+            hex"00000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000180"
+            hex"00000000000000000000000000000000000000000000000000000000000002000909090909090909090909090909090909090909090909090909090909090909"
+            hex"00000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000280"
+            hex"00000000000000000000000000000000000000000000000000000000000001f40000000000000000000000000000000000000000000000000000000000000001"
+            hex"04040404040404040404040404040404040404040404040404040404040404040000000000000000000000000000000000000000000000000000000000000001"
+            hex"000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000000000000000000000000000000000000000000000000001"
+            hex"00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001"
+            hex"000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000000000000000000000000000000000000000000000000000"
+            hex"07070707070707070707070707070707070707070707070707070707070707070000000000000000000000000000000000000000000000000000000000000001"
+            hex"000000000000000000000000ffffffffffffffffffffffffffffffffffffffff";
+        bytes32[] memory roots = new bytes32[](1);
+        roots[0] = bytes32(uint256(0x0404040404040404040404040404040404040404040404040404040404040404));
+        V.ClaimDelta[] memory cl = new V.ClaimDelta[](1);
+        cl[0] = V.ClaimDelta(address(0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa), 1, 2);
+        V.Exit[] memory ex = new V.Exit[](1);
+        ex[0] = V.Exit(
+            address(0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa),
+            0,
+            bytes32(uint256(0x0707070707070707070707070707070707070707070707070707070707070707))
+        );
+        address[] memory wd = new address[](1);
+        wd[0] = address(type(uint160).max);
+        V.UpdateJournal memory want = V.UpdateJournal(
+            bytes32(uint256(0x0101010101010101010101010101010101010101010101010101010101010101)),
+            bytes32(uint256(0x0202020202020202020202020202020202020202020202020202020202020202)),
+            bytes32(uint256(0x0303030303030303030303030303030303030303030303030303030303030303)),
+            roots,
+            cl,
+            ex,
+            bytes32(uint256(0x0909090909090909090909090909090909090909090909090909090909090909)),
+            3,
+            wd,
+            500
+        );
+        assertEq(abi.encode(want), b);
+        V.UpdateJournal memory got = abi.decode(b, (V.UpdateJournal));
+        assertEq(got.woundDown[0], address(type(uint160).max));
+        assertEq(got.mintStoppedBlock, 500);
+        assertEq(got.claimAccCount, 3);
     }
 }
 
@@ -607,6 +799,7 @@ contract FailsafeAdminTest is FailsafeBase {
         (,,,,,,,, uint256 fees) = v.tokenConfig(address(usdc));
         uint64 wAt = v.windDownAt();
         bytes32 fs = v.finalState();
+        uint64 sb = v.mintStoppedBlock();
         bytes[] memory c = _privileged();
         for (uint256 i; i < c.length; ++i) {
             vm.prank(i < N_FREEZER ? freezer : admin);
@@ -620,6 +813,7 @@ contract FailsafeAdminTest is FailsafeBase {
             assertEq(_principal(), principal, "principal moved");
             assertEq(v.windDownAt(), wAt);
             assertEq(v.finalState(), fs);
+            assertEq(v.mintStoppedBlock(), sb);
         }
         assertEq(usdc.balanceOf(admin), fees, "the admin got exactly the accrued deposit fees (as fee recipient), no principal");
         assertEq(usdc.balanceOf(freezer), 0);

@@ -233,6 +233,12 @@ depositor, never an admin recovery.**
   on the first update after `windDown()` without checking that LEZ minting has stopped, so a late exit can be paid while
   the same deposit is reclaimed (forged mints before the final also use up reclaim room). M6's irreversible LEZ mint
   freeze closes this limit.
+- M6 as built (2026-11-27, closed in code, not deployed; `DESIGN.md` §10): the vault sets a hashed slot
+  (`keccak256("RFP022/failsafe/wind-down/v1")`, not the numbered slot 92 of the design, which a later layout of either
+  vault could fill); anyone proves it on LEZ and the bridge stops minting for good; G2 carries the wind-down as `GLOBAL`
+  in the state's existing `wound_down` and refuses later claims; the vault fixes its final only from such a state. The
+  LEZ program records no block height (it cannot read one; a caller-supplied height would be unchecked): G2 reports the
+  wind-down's block in the journal of the update that holds it.
 - Source: `research/failsafe-design.md`; `public-demo/prove/failsafe-20261117/README.md`.
 
 ## Proposal and process

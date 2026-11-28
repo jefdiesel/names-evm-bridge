@@ -17,13 +17,14 @@ Known limits are written down rather than hidden: the trust model is in `DESIGN.
 
 ## Known limits
 
-- **Failsafe (`vault/src/failsafe/BridgeVaultFailsafe.sol`, not deployed):** `windDown()` fixes
-  `finalState` on the first update after wind-down without checking that LEZ minting has stopped (on
-  today's LEZ program the mint freeze is reversible and G2 does not track it). If LEZ minting is not
-  frozen first or is unfrozen after `finalState` is fixed, a late exit can be paid while the same
-  deposit is reclaimed; forged mints before the final also consume reclaim room (vault solvency
-  still holds). This variant is not deployed; the irreversible LEZ mint freeze in M6 closes this
-  limit (`public-demo/prove/failsafe-20261117/README.md`).
+- **Failsafe (`vault/src/failsafe/BridgeVaultFailsafe.sol`, not deployed):** the release-plus-reclaim
+  double-dip (the final fixed before LEZ minting had stopped) is **closed in code, not deployed**
+  (M6): `windDown()` sets a hashed slot that anyone proves on LEZ under a finalized anchor
+  (`WindDownAttested`); the bridge then refuses every mint for good, G2 refuses any claim after it
+  and marks its states `GLOBAL`, and the vault fixes `finalState` only from such a state and refuses
+  later claims. The CLI step (`wind-down`), the failsafe G2 guest (`outbound_guest_failsafe`) and the
+  e2e are written; the e2e has not run yet (it needs a host that runs the rc3 sequencer). Forged mints before
+  the final still consume reclaim room (vault solvency holds) (`DESIGN.md` §10).
 - **v7 threshold-signature route (`SeqSigGate`):** today's signers (`seqsig attest`) re-hash and
   re-extract blocks, checking neither privacy receipts nor public execution yet. Vault v7 uses
   stand-in keys of ours on our one sequencer, so v7 still trusts us (real accredited sequencer

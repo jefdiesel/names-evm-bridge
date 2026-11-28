@@ -55,6 +55,12 @@ pub fn update_image_id_trusted_tip() -> [u8; 32] {
     digest_bytes(OUTBOUND_GUEST_TRUSTED_TIP_ID)
 }
 
+/// The failsafe vault's G2 image (M6): TrustedTip, committing the V2 journal.
+#[must_use]
+pub fn update_image_id_failsafe() -> [u8; 32] {
+    digest_bytes(OUTBOUND_GUEST_FAILSAFE_ID)
+}
+
 /// The release G2 image (Logos Blockchain light client, not implemented).
 #[must_use]
 pub fn update_image_id_release() -> [u8; 32] {
@@ -232,6 +238,7 @@ impl HostState {
             "claimAccRoot": h0x(&g.claim_acc.root),
             "claimAccCount": g.claim_acc.count,
             "exitCount": g.exit_count,
+            "woundDown": g.wound_down.iter().map(|a| h0x(a)).collect::<Vec<_>>(),
             "viewHash": h0x(&g.view_hash),
             "cfgId": h0x(&self.view.cfg_id),
             "tokens": self.view.tokens.iter().map(|t| serde_json::json!({
@@ -465,6 +472,12 @@ impl Guest {
     #[must_use]
     pub fn trusted_tip() -> Self {
         Self { elf: OUTBOUND_GUEST_TRUSTED_TIP_ELF.to_vec(), image: update_image_id_trusted_tip(), source: "embedded".into() }
+    }
+
+    /// The failsafe vault's G2 guest (TrustedTip, V2 journal) embedded at build time.
+    #[must_use]
+    pub fn failsafe() -> Self {
+        Self { elf: OUTBOUND_GUEST_FAILSAFE_ELF.to_vec(), image: update_image_id_failsafe(), source: "embedded".into() }
     }
 
     /// The G3 release guest embedded at build time.

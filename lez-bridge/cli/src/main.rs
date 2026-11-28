@@ -394,6 +394,32 @@ enum Command {
         #[arg(long, default_value_t = bc::VAULT_DEPOSIT_ROOT_SLOT)]
         deposit_root_slot: u64,
     },
+    /// M6 failsafe: stop minting on this bridge for good, once its vault (`BridgeVaultFailsafe`)
+    /// has wound down. An RFP-021 bridge: anyone sends an `eth_getProof` of the vault's
+    /// `WIND_DOWN_SLOT` under an anchor the instance finalized (`--proof` and an anchor). A
+    /// stand-in bridge: the attestor sends `--stand-in`. Nothing undoes it.
+    WindDown {
+        #[arg(long)]
+        bridge: AccountId,
+        /// The signer (any account on an RFP-021 bridge; the attestor with `--stand-in`).
+        #[arg(long)]
+        from: AccountId,
+        /// Stand-in bridge: the attestor says the vault has wound down.
+        #[arg(long)]
+        stand_in: bool,
+        /// `eth_getProof(vault, [WIND_DOWN_SLOT], block)` as JSON (bare result or JSON-RPC response).
+        #[arg(long)]
+        proof: Option<PathBuf>,
+        /// The anchor is this execution state root (32 bytes of hex)...
+        #[arg(long, conflicts_with = "anchor_block_hash")]
+        anchor_state_root: Option<String>,
+        /// ...or this execution block hash, with `--header-rlp`.
+        #[arg(long, requires = "header_rlp")]
+        anchor_block_hash: Option<String>,
+        /// The block's RLP header, as hex text or raw bytes.
+        #[arg(long)]
+        header_rlp: Option<PathBuf>,
+    },
     /// Claim through RFP-021: prove the vault's `isDepositRoot[root]` under a finalized anchor.
     /// The root is the one the leaves give (the vault's current root).
     ClaimAttested {
@@ -560,6 +586,7 @@ impl Command {
                 | Self::Attest { rfp021: None, .. }
                 | Self::Claim { .. }
                 | Self::ClaimAttested { .. }
+                | Self::WindDown { .. }
                 | Self::SetSponsor { .. }
                 | Self::FundFloat { .. }
                 | Self::Shield { .. }
@@ -1111,6 +1138,49 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
             let sequencer = SEQUENCER.get().cloned().unwrap_or_default();
             relay::run_cosign(wallet, &sequencer, &tx_file, bridge, token_program, payer, max_gas, max_fee, submit, kind == "burn").await
         }
+        Command::WindDown { bridge, from, stand_in, proof, anchor_state_root, anchor_block_hash, header_rlp } => {
+            let c: Config = borsh::from_slice(&public_state(wallet, config_address(&bridge), bridge).await?).context("the bridge config")?;
+            if c.mint_wound_down.0 {
+                bail!("minting is already wound down on this bridge; nothing sent");
+            }
+            match (c.root_source, stand_in) {
+                (RootSource::StandIn, true) => {
+                    let message = BridgeMessage::Instruction(Instruction::AttestWindDown);
+                    let accounts = vec![signer(wallet, from, bridge), pda(bridge, config_seed())];
+                    send(wallet, &[bridge], accounts, &borsh::to_vec(&message)?, None).await
+                }
+                (RootSource::StandIn, false) => bail!("this bridge uses the stand-in attestor: give --stand-in (the attestor signs); nothing sent"),
+                (RootSource::Attest(_), true) => bail!("this bridge takes RFP-021 proofs: give --proof and an anchor, not --stand-in; nothing sent"),
+                (RootSource::Attest(source), false) => {
+                    let proof = proof.ok_or_else(|| anyhow!("give --proof (eth_getProof of the vault's wind-down slot); nothing sent"))?;
+                    let anchor = anchor_witness(anchor_state_root, anchor_block_hash, header_rlp)?;
+                    let proof = storage_proof(&proof, &c.vault, &bc::VAULT_WIND_DOWN_SLOT)?;
+                    println!("wind-down slot 0x{} value 0x{}", to_hex(&bc::VAULT_WIND_DOWN_SLOT), to_hex(&proof.value));
+                    if proof.value == [0; 32] {
+                        bail!("the vault's wind-down slot is 0 at that block: it has not wound down; nothing sent");
+                    }
+                    if bc::check_attested_wind_down(&source, &c.vault, c.evm_chain_id, &anchor, &proof).is_err() {
+                        bail!("the wind-down proof does not verify against that anchor; nothing sent");
+                    }
+                    let anchor_pda = eth_attest_core::anchor_address(&source.attest_program, &source.attest_instance, &anchor.anchor);
+                    let attest_program = source.attest_program;
+                    let message = BridgeMessage::Instruction(Instruction::WindDownAttested {
+                        cfg_id: c.cfg_id,
+                        source,
+                        vault: c.vault,
+                        evm_chain_id: c.evm_chain_id,
+                        anchor,
+                        proof,
+                    });
+                    let accounts = vec![
+                        signer(wallet, from, bridge),
+                        pda(bridge, config_seed()),
+                        AccountIdentity::PublicNoSign(anchor_pda).select_program_actor_state(attest_program),
+                    ];
+                    send(wallet, &[bridge, attest_program], accounts, &borsh::to_vec(&message)?, None).await
+                }
+            }
+        }
         Command::ClaimAttested {
             bridge,
             token_program,
@@ -1136,15 +1206,7 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
             let RootSource::Attest(source) = plan.config.root_source else {
                 bail!("this bridge uses the stand-in attestor: use claim");
             };
-            let anchor = match (anchor_state_root, anchor_block_hash, header_rlp) {
-                (Some(root), None, _) => AnchorWitness { anchor: Anchor::StateRoot(hex32(&root)?), header_rlp: None },
-                (None, Some(hash), Some(path)) => {
-                    let raw = std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
-                    let rlp = std::str::from_utf8(&raw).ok().and_then(|t| hex_bytes(t).ok()).unwrap_or(raw);
-                    AnchorWitness { anchor: Anchor::BlockHash(hex32(&hash)?), header_rlp: Some(rlp) }
-                }
-                _ => bail!("give --anchor-state-root, or --anchor-block-hash with --header-rlp"),
-            };
+            let anchor = anchor_witness(anchor_state_root, anchor_block_hash, header_rlp)?;
             let slot = mapping_slot(&plan.root, source.deposit_root_slot);
             let proof = storage_proof(&proof, &plan.config.vault, &slot)?;
             println!("isDepositRoot[root] slot 0x{} value 0x{}", to_hex(&slot), to_hex(&proof.value));
@@ -1277,6 +1339,7 @@ async fn run(wallet: &mut WalletCore<SequencerClient>, command: Command) -> Resu
             println!("lez_chain_id 0x{}\nzone_id 0x{}", to_hex(&c.lez_chain_id), to_hex(&c.zone_id));
             println!("admin {}\nfreezer {}\nattestor {}", c.admin, c.freezer, c.attestor);
             println!("mint_frozen {}\nburn_frozen {}", c.mint_frozen, c.burn_frozen);
+            println!("mint_wound_down {}", c.mint_wound_down.0);
             match c.root_source {
                 RootSource::StandIn => println!("root_source stand-in"),
                 RootSource::Attest(a) => println!(
@@ -1340,6 +1403,7 @@ fn show_json(c: &Config, float_now: Balance) -> serde_json::Value {
         "lez_chain_id": hx(&c.lez_chain_id), "zone_id": hx(&c.zone_id), "token_program": c.token_program.to_string(),
         "admin": c.admin.to_string(), "pending_admin": c.pending_admin.map(|a| a.to_string()), "freezer": c.freezer.to_string(),
         "attestor": c.attestor.to_string(), "mint_frozen": c.mint_frozen, "burn_frozen": c.burn_frozen,
+        "mint_wound_down": c.mint_wound_down.0,
         "root_source": source, "sponsor_amount": c.sponsor_amount.to_string(), "float": float_now.to_string(),
         "tokens": c.tokens.iter().map(|t| json!({
             "eth_token": hx(&t.eth_token), "definition": t.definition.to_string(), "decimals": t.decimals,
@@ -1746,6 +1810,9 @@ async fn diagnose_claim(
         .iter()
         .find(|t| t.eth_token == plan.eth_token)
         .ok_or_else(|| anyhow!("token not registered on this bridge; nothing sent"))?;
+    if c.mint_wound_down.0 {
+        bail!("minting is permanently wound down on this bridge; nothing sent");
+    }
     if c.mint_frozen {
         bail!("minting is frozen on this bridge (all tokens): retry once the admin unfreezes it; nothing sent");
     }
@@ -1786,6 +1853,19 @@ async fn diagnose_claim(
     }
     println!("pre-check passed: attested root, unspent nullifier, minting open, denomination {denom_index} = {denom}");
     Ok(())
+}
+
+/// The anchor of an RFP-021 proof: `--anchor-state-root`, or `--anchor-block-hash` with `--header-rlp`.
+fn anchor_witness(state_root: Option<String>, block_hash: Option<String>, header_rlp: Option<PathBuf>) -> Result<AnchorWitness> {
+    Ok(match (state_root, block_hash, header_rlp) {
+        (Some(root), None, _) => AnchorWitness { anchor: Anchor::StateRoot(hex32(&root)?), header_rlp: None },
+        (None, Some(hash), Some(path)) => {
+            let raw = std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
+            let rlp = std::str::from_utf8(&raw).ok().and_then(|t| hex_bytes(t).ok()).unwrap_or(raw);
+            AnchorWitness { anchor: Anchor::BlockHash(hex32(&hash)?), header_rlp: Some(rlp) }
+        }
+        _ => bail!("give --anchor-state-root, or --anchor-block-hash with --header-rlp"),
+    })
 }
 
 /// An `eth_getProof` result (bare, or inside a JSON-RPC response) for `vault`'s `slot`.
@@ -2098,5 +2178,34 @@ mod sequencer_tests {
         ] {
             assert!(allowed_sequencer(bad).is_err(), "{bad} should be refused");
         }
+    }
+}
+
+/// `wind-down` (M6): its arguments parse in both forms, and an anchor needs a root or a hash
+/// with its header.
+#[cfg(test)]
+mod wind_down_tests {
+    use super::{Cli, Command, anchor_witness};
+    use clap::Parser as _;
+
+    const B: &str = "E4ZJuR5AA7Zf1exBDA6zmdrAoBCw2jX7gSUR696LSpNv";
+
+    #[test]
+    fn wind_down_parses_both_forms() {
+        let c = Cli::try_parse_from(["lez-bridge", "wind-down", "--bridge", B, "--from", B, "--stand-in"]).unwrap();
+        assert!(matches!(c.command, Command::WindDown { stand_in: true, proof: None, .. }));
+        let root = format!("0x{}", "11".repeat(32));
+        let c = Cli::try_parse_from(["lez-bridge", "wind-down", "--bridge", B, "--from", B, "--proof", "p.json", "--anchor-state-root", &root])
+            .unwrap();
+        assert!(matches!(c.command, Command::WindDown { stand_in: false, proof: Some(_), anchor_state_root: Some(_), .. }));
+        assert!(Cli::try_parse_from(["lez-bridge", "wind-down", "--bridge", B, "--from", B, "--anchor-block-hash", &root]).is_err(), "a hash needs --header-rlp");
+    }
+
+    #[test]
+    fn an_anchor_is_a_root_or_a_hash_with_its_header() {
+        assert!(anchor_witness(None, None, None).is_err());
+        assert!(anchor_witness(None, Some(format!("0x{}", "22".repeat(32))), None).is_err());
+        let a = anchor_witness(Some(format!("0x{}", "11".repeat(32))), None, None).unwrap();
+        assert!(a.header_rlp.is_none());
     }
 }

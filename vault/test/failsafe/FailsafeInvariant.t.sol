@@ -36,6 +36,7 @@ contract FailsafeHandler is CommonBase, StdCheats, StdUtils {
     uint256 public updatesOk;
     bool public sawWindDown;
     bytes32 public firstFinal;
+    uint64 public firstMintStoppedBlock;
 
     constructor(V v_, MockVerifier mv_, TestToken usdc_, address admin_, address freezer_) {
         v = v_;
@@ -71,17 +72,32 @@ contract FailsafeHandler is CommonBase, StdCheats, StdUtils {
         address t = _tok(seed);
         uint32 di = uint32((seed >> 8) % (t == ETH ? 1 : 2));
         // claims in a third of the updates, 1-2 at a time (sometimes above deposits: refused while
-        // active, clamped after wind-down, ignored after the final)
+        // active, clamped after wind-down before final, refused after final)
         bool withClaims = nClaims % 3 == 0;
         V.ClaimDelta[] memory cl = new V.ClaimDelta[](withClaims ? 1 : 0);
         if (withClaims) cl[0] = V.ClaimDelta(t, di, uint64(bound(nClaims >> 2, 1, 2)));
         V.Exit[] memory ex = new V.Exit[](bound(nExits, 0, 3));
         for (uint256 i; i < ex.length; ++i) ex[i] = V.Exit(t, uint32((seed >> (16 + i)) % (t == ETH ? 1 : 2)), keccak256(abi.encode("e", ++nonce)));
-        bytes memory j = abi.encode(V.UpdateJournal(v.cfgId(), v.g2State(), keccak256(abi.encode("s", ++nonce)), new bytes32[](0), cl, ex));
+        // as G2 emits it: GLOBAL kept after the final; GLOBAL + the stop block in the batch that
+        // holds the LEZ wind-down (here: half the updates after windDown, before the final)
+        bool carryStop = v.finalState() != bytes32(0);
+        uint64 stopBlock;
+        if (!carryStop && v.windDownAt() != 0 && (seed >> 24) % 2 == 0) {
+            carryStop = true;
+            stopBlock = uint64(++nonce);
+        }
+        address[] memory wd = new address[](carryStop ? 1 : 0);
+        if (carryStop) wd[0] = address(type(uint160).max);
+        bytes memory j = abi.encode(
+            V.UpdateJournal(v.cfgId(), v.g2State(), keccak256(abi.encode("s", ++nonce)), new bytes32[](0), cl, ex, bytes32(0), 0, wd, stopBlock)
+        );
         try v.update(j, mv.sealFor(G2, sha256(j))) {
             updatesOk++;
         } catch {}
-        if (firstFinal == bytes32(0)) firstFinal = v.finalState();
+        if (firstFinal == bytes32(0)) {
+            firstFinal = v.finalState();
+            firstMintStoppedBlock = v.mintStoppedBlock();
+        }
     }
 
     function release(uint256 seed) external {
@@ -242,11 +258,14 @@ contract FailsafeInvariantTest is Test {
         }
     }
 
-    /// Once wound down, always wound down; the first final never changes; no deposit after it.
+    /// Once wound down, always wound down; the first final and its mintStoppedBlock never change;
+    /// finalState is never set without windDown.
     function invariant_windDownIrreversible() public view {
         if (h.sawWindDown()) assertTrue(v.windDownAt() != 0, "wind-down undone");
         if (h.firstFinal() != bytes32(0)) assertEq(v.finalState(), h.firstFinal(), "final moved");
+        if (h.firstFinal() != bytes32(0)) assertEq(v.mintStoppedBlock(), h.firstMintStoppedBlock(), "mintStoppedBlock moved");
         if (v.finalState() != bytes32(0)) assertTrue(v.windDownAt() != 0);
+        else assertEq(v.mintStoppedBlock(), 0, "stop block without a final");
         if (v.windDownAt() == 0) {
             for (uint256 d; d < 2; ++d) assertEq(v.reclaims(address(usdc), d), 0, "reclaim before wind-down");
         }
@@ -281,7 +300,11 @@ contract FailsafeFuzzTest is Test {
         v.windDown();
         V.ClaimDelta[] memory cl = new V.ClaimDelta[](1);
         cl[0] = V.ClaimDelta(address(usdc), 0, nClaim);
-        bytes memory j = abi.encode(V.UpdateJournal(v.cfgId(), v.g2State(), keccak256("final"), new bytes32[](0), cl, new V.Exit[](0)));
+        address[] memory wd = new address[](1);
+        wd[0] = address(type(uint160).max);
+        bytes memory j = abi.encode(
+            V.UpdateJournal(v.cfgId(), v.g2State(), keccak256("final"), new bytes32[](0), cl, new V.Exit[](0), bytes32(0), 0, wd, 100)
+        );
         v.update(j, mv.sealFor(keccak256("g2"), sha256(j)));
         bytes32 root = v.depositRoot();
         uint256 paid;

@@ -23,3 +23,6 @@ default = []
 # the host says so. A guest built without this feature has no way to name it; the release guest
 # (methods/outbound_guest) never enables it, so its image id differs from the test guest's.
 trusted-tip = []
+# Failsafe vault (`BridgeVaultFailsafe.sol`): commits `JournalVersion::V2` (claim accumulator,
+# `woundDown`, `mintStoppedBlock`) instead of V1 (`BridgeVault.sol`).
+journal-v2 = []

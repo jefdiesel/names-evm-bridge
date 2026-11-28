@@ -21,9 +21,10 @@
 //! anchor the attestation instance finalized, and on Ethereum `claims <= deposits` per (token,
 //! denomination) holds whatever LEZ says, because the vault counts both.
 //!
-//! **Versions.** [`JournalVersion::V1`] is today's vault. [`JournalVersion::V2`] appends
-//! `bytes32 claimAccRoot; uint64 claimAccCount; address[] woundDown;` for the planned failsafe
-//! vault; nothing emits it yet.
+//! **Versions.** [`JournalVersion::V1`] is today's `BridgeVault` (6 fields). [`JournalVersion::V2`]
+//! appends `bytes32 claimAccRoot; uint64 claimAccCount; address[] woundDown; uint64 mintStoppedBlock;`
+//! for the failsafe vault (`BridgeVaultFailsafe.sol`), carrying the claim-nullifier accumulator
+//! and the LEZ mint-stop proof (`GLOBAL` in `woundDown` and `mintStoppedBlock != 0`).
 
 use crate::view::{ClaimDelta, EthAddress, Exit};
 
@@ -31,7 +32,7 @@ use crate::view::{ClaimDelta, EthAddress, Exit};
 pub enum JournalVersion {
     /// `BridgeVault` as deployed (6 fields).
     V1,
-    /// The failsafe vault (planned): V1 plus the accumulator and the wound-down tokens.
+    /// `BridgeVaultFailsafe` (10 fields): V1 plus the claim accumulator, `woundDown`, and `mintStoppedBlock`.
     V2,
 }
 
@@ -47,6 +48,8 @@ pub struct UpdateJournal {
     pub claim_acc_root: [u8; 32],
     pub claim_acc_count: u64,
     pub wound_down: Vec<EthAddress>,
+    /// V2 only: LEZ block height at which minting irreversibly stopped (0 while active).
+    pub mint_stopped_block: u64,
 }
 
 fn word_u(v: u64) -> [u8; 32] {
@@ -67,7 +70,7 @@ impl UpdateJournal {
     pub fn abi_encode(&self, version: JournalVersion) -> Vec<u8> {
         let v2 = version == JournalVersion::V2;
         // Head of the tuple: static fields inline, dynamic ones as offsets from the tuple start.
-        let head_words = if v2 { 9 } else { 6 };
+        let head_words = if v2 { 10 } else { 6 };
         let mut tails: Vec<Vec<u8>> = Vec::new();
         let mut t = word_u(self.deposit_roots_used.len() as u64).to_vec();
         for r in &self.deposit_roots_used {
@@ -113,6 +116,7 @@ impl UpdateJournal {
             out.extend_from_slice(&self.claim_acc_root);
             out.extend_from_slice(&word_u(self.claim_acc_count));
             out.extend_from_slice(&offsets[3]);
+            out.extend_from_slice(&word_u(self.mint_stopped_block));
         }
         for t in &tails {
             out.extend_from_slice(t);
@@ -123,6 +127,16 @@ impl UpdateJournal {
     /// Strict inverse of [`Self::abi_encode`] for V1 (the canonical layout only).
     #[must_use]
     pub fn abi_decode_v1(b: &[u8]) -> Option<Self> {
+        Self::abi_decode_version(b, JournalVersion::V1)
+    }
+
+    /// Strict inverse of [`Self::abi_encode`] for V2 (the canonical layout only).
+    #[must_use]
+    pub fn abi_decode_v2(b: &[u8]) -> Option<Self> {
+        Self::abi_decode_version(b, JournalVersion::V2)
+    }
+
+    fn abi_decode_version(b: &[u8], version: JournalVersion) -> Option<Self> {
         let word = |i: usize| -> Option<[u8; 32]> { b.get(i..i + 32)?.try_into().ok() };
         let uint = |i: usize| -> Option<u64> {
             let w = word(i)?;
@@ -143,22 +157,30 @@ impl UpdateJournal {
         }
         let base = 32usize;
         let (o_r, o_c, o_e) = (uint(base + 96)? as usize, uint(base + 128)? as usize, uint(base + 160)? as usize);
-        let nr = uint(base + o_r)? as usize;
+        let nr = uint(base.checked_add(o_r)?)? as usize;
         let roots = (0..nr).map(|i| word(base + o_r + 32 + 32 * i)).collect::<Option<Vec<_>>>()?;
-        let nc = uint(base + o_c)? as usize;
+        let nc = uint(base.checked_add(o_c)?)? as usize;
         let claims = (0..nc)
             .map(|i| {
                 let p = base + o_c + 32 + 96 * i;
                 Some(ClaimDelta { token: addr(p)?, denom_index: u32::try_from(uint(p + 32)?).ok()?, count: uint(p + 64)? })
             })
             .collect::<Option<Vec<_>>>()?;
-        let ne = uint(base + o_e)? as usize;
+        let ne = uint(base.checked_add(o_e)?)? as usize;
         let exits = (0..ne)
             .map(|i| {
                 let p = base + o_e + 32 + 96 * i;
                 Some(Exit { token: addr(p)?, denom_index: u32::try_from(uint(p + 32)?).ok()?, commitment: word(p + 64)? })
             })
             .collect::<Option<Vec<_>>>()?;
+        let (claim_acc_root, claim_acc_count, wound_down, mint_stopped_block) = if version == JournalVersion::V2 {
+            let o_w = uint(base + 256)? as usize;
+            let nw = uint(base.checked_add(o_w)?)? as usize;
+            let wound_down = (0..nw).map(|i| addr(base + o_w + 32 + 32 * i)).collect::<Option<Vec<_>>>()?;
+            (word(base + 192)?, uint(base + 224)?, wound_down, uint(base + 288)?)
+        } else {
+            ([0; 32], 0, Vec::new(), 0)
+        };
         let j = Self {
             cfg_id: word(base)?,
             prev_state: word(base + 32)?,
@@ -166,10 +188,11 @@ impl UpdateJournal {
             deposit_roots_used: roots,
             claims,
             exits,
-            claim_acc_root: [0; 32],
-            claim_acc_count: 0,
-            wound_down: Vec::new(),
+            claim_acc_root,
+            claim_acc_count,
+            wound_down,
+            mint_stopped_block,
         };
-        (j.abi_encode(JournalVersion::V1) == b).then_some(j)
+        (j.abi_encode(version) == b).then_some(j)
     }
 }

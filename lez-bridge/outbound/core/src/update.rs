@@ -172,7 +172,8 @@ pub fn update<F: FinalitySource>(
     }
     let bridge = AccountId::new(prev.bridge_program);
     let mut view = input.view.clone();
-    let mut batch = BatchOut::default();
+    // M6: a wind-down read in an earlier batch still refuses claims in this one
+    let mut batch = BatchOut { wound_down: prev.wound_down.contains(&bridge_core::GLOBAL), ..BatchOut::default() };
     let mut stats = Stats::default();
     let mut tip = prev.tip;
     let mut refs = Vec::with_capacity(input.blocks.len());
@@ -241,6 +242,10 @@ pub fn update<F: FinalitySource>(
     if !view.initialized {
         return Err(G2Error::Input("the bridge is not initialised by the end of the batch"));
     }
+    let mut wound_down = prev.wound_down.clone();
+    if batch.wound_down && !wound_down.contains(&bridge_core::GLOBAL) {
+        wound_down.push(bridge_core::GLOBAL);
+    }
     let next = G2State {
         finality_kind: F::KIND,
         l1_state: l1,
@@ -249,7 +254,7 @@ pub fn update<F: FinalitySource>(
         claim_acc: acc.state(),
         view_hash: view.hash(),
         exit_count: prev.exit_count + batch.exits.len() as u64,
-        wound_down: prev.wound_down.clone(),
+        wound_down: wound_down.clone(),
     };
     let journal = UpdateJournal {
         cfg_id: view.cfg_id,
@@ -260,12 +265,16 @@ pub fn update<F: FinalitySource>(
         exits: batch.exits.clone(),
         claim_acc_root: next.claim_acc.root,
         claim_acc_count: next.claim_acc.count,
-        wound_down: next.wound_down.clone(),
+        wound_down,
+        mint_stopped_block: batch.mint_stopped_block,
     };
     Ok(UpdateOutput { journal, next, view, batch, stats })
 }
 
-/// The journal version the guest commits: today's vault.
+/// The journal version the guest commits: V2 (failsafe) with feature `journal-v2`, else V1 (`BridgeVault`).
+#[cfg(feature = "journal-v2")]
+pub const JOURNAL_VERSION: JournalVersion = JournalVersion::V2;
+#[cfg(not(feature = "journal-v2"))]
 pub const JOURNAL_VERSION: JournalVersion = JournalVersion::V1;
 
 // ------------------------------------------------------------------------------- guest input

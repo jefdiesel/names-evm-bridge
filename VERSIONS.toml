@@ -434,6 +434,8 @@ manifest = "lez-bridge/methods/token_guest/Cargo.toml"
 role = "lez_guests"
 image_id = { v = "0x243bc09d66c1e742725b5fb6192b0a2d06772d95d7d00759d12dce8aa46b91de", elf_sha256 = "e81a57701fc68dbbe53511078e544a8337dea29a889c24767b2a3ba3d4856af0", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
 
+# STALE since M6 (2026-11-28): this guest's source changed (bridge_core / outbound_core); the id below is the
+# pre-M6 Docker build. Re-run CI job repro-guest-builds and re-pin (DESIGN.md §10 lists the native ids).
 [[repro_guest]]
 name = "bridge_guest"
 workspace = "lez-bridge"
@@ -455,6 +457,8 @@ manifest = "lez-bridge/methods/attest_probe_guest/Cargo.toml"
 role = "lez_guests"
 image_id = { v = "0xad23410addf9b681fcce9e474d03714bd04cbc2b21d0fc9ae2376bd405460f29", elf_sha256 = "7afe3be0ad4ff54b400f87cb2cfa4a3b58f99094b08420711887d9ece53172c2", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
 
+# STALE since M6 (2026-11-28): this guest's source changed (bridge_core / outbound_core); the id below is the
+# pre-M6 Docker build. Re-run CI job repro-guest-builds and re-pin (DESIGN.md §10 lists the native ids).
 [[repro_guest]]
 name = "outbound_guest"
 workspace = "lez-bridge/methods/outbound_guest"
@@ -462,6 +466,8 @@ manifest = "lez-bridge/methods/outbound_guest/Cargo.toml"
 role = "eth_guests"
 image_id = { v = "0xc12da7fa92b942ad3b2d52222c62ddebe970625d95dfd9f9d98d54f59d410589", elf_sha256 = "1046ad4bbae30ae470c5eeaf576e88e9c3daa84db69146e56888096b221c3847", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
 
+# STALE since M6 (2026-11-28): this guest's source changed (bridge_core / outbound_core); the id below is the
+# pre-M6 Docker build. Re-run CI job repro-guest-builds and re-pin (DESIGN.md §10 lists the native ids).
 [[repro_guest]]
 name = "outbound_guest_trusted_tip"
 workspace = "lez-bridge/methods/outbound_guest_trusted_tip"
@@ -476,6 +482,8 @@ manifest = "lez-bridge/methods/release_guest/Cargo.toml"
 role = "eth_guests"
 image_id = { v = "0x98728e5b83c7b3b2e808b9d44aae8eed58d240c139a523a65e1a26ca4f1e32f9", elf_sha256 = "3c4e85a274bc64163e11a2f7fef9b7ca77a6b874a2128362703ed690d4c0e8d9", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
 
+# STALE since M6 (2026-11-28): this guest's source changed (bridge_core / outbound_core); the id below is the
+# pre-M6 Docker build. Re-run CI job repro-guest-builds and re-pin (DESIGN.md §10 lists the native ids).
 [[repro_guest]]
 name = "outbound_guest_seqsig"
 workspace = "lez-bridge/methods/outbound_guest_seqsig"
@@ -527,6 +535,12 @@ roles = ["eth_guests"]
 path = "lez-bridge/methods/outbound_guest_trusted_tip"
 roles = ["eth_guests"]
 image = "update_image"
+
+# M6 (2026-11-28): the failsafe vault's G2 guest (TrustedTip + journal-v2). Not deployed, no image
+# pinned yet (not in scripts/repro-build.sh's deployable list).
+[[workspace]]
+path = "lez-bridge/methods/outbound_guest_failsafe"
+roles = ["eth_guests"]
 
 [[workspace]]
 path = "lez-bridge/methods/release_guest"

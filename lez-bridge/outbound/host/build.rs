@@ -20,7 +20,7 @@ fn main() {
         .expect("canonicalize lez-bridge docker root_dir");
 
     let mut opts = HashMap::new();
-    for pkg in ["outbound_guest", "outbound_guest_trusted_tip", "release_guest"] {
+    for pkg in ["outbound_guest", "outbound_guest_trusted_tip", "outbound_guest_failsafe", "release_guest"] {
         let docker = risc0_build::DockerOptionsBuilder::default()
             .root_dir(root_dir.clone())
             .build()

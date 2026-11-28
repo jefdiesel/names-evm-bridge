@@ -1,8 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT OR Apache-2.0
 # The bridge's FAILSAFE (RFP-022 Security #9) end to end on throwaway local chains, judge-demo style:
-#   three seed-derived deposits; one claimed on LEZ; LEZ minting frozen; the vault wound down; the
-#   final claim accumulator fixed by the next G2 update; the two unclaimed deposits reclaimed on
+#   three seed-derived deposits; one claimed on LEZ; the vault wound down; LEZ minting stopped for
+#   good by the bridge's wind-down; the final claim accumulator fixed by the G2 update that holds it; the two unclaimed deposits reclaimed on
 #   Ethereum to fresh addresses by a relayer that is not the depositor (one of the two depositors
 #   first recovered from the seed phrase alone, wallet directory wiped); the claimed one refused.
 #
@@ -16,6 +16,12 @@
 #     OUTBOUND_HOST=<canonical outbound_host> GUESTS=<dir: bridge_guest.bin token_guest.bin> \
 #     SEQ_BIN=<rc3 sequencer_service> NETCFG=<rc3 networks/local.json> CHAIN_SH=<rc3 test-chain script> \
 #     lez-bridge/scripts/e2e-failsafe.sh
+#
+# M6 order (2026-11-28; not run yet: it needs a host that runs the rc3 sequencer): the vault winds
+# down; an update after that fixes nothing; the attestor's `wind-down --stand-in` stops LEZ minting
+# for good (an admin unfreeze does not reopen it); the next update, which holds that block, fixes
+# the final. Every update uses the failsafe guest (`host update --failsafe`, V2 journals). The
+# pre-M6 run is public-demo/prove/failsafe-20261117/.
 set -euo pipefail
 : "${R:?set R to a fresh run directory}" "${CLI:?}" "${RECLAIM_HOST:?}" "${OUTBOUND_HOST:?}" "${GUESTS:?}" "${SEQ_BIN:?}" "${NETCFG:?}"
 # CHAIN_SH: a LEZ rc3 test-chain script taking R, SEQ_BIN, NETCFG, CLI, RPC, METRICS and the verbs
@@ -95,12 +101,12 @@ LEZ_CHAIN_ID=$(as $OPW chain-id | kv LEZ_CHAIN_ID); ZONE_ID=$(T source-id | kv Z
 to $R/genesis.txt host genesis --rpc $SEQ --dir $R/blocks --block $START --bridge $BP --out $R/state0.bin
 G2_STATE0=$(kv G2_STATE < $R/genesis.txt)
 to $R/image-ids.txt host ids
-UPDATE_IMAGE_ID=$(kv UPDATE_IMAGE_ID_TRUSTED_TIP < $R/image-ids.txt); RELEASE_IMAGE_ID=$(kv RELEASE_IMAGE_ID < $R/image-ids.txt)
+UPDATE_IMAGE_ID=$(kv UPDATE_IMAGE_ID_FAILSAFE < $R/image-ids.txt); RELEASE_IMAGE_ID=$(kv RELEASE_IMAGE_ID < $R/image-ids.txt)
 RECLAIM_IMAGE_ID=$(rhost ids | kv RECLAIM_IMAGE_ID)
 echo "update image $UPDATE_IMAGE_ID; release image $RELEASE_IMAGE_ID; reclaim image $RECLAIM_IMAGE_ID"
 
 # ------------------------------------------------------------------------------- vault
-say "Ethereum: the failsafe vault (MockVerifier; G2 TrustedTip, G3 and G4 image ids from their hosts)"
+say "Ethereum: the failsafe vault (MockVerifier; G2 failsafe guest (TrustedTip, V2 journal), G3 and G4 image ids from their hosts)"
 out=$(cd "$VAULT_DIR" && PROGRAM_ID=$PROGRAM_ID LEZ_CHAIN_ID=$LEZ_CHAIN_ID ZONE_ID=$ZONE_ID UPDATE_IMAGE_ID=$UPDATE_IMAGE_ID \
   RELEASE_IMAGE_ID=$RELEASE_IMAGE_ID RECLAIM_IMAGE_ID=$RECLAIM_IMAGE_ID G2_STATE=$G2_STATE0 \
   forge script script/FailsafeDeploy.s.sol --rpc-url $ETH_RPC --private-key $K0 --broadcast 2>&1) || { echo "$out"; die "vault deploy"; }
@@ -150,36 +156,44 @@ to $R/out/u3-claim.txt as $(wd u3) claim --bridge $BP --token-program $TP --from
 L1=$(block_of < $R/out/u3-claim.txt)
 
 say "G2 update 1 (LEZ blocks $((START + 1))..$L1, executor), submitted: the vault counts u3's claim"
-to $R/update1.txt host update --rpc $SEQ --dir $R/blocks --state $R/state0.bin --to $L1 --out $R/update1
+to $R/update1.txt host update --failsafe --rpc $SEQ --dir $R/blocks --state $R/state0.bin --to $L1 --out $R/update1
 esend $K0 $VAULT "update(bytes,bytes)" $(cat $R/update1/journal.hex) $(cat $R/update1/seal.hex) > $R/out/update1-tx.json
 echo "counters (deposits, claims, burns, releases): $(ecall $VAULT 'counters(address,uint256)(uint64,uint64,uint64,uint64)' $USDC 0 | tr '\n' ' ')"
 
 # ------------------------------------------------------------------------------- wind-down
-say "WIND-DOWN 1/3, LEZ: the freezer freezes minting globally (on LEZ 0.4 the admin could still unfreeze: see the README)"
-to $R/out/freeze.txt as $OPW freeze --bridge $BP --by $OP --mint
-LF=$(block_of < $R/out/freeze.txt)
-say "G2 update 2 (to the freeze block $LF), submitted BEFORE the vault winds down: the vault's g2State covers the freeze"
-to $R/update2.txt host update --rpc $SEQ --dir $R/blocks --state $R/update1/next-state.bin --to $LF --out $R/update2
-esend $K0 $VAULT "update(bytes,bytes)" $(cat $R/update2/journal.hex) $(cat $R/update2/seal.hex) > $R/out/update2-tx.json
-say "WIND-DOWN 2/3, Ethereum: the vault admin calls windDown(); deposits are refused from now on"
+say "WIND-DOWN 1/3, Ethereum: the vault admin calls windDown(); deposits are refused from now on"
 esend $K0 $VAULT "windDown()" > $R/out/winddown-tx.json
-echo "windDownAt $(ecall $VAULT 'windDownAt()(uint64)'); finalState $(ecall $VAULT 'finalState()(bytes32)') (not yet)"
+echo "windDownAt $(ecall $VAULT 'windDownAt()(uint64)'); wind-down slot $(cast storage $VAULT $(ecall $VAULT 'WIND_DOWN_SLOT()(bytes32)') --rpc-url $ETH_RPC); finalState $(ecall $VAULT 'finalState()(bytes32)') (not yet)"
 erevert IsWoundDown $K1 $VAULT "deposit(address,uint32,bytes32)" $USDC 0 $(cast keccak "late-deposit-$R")
-say "a reclaim before the final is refused (NotFinal); a LEZ claim after the freeze is refused (minting is frozen)"
 erevert NotFinal $K2 $VAULT "reclaim(bytes,bytes32,bytes32,address,uint32,address,address,uint256)" 0x $(ecall $VAULT "depositRoot()(bytes32)") $(cast keccak x) $USDC 0 $A1 0x0000000000000000000000000000000000000000 0
-to $R/out/fund-u2.txt as $OPW wallet auth-transfer send --from Public/$OP --to Public/$(acct u2) --amount 200000000000
-if as $(wd u2) claim --bridge $BP --token-program $TP --from $(acct u2) --eth-token $USDC --denom-index 0 --denom $DENOM --key-index 0 > $R/out/u2-claim-after-freeze.txt 2>&1; then
-  cat $R/out/u2-claim-after-freeze.txt; die "a claim went through after the mint freeze"; fi
-grep -q "minting is frozen" $R/out/u2-claim-after-freeze.txt || { cat $R/out/u2-claim-after-freeze.txt; die "claim refused for another reason"; }
-echo "u2's claim refused: minting is frozen"
-say "WIND-DOWN 3/3: the next G2 update after windDown fixes the final claim accumulator (one more LEZ block first)"
+say "G2 update 2 (one more LEZ block), after windDown but before LEZ stopped minting: counted, fixes nothing"
 to $R/out/tick.txt as $OPW wallet auth-transfer send --from Public/$OP --to Public/$(acct u2) --amount 1
-L3=$(block_of < $R/out/tick.txt)
-to $R/update3.txt host update --rpc $SEQ --dir $R/blocks --state $R/update2/next-state.bin --to $L3 --out $R/update3
+L2=$(block_of < $R/out/tick.txt)
+to $R/update2.txt host update --failsafe --rpc $SEQ --dir $R/blocks --state $R/update1/next-state.bin --to $L2 --out $R/update2
+esend $K0 $VAULT "update(bytes,bytes)" $(cat $R/update2/journal.hex) $(cat $R/update2/seal.hex) > $R/out/update2-tx.json
+[ "$(ecall $VAULT 'finalState()(bytes32)')" = 0x0000000000000000000000000000000000000000000000000000000000000000 ] || die "update 2 fixed the final before LEZ stopped minting"
+echo "finalState still unset"
+say "WIND-DOWN 2/3, LEZ: the stand-in attestor stops minting for good (wind-down --stand-in)"
+to $R/out/wind-down.txt as $OPW wind-down --bridge $BP --from $OP --stand-in
+LW=$(block_of < $R/out/wind-down.txt)
+to $R/out/show-wound.txt T show --bridge $BP
+grep -q "mint_wound_down true" $R/out/show-wound.txt || die "the bridge is not wound down"
+say "an admin unfreeze does not reopen minting; u2's LEZ claim is refused (minting is wound down)"
+to $R/out/unfreeze.txt as $OPW unfreeze --bridge $BP --admin $OP --mint
+to $R/out/fund-u2.txt as $OPW wallet auth-transfer send --from Public/$OP --to Public/$(acct u2) --amount 200000000000
+if as $(wd u2) claim --bridge $BP --token-program $TP --from $(acct u2) --eth-token $USDC --denom-index 0 --denom $DENOM --key-index 0 > $R/out/u2-claim-after-wind-down.txt 2>&1; then
+  cat $R/out/u2-claim-after-wind-down.txt; die "a claim went through after the wind-down"; fi
+grep -q "wound down" $R/out/u2-claim-after-wind-down.txt || { cat $R/out/u2-claim-after-wind-down.txt; die "claim refused for another reason"; }
+echo "u2's claim refused: minting is wound down"
+say "WIND-DOWN 3/3: G2 update 3 holds the wind-down (LEZ block $LW): its journal carries GLOBAL and the vault fixes the final"
+to $R/out/tick3.txt as $OPW wallet auth-transfer send --from Public/$OP --to Public/$(acct u2) --amount 1
+L3=$(block_of < $R/out/tick3.txt)
+to $R/update3.txt host update --failsafe --rpc $SEQ --dir $R/blocks --state $R/update2/next-state.bin --to $L3 --out $R/update3
 esend $K0 $VAULT "update(bytes,bytes)" $(cat $R/update3/journal.hex) $(cat $R/update3/seal.hex) > $R/out/update3-tx.json
 FINAL=$(ecall $VAULT "finalState()(bytes32)")
 NEW3=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["newState"])' $R/update3/report.json)
 [ "$(echo $FINAL | lower)" = "$(echo $NEW3 | lower)" ] || die "finalState $FINAL is not update 3's newState $NEW3"
+[ "$(ecall $VAULT 'mintStoppedBlock()(uint64)')" = "$LW" ] || die "mintStoppedBlock is not the wind-down block $LW"
 python3 -c 'import json,sys;s=json.load(open(sys.argv[1]));print("final accumulator: root", s["claimAccRoot"], "count", s["claimAccCount"])' $R/update3/next-state.json
 ok "final state fixed: $FINAL"
 

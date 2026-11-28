@@ -29,7 +29,8 @@ pub struct G2State {
     pub view_hash: [u8; 32],
     /// Exits recorded so far (the vault's `exitCount` once every update is applied).
     pub exit_count: u64,
-    /// Tokens wound down by the failsafe (always empty today; a future vault version).
+    /// Tokens wound down by the failsafe: `bridge_core::GLOBAL` once G2 has read the bridge's
+    /// wind-down (M6), kept in every later state; empty before.
     pub wound_down: Vec<EthAddress>,
 }
 

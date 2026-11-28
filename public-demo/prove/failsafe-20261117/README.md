@@ -195,6 +195,11 @@ deploy transactions.
 
 ## Known limits of this demo (written down, not fixed)
 
+> **Since M6 (2026-11-27, closed in code, not deployed; `DESIGN.md` §10):** the first limit below is closed in
+> code: the vault fixes its final only from a G2 state that has read the LEZ bridge's wind-down, which no admin can
+> undo. This record ran before that change, in the order it describes; `lez-bridge/scripts/e2e-failsafe.sh` now
+> runs the M6 order (not run yet).
+
 - **LEZ minting is NOT frozen for good on LEZ 0.4 here, and `windDown()` fixes `finalState` without checking LEZ minting has stopped.** The wind-down uses the existing global
   mint freeze, and the LEZ admin can undo it (`lez-bridge/bridge/src/lib.rs:1226`). G2 does not track
   freezes (`lez-bridge/outbound/core/src/view.rs:30-33`), so the vault cannot check one.

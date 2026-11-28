@@ -34,6 +34,16 @@
 //! freezer or the admin may freeze; only the admin unfreezes. A refused claim gives the same
 //! error whichever level froze it, so the failure says nothing more about the deposit.
 //!
+//! # Failsafe wind-down (M6)
+//!
+//! Separate from freezing and never undone: once the vault (`BridgeVaultFailsafe`) has called
+//! `windDown()`, anyone proves its [`VAULT_WIND_DOWN_SLOT`] non-zero under a finalized anchor
+//! ([`Instruction::WindDownAttested`]; on a stand-in config the attestor's
+//! [`Instruction::AttestWindDown`]), and from then on every claim and stand-in root is refused
+//! ([`MINT_WOUND_DOWN`]). Burns still go through. G2 reads the wind-down and refuses any claim
+//! after it, and the vault fixes its final claim list only from the G2 state that has read it, so
+//! a deposit can be claimed or reclaimed, never both.
+//!
 //! The secret `k`, the leaf index and the path stay inside the private execution. What becomes
 //! public is the root used, the nullifier, the token and denomination, and the address
 //! credited: none of it says which deposit was claimed.
@@ -195,6 +205,7 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use bridge_token_core::{BurnNotice, Message as TokenMessage};
+pub use eth_attest_core;
 use eth_attest_core::{
     assert_anchor, assert_instance,
     inclusion::{
@@ -242,6 +253,16 @@ pub const MAX_DENOMS: usize = 8;
 /// declared before it: re-check it whenever the vault's storage layout changes, and configure
 /// the new value in a new bridge config.
 pub const VAULT_DEPOSIT_ROOT_SLOT: u64 = 83;
+/// The storage slot `BridgeVaultFailsafe.windDown()` sets to 1 (its `WIND_DOWN_SLOT`):
+/// `keccak256("RFP022/failsafe/wind-down/v1")`. A hashed slot, never a declared variable, so it
+/// is zero in every vault that has not wound down, `BridgeVault` included, whatever its layout
+/// (a numbered slot could hold another variable after a layout change). M6.
+pub const VAULT_WIND_DOWN_SLOT: [u8; 32] = [
+    0xff, 0x8e, 0x21, 0x41, 0xd8, 0xc6, 0x1d, 0xb3, 0x1c, 0x3e, 0x41, 0xb0, 0x19, 0xa7, 0x32, 0xdd, 0x99, 0x99, 0x56, 0x6d,
+    0xb0, 0x5b, 0xed, 0x24, 0x5d, 0xb5, 0xa1, 0xf3, 0x3a, 0x70, 0x3c, 0x1f,
+];
+/// The preimage of [`VAULT_WIND_DOWN_SLOT`].
+pub const VAULT_WIND_DOWN_TAG: &[u8] = b"RFP022/failsafe/wind-down/v1";
 
 const CONFIG_SEED: [u8; 32] = *b"/RFP022/bridge/config/v1/000000/";
 const ROOT_SEED_DOMAIN: &[u8] = b"/RFP022/bridge/root/v1";
@@ -270,6 +291,8 @@ const fn nib(c: u8) -> u8 {
 pub type EthAddress = [u8; 20];
 /// ETH itself, as the vault encodes it (`address(0)`).
 pub const ETH: EthAddress = [0; 20];
+/// Global sentinel address, matching `BridgeVaultFailsafe.GLOBAL` (`address(type(uint160).max)`).
+pub const GLOBAL: EthAddress = [0xff; 20];
 
 // ---------------------------------------------------------------------------------------------
 // Hashes
@@ -480,6 +503,26 @@ pub fn check_attested_root(
     verify_storage_slot(&context, anchor, vault, &slot, Predicate::Eq(word(1)), proof).map_err(ClaimFault::Inclusion)
 }
 
+/// Checks an attested wind-down's vault proof: slot [`VAULT_WIND_DOWN_SLOT`] of `vault` is
+/// non-zero under the anchor's state root. What [`Instruction::WindDownAttested`] checks in the
+/// submitter's actor; the anchor itself must still be finalized by the instance (`AssertAnchor`).
+///
+/// # Errors
+/// [`InclusionError`].
+pub fn check_attested_wind_down(
+    source: &AttestSource,
+    vault: &EthAddress,
+    evm_chain_id: u64,
+    anchor: &AnchorWitness,
+    proof: &StorageProof,
+) -> Result<StorageStatement, InclusionError> {
+    let context = StatementContext {
+        evm_chain_id,
+        instance_id: source.attest_instance,
+    };
+    verify_storage_slot(&context, anchor, vault, &VAULT_WIND_DOWN_SLOT, Predicate::Ne(word(0)), proof)
+}
+
 /// `zeros[h]`: the root of an empty subtree of height `h`, as in the vault.
 #[must_use]
 pub fn zero_hashes() -> [[u8; 32]; TREE_DEPTH + 1] {
@@ -600,6 +643,35 @@ pub struct Config {
     /// Native LEZ the config pays from its own balance (the float) to the one-time recipient of
     /// every claim that has one, in the claim's transaction. 0: no sponsoring. Admin sets it.
     pub sponsor_amount: Balance,
+    /// The failsafe wind-down (M6): set once the vault's wind-down is proven here
+    /// ([`Instruction::WindDownAttested`], or the stand-in attestor's
+    /// [`Instruction::AttestWindDown`]). Never cleared, by [`AdminOp::Unfreeze`] or anything else;
+    /// once set, every claim (mint) and stand-in root is refused. Must stay the LAST field: it is
+    /// absent from the encoding until set ([`WoundDown`]), so configs written before it existed
+    /// decode, and re-encode byte for byte.
+    pub mint_wound_down: WoundDown,
+}
+
+/// [`Config::mint_wound_down`]: `false` encodes as nothing, `true` as one byte `1`. Only valid as
+/// the last field of the last thing in an encoding.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct WoundDown(pub bool);
+
+impl BorshSerialize for WoundDown {
+    fn serialize<W: borsh::io::Write>(&self, writer: &mut W) -> borsh::io::Result<()> {
+        if self.0 { writer.write_all(&[1]) } else { Ok(()) }
+    }
+}
+
+impl BorshDeserialize for WoundDown {
+    fn deserialize_reader<R: borsh::io::Read>(reader: &mut R) -> borsh::io::Result<Self> {
+        let mut b = [0u8; 1];
+        match reader.read(&mut b)? {
+            0 => Ok(Self(false)),
+            _ if b[0] == 1 => Ok(Self(true)),
+            _ => Err(borsh::io::Error::new(borsh::io::ErrorKind::InvalidData, "wound-down flag")),
+        }
+    }
 }
 
 /// The attestation source a config trusts for vault deposit roots.
@@ -653,6 +725,12 @@ pub const CLAIM_REFUSED: &str = "claim refused";
 /// The one error for a frozen claim or root attestation, whichever flag fired: a refused claim
 /// must not say more about the deposit than that minting is frozen.
 pub const MINT_FROZEN: &str = "minting is frozen";
+/// After the failsafe wind-down: every claim (mint) and stand-in root is refused, for good.
+pub const MINT_WOUND_DOWN: &str = "minting is wound down";
+/// A wind-down storage proof or anchor witness did not verify.
+pub const WIND_DOWN_REFUSED: &str = "wind-down proof refused";
+/// A second wind-down on a bridge that is already wound down.
+pub const ALREADY_WOUND_DOWN: &str = "minting is already wound down";
 /// The one error for a frozen burn, whichever flag fired.
 pub const BURN_FROZEN: &str = "redemption is frozen";
 /// A stand-in root or claim on a config whose roots come from RFP-021.
@@ -767,6 +845,23 @@ pub enum Instruction {
         freezer: AccountId,
         source: AttestSource,
     },
+    /// Stop minting for good on an RFP-021 config, by proving the vault's wind-down slot
+    /// ([`VAULT_WIND_DOWN_SLOT`]) non-zero under an execution anchor the instance finalized.
+    /// Anyone may submit it. `cfg_id`, `source`, `vault` and `evm_chain_id` must be the config's
+    /// (checked there). The LEZ block it lands in is what G2 reports to the vault.
+    WindDownAttested {
+        cfg_id: [u8; 32],
+        source: AttestSource,
+        vault: EthAddress,
+        evm_chain_id: u64,
+        /// The anchor, with the execution header RLP for a block-hash anchor.
+        anchor: AnchorWitness,
+        /// `eth_getProof(vault, [VAULT_WIND_DOWN_SLOT])` at that block.
+        proof: StorageProof,
+    },
+    /// Stand-in form of [`Instruction::WindDownAttested`] on a stand-in config: the attestor,
+    /// which stands in for the light client, says the vault has wound down. Only the attestor.
+    AttestWindDown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
@@ -831,6 +926,22 @@ pub enum Effect {
         evm_chain_id: u64,
         one_time: bool,
     },
+    /// To the config PDA, from a submitter's actor that has verified the vault's wind-down
+    /// storage proof against `source`, `vault` and `evm_chain_id`.
+    WindDownAttested {
+        cfg_id: [u8; 32],
+        source: AttestSource,
+        vault: EthAddress,
+        evm_chain_id: u64,
+    },
+    /// To the config PDA, for a stand-in config; `by` is the signing account.
+    AttestWindDown { by: AccountId },
+}
+
+/// Emitted by the config when the failsafe wind-down stops minting for good.
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct MintWoundDown {
+    pub cfg_id: [u8; 32],
 }
 
 /// Emitted by the config for every recorded burn. G2 also reads `E` from the transaction itself.
@@ -1007,6 +1118,30 @@ pub fn instruct(input: &ReceiveInput, instruction: Instruction) -> Response {
                     },
                 ))
         }
+        Instruction::WindDownAttested {
+            cfg_id,
+            source,
+            vault,
+            evm_chain_id,
+            anchor,
+            proof,
+        } => {
+            let statement = check_attested_wind_down(&source, &vault, evm_chain_id, &anchor, &proof)
+                .unwrap_or_else(|_| panic!("{WIND_DOWN_REFUSED}"));
+            Response::keep_state()
+                .send(assert_anchor(&source.attest_program, &source.attest_instance, evm_chain_id, &statement.anchor))
+                .send(effect(
+                    config,
+                    &program,
+                    Effect::WindDownAttested {
+                        cfg_id,
+                        source,
+                        vault,
+                        evm_chain_id,
+                    },
+                ))
+        }
+        Instruction::AttestWindDown => Response::keep_state().send(effect(config, &program, Effect::AttestWindDown { by: me })),
     }
 }
 
@@ -1050,6 +1185,7 @@ fn new_config(
         tokens: Vec::new(),
         root_source,
         sponsor_amount: 0,
+        mint_wound_down: WoundDown(false),
     }
 }
 
@@ -1073,6 +1209,7 @@ fn apply(input: &ReceiveInput, e: Effect) -> Response {
             let c = Config::decode(&input.pre_state);
             assert!(c.root_source == RootSource::StandIn, "{STAND_IN_OFF}");
             assert!(by == c.attestor, "only the attestor records roots");
+            assert!(!c.mint_wound_down.0, "{MINT_WOUND_DOWN}");
             assert!(!c.mint_frozen, "{MINT_FROZEN}");
             Response::keep_state()
                 .send(effect(root_seed(&root), &program, Effect::RecordRoot))
@@ -1124,7 +1261,36 @@ fn apply(input: &ReceiveInput, e: Effect) -> Response {
             );
             mint_claim(c, here, eth_token, denom_index, denom, to, one_time)
         }
+        Effect::WindDownAttested {
+            cfg_id,
+            source,
+            vault,
+            evm_chain_id,
+        } => {
+            assert!(here == config_address(&program), "wind-down goes to the config");
+            let c = Config::decode(&input.pre_state);
+            assert!(cfg_id == c.cfg_id, "wind-down for another deployment");
+            assert!(
+                c.root_source == RootSource::Attest(source) && vault == c.vault && evm_chain_id == c.evm_chain_id,
+                "{WRONG_SOURCE}"
+            );
+            wind_down(c)
+        }
+        Effect::AttestWindDown { by } => {
+            assert!(here == config_address(&program), "wind-down goes to the config");
+            let c = Config::decode(&input.pre_state);
+            assert!(c.root_source == RootSource::StandIn, "{STAND_IN_OFF}");
+            assert!(by == c.attestor, "only the attestor winds down");
+            wind_down(c)
+        }
     }
+}
+
+/// The failsafe wind-down at the config: set once, never cleared.
+fn wind_down(mut c: Config) -> Response {
+    assert!(!c.mint_wound_down.0, "{ALREADY_WOUND_DOWN}");
+    c.mint_wound_down = WoundDown(true);
+    Response::set_state(c.encode()).event(event("MintWoundDown", &MintWoundDown { cfg_id: c.cfg_id }))
 }
 
 /// Counts a proven claim and mints its denomination to `to` through the token program. For a
@@ -1139,6 +1305,7 @@ fn mint_claim(
     to: AccountId,
     one_time: bool,
 ) -> Response {
+    assert!(!c.mint_wound_down.0, "{MINT_WOUND_DOWN}");
     assert!(!c.mint_frozen, "{MINT_FROZEN}");
     let token_program = c.token_program;
     // No `registered` check: a delisted token's earlier deposits stay claimable.

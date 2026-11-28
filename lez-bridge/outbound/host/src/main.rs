@@ -7,7 +7,7 @@
 //!                         prints G2_STATE / INITIAL_G2_STATE: the vault's `initialG2State` for a
 //!                         genesis at block N (N must come before the bridge's Initialize)
 //!   outbound_host update  --rpc URL --dir BLOCKS --state STATE --to N --out DIR [--no-exec]
-//!                         [--elf GUEST --image-id H] [--po2 P] [--prove]
+//!                         [--elf GUEST --image-id H] [--po2 P] [--prove] [--failsafe]
 //!   outbound_host release (--secret-file F | --secret K) --eth-dest A --token A --denom N
 //!                         --max-relay-fee N --cfg-id H --leaves FILE --index I --relayer A --relay-fee N
 //!                         [--elf GUEST --image-id H] [--po2 P] [--out DIR] [--prove]
@@ -20,6 +20,7 @@
 //! executor (unless --no-exec), checks both journals are equal, and writes to DIR: journal.hex,
 //! seal.hex (the test MockVerifier's seal), next-state.bin/.json, report.json. STATE itself is
 //! not changed: the caller promotes next-state.bin once the vault accepted the update.
+//! `--failsafe` (M6): the failsafe vault's guest (`outbound_guest_failsafe`) and its V2 journal.
 //!
 //! `--elf GUEST --image-id H`: run (and prove) that ELF instead of the embedded guest; its computed
 //! image id must equal H (the vault's `updateImageId` / `releaseImageId`). `--image-id` alone pins
@@ -79,6 +80,7 @@ fn main() -> Result<()> {
         "ids" => {
             println!("UPDATE_IMAGE_ID_TRUSTED_TIP={}", h0x(&update_image_id_trusted_tip()));
             println!("UPDATE_IMAGE_ID_RELEASE={}", h0x(&update_image_id_release()));
+            println!("UPDATE_IMAGE_ID_FAILSAFE={}", h0x(&update_image_id_failsafe()));
             println!("RELEASE_IMAGE_ID={}", h0x(&release_image_id()));
             println!("PRIVACY_CIRCUIT_ID={}", h0x(&outbound_core::PRIVACY_PRESERVING_CIRCUIT_ID));
             // The 4-byte selector a Groth16 seal from this risc0 version carries (risc0-ethereum's
@@ -152,7 +154,9 @@ fn cmd_verify(a: &Args) -> Result<()> {
 }
 
 fn cmd_update(a: &Args) -> Result<()> {
-    let g = guest(a, Guest::trusted_tip())?;
+    // --failsafe (M6): the failsafe vault's guest and its V2 journal
+    let failsafe = a.flag("failsafe");
+    let g = guest(a, if failsafe { Guest::failsafe() } else { Guest::trusted_tip() })?;
     let po2 = po2(a)?;
     let prove = a.flag("prove");
     ensure!(!(prove && a.flag("no-exec")), "--prove executes first: drop --no-exec");
@@ -162,7 +166,10 @@ fn cmd_update(a: &Args) -> Result<()> {
     ensure!(to > st.g2.tip.id, "--to {to} is not past the state's tip {}", st.g2.tip.id);
     let blocks = s.range(st.g2.tip.id + 1, to)?;
     let bytes: usize = blocks.iter().map(Vec::len).sum();
-    let p = prepare(&st, blocks)?;
+    let mut p = prepare(&st, blocks)?;
+    if failsafe {
+        p.journal = p.out.journal.abi_encode(outbound_core::journal::JournalVersion::V2);
+    }
     let out = PathBuf::from(a.get("out")?);
     std::fs::create_dir_all(&out)?;
     let run = if a.flag("no-exec") { None } else { Some(execute_guest(&g, &p, po2)?) };
@@ -187,6 +194,9 @@ fn cmd_update(a: &Args) -> Result<()> {
         "journalBytes": p.journal.len(),
         "journalDigest": h0x(&sha256(&p.journal)),
         "updateImageId": h0x(&image),
+        "journalVersion": if failsafe { "V2" } else { "V1" },
+        "woundDown": j.wound_down.iter().map(|w| h0x(w)).collect::<Vec<_>>(),
+        "mintStoppedBlock": j.mint_stopped_block,
         "guest": g.source,
         "segmentPo2": po2,
         "executor": run.as_ref().map(|r| serde_json::json!({

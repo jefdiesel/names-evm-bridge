@@ -28,4 +28,4 @@ anyhow = "1"
 risc0-build = "=3.0.7"   # what risc0-zkvm 3.1.0 requires (^3.0.7)
 
 [package.metadata.risc0]
-methods = ["../../methods/outbound_guest", "../../methods/outbound_guest_trusted_tip", "../../methods/release_guest"]
+methods = ["../../methods/outbound_guest", "../../methods/outbound_guest_trusted_tip", "../../methods/outbound_guest_failsafe", "../../methods/release_guest"]

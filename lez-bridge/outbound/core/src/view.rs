@@ -27,6 +27,12 @@
 //! denomIndex). Per token, the bridge's own counters (`claims`, `burns`, `claimed_value`,
 //! `burned_value`), so a burn above claims is caught as the bridge catches it.
 //!
+//! The failsafe wind-down (M6: `WindDownAttested`, or the stand-in `AttestWindDown`): from it on,
+//! a claim or stand-in root is an error here, not just refused by the bridge, so no G2 state after
+//! the wind-down holds a claim the vault's final did not count. It is kept in the batch output
+//! ([`BatchOut::wound_down`]) and carried between batches by the state's `wound_down`
+//! (`bridge_core::GLOBAL`), not in the view, whose hash is unchanged.
+//!
 //! Not tracked (liveness only, or caught on Ethereum): freezes, delisting, admin and attestor
 //! changes, the sponsor float. A non-reverted transaction that a freeze should have stopped is
 //! not detected here; it is the sequencer's fault like any invalid public execution, and the
@@ -104,6 +110,12 @@ pub struct BatchOut {
     pub exits: Vec<Exit>,
     /// Claim-nullifier PDA ids spent, in LEZ order (the accumulator keys).
     pub nullifiers: Vec<[u8; 32]>,
+    /// M6: the bridge's failsafe wind-down has been read, in this batch or before it (`update`
+    /// seeds it from the previous state's `wound_down`). From then on a claim or stand-in root is
+    /// inconsistent: the bridge refuses them.
+    pub wound_down: bool,
+    /// The LEZ block of the wind-down if it is in this batch, else 0.
+    pub mint_stopped_block: u64,
 }
 
 /// Where a transaction sits, for errors.
@@ -235,6 +247,27 @@ impl<'v> Extractor<'v> {
                 let nf = bridge_core::claim_nullifier(&secret, &signer, &eth_token, denom);
                 self.spend(at, bridge_core::nullifier_address(&self.bridge, &nf))
             }
+            Instruction::WindDownAttested { cfg_id, .. } => {
+                if !self.view.initialized {
+                    return Err(at.bad("a wind-down before init"));
+                }
+                if self.view.stand_in {
+                    return Err(at.bad("an attested wind-down on a stand-in config"));
+                }
+                if cfg_id != self.view.cfg_id {
+                    return Err(at.bad("wind-down for another deployment"));
+                }
+                self.wind_down(at)
+            }
+            Instruction::AttestWindDown => {
+                if !self.view.initialized {
+                    return Err(at.bad("a wind-down before init"));
+                }
+                if !self.view.stand_in {
+                    return Err(at.bad("a stand-in wind-down on an RFP-021 config"));
+                }
+                self.wind_down(at)
+            }
         }
     }
 
@@ -303,15 +336,36 @@ impl<'v> Extractor<'v> {
         if !self.view.initialized || !self.view.stand_in {
             return Err(at.bad("a stand-in root on a config without the stand-in source"));
         }
+        if self.out.wound_down {
+            return Err(at.bad("a stand-in root after minting was wound down"));
+        }
         if !self.out.roots.contains(&root) {
             self.out.roots.push(root);
         }
         Ok(())
     }
 
+    fn wind_down(&mut self, at: At) -> Result<(), G2Error> {
+        if !self.view.initialized {
+            return Err(at.bad("a wind-down before init"));
+        }
+        if self.out.wound_down {
+            return Err(at.bad("the bridge wound down twice"));
+        }
+        if at.block_id == 0 {
+            return Err(at.bad("wind-down at block 0"));
+        }
+        self.out.wound_down = true;
+        self.out.mint_stopped_block = at.block_id;
+        Ok(())
+    }
+
     fn claim(&mut self, at: At, eth_token: &EthAddress, denom_index: u32, denom: u128) -> Result<(), G2Error> {
         if !self.view.initialized {
             return Err(at.bad("a claim before init"));
+        }
+        if self.out.wound_down {
+            return Err(at.bad("a claim after minting was wound down"));
         }
         let t = self.view.tokens.iter_mut().find(|t| &t.eth_token == eth_token).ok_or(at.bad("token not registered"))?;
         let i = denom_index as usize;
@@ -407,6 +461,27 @@ impl<'v> Extractor<'v> {
                     }
                     self.claim(at, &eth_token, denom_index, denom)?;
                     claims += 1;
+                }
+                Effect::WindDownAttested { cfg_id, .. } if to_config => {
+                    if !self.view.initialized {
+                        return Err(at.bad("a wind-down before init"));
+                    }
+                    if self.view.stand_in {
+                        return Err(at.bad("an attested wind-down on a stand-in config"));
+                    }
+                    if cfg_id != self.view.cfg_id {
+                        return Err(at.bad("wind-down for another deployment"));
+                    }
+                    self.wind_down(at)?;
+                }
+                Effect::AttestWindDown { .. } if to_config => {
+                    if !self.view.initialized {
+                        return Err(at.bad("a wind-down before init"));
+                    }
+                    if !self.view.stand_in {
+                        return Err(at.bad("a stand-in wind-down on an RFP-021 config"));
+                    }
+                    self.wind_down(at)?;
                 }
                 Effect::SpendClaim if !to_config => {
                     self.spend(at, env.to.account_id)?;

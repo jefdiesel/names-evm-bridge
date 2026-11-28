@@ -217,6 +217,20 @@ fn public9_known_answer_natively_and_in_the_executor() {
     println!("public9 2893..2904: {} user cycles, {} segments; {:?}", run.user_cycles, run.segments, run.stats);
 }
 
+/// M6: the failsafe guest runs the same statement and commits the V2 journal of the same update.
+#[test]
+fn the_failsafe_guest_commits_the_v2_journal() {
+    let st = p9_genesis();
+    let mut p = native(&st, &p9_blocks(P9_FIRST, P9_LAST)).unwrap();
+    p.journal = p.out.journal.abi_encode(JournalVersion::V2);
+    let run = execute_guest(&Guest::failsafe(), &p, None).unwrap();
+    assert_eq!(run.journal, p.journal);
+    let d = UpdateJournal::abi_decode_v2(&run.journal).unwrap();
+    assert_eq!(d, p.out.journal);
+    assert!(d.wound_down.is_empty() && d.mint_stopped_block == 0, "no wind-down in these blocks");
+    assert_ne!(update_image_id_failsafe(), update_image_id_trusted_tip());
+}
+
 #[test]
 fn split_batches_chain_to_the_same_state() {
     let st = p9_genesis();
@@ -436,6 +450,7 @@ fn journal_abi_layout() {
         claim_acc_root: [9; 32],
         claim_acc_count: 3,
         wound_down: vec![[10; 20]],
+        mint_stopped_block: 42,
     };
     let b = j.abi_encode(JournalVersion::V1);
     let w = |i: usize| &b[32 * i..32 * i + 32];
@@ -451,11 +466,14 @@ fn journal_abi_layout() {
     back.claim_acc_root = j.claim_acc_root;
     back.claim_acc_count = j.claim_acc_count;
     back.wound_down = j.wound_down.clone();
+    back.mint_stopped_block = j.mint_stopped_block;
     assert_eq!(back, j);
-    // V2 appends the three fields to the tuple head and one tail
+    // V2 appends four fields to the tuple head (claimAccRoot, claimAccCount, offset(woundDown), mintStoppedBlock) and one tail
     let b2 = j.abi_encode(JournalVersion::V2);
-    assert_eq!(b2.len(), b.len() + 32 * 3 + 32 * 2);
+    assert_eq!(b2.len(), b.len() + 32 * 4 + 32 * 2);
     assert_eq!(&b2[32 * 7..32 * 8], &[9u8; 32][..]);
+    assert_eq!(u64::from_be_bytes(b2[32 * 10 + 24..32 * 11].try_into().unwrap()), 42);
+    assert_eq!(UpdateJournal::abi_decode_v2(&b2), Some(j.clone()));
     let mut dirty = b.clone();
     dirty[32 * 10 + 3] = 1; // non-zero address padding
     assert!(UpdateJournal::abi_decode_v1(&dirty).is_none());

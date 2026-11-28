@@ -38,16 +38,22 @@ import {Sha256IncrementalTree} from "../Sha256IncrementalTree.sol";
 /// `cfgId = SHA256(CFG_TAG | chainid | address(this) | lezChainId | zoneId | programId)`
 /// (32 + 32 + 20 + 32 + 32 + 32 = 180 bytes) is derived at deployment, never supplied.
 ///
-/// FAILSAFE VARIANT (RFP-022 Security #9; research/failsafe-design.md, as built for the demo in
-/// public-demo/prove/failsafe-20261117/README.md). A copy of `BridgeVault.sol` (which is not
-/// changed) plus, marked `FAILSAFE` below:
+/// FAILSAFE VARIANT (RFP-022 Security #9; research/failsafe-design.md, M6 mint freeze). A copy of
+/// `BridgeVault.sol` (which is not changed) plus, marked `FAILSAFE` below:
 ///
-///   - `windDown()` (admin, once, irreversible): no deposit is ever accepted again.
-///   - The first G2 `update` after `windDown` fixes `finalState` (its newState): the G2 state
-///     commitment whose claim-nullifier accumulator is the final list of LEZ claims. Claim deltas
-///     of later updates count nowhere. Between `windDown` and the final, claims above deposits are
-///     clamped (an over-mint can't stall the final), and after `windDown` an exit above the
-///     claimed value is dropped, not inserted (an unbacked burn can't stall outbound).
+///   - `windDown()` (admin, once, irreversible): no deposit is ever accepted again. It also sets
+///     the hashed slot `WIND_DOWN_SLOT` to 1, which anyone can prove on LEZ (the bridge's
+///     `WindDownAttested`: an RFP-021 storage proof under a finalized anchor) to stop LEZ minting
+///     for good. No LEZ admin can lift that stop.
+///   - G2 `update` (journal `JournalVersion::V2`: V1 plus `claimAccRoot`, `claimAccCount`,
+///     `woundDown`, `mintStoppedBlock`). `finalState` is fixed only by the first update after
+///     `windDown` whose `woundDown` holds `GLOBAL`: G2 puts it there once it has read the bridge's
+///     wind-down, and G2 refuses any claim after it, so that state's claim accumulator holds every
+///     LEZ claim there will ever be. Updates between `windDown` and that one advance `g2State` and
+///     count their claims (clamped at deposits, so an over-mint can't stall the final); after
+///     `windDown` an exit above the claimed value is dropped, not inserted. After the final, an
+///     update must keep `GLOBAL` and carry no claims (`MintNotStopped`, `ClaimsAfterMintStop`).
+///     This closes the release-plus-reclaim double-dip (red-team B1.2 A).
 ///   - `reclaim(...)` (anyone, once per deposit): a G4 proof (`reclaimImageId`) that the prover
 ///     holds the master secret of a deposit in one of this vault's deposit roots whose claim
 ///     nullifier is NOT in `finalState`'s accumulator pays that deposit's denomination to the
@@ -74,6 +80,11 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
     /// Token address used in freeze events for the global flags.
     address public constant GLOBAL = address(type(uint160).max);
     uint256 internal constant MAX112 = type(uint112).max;
+    /// FAILSAFE (M6): the storage slot `windDown` sets to 1, read on LEZ by the bridge's
+    /// `WindDownAttested` (storage proof `!= 0` under a finalized anchor; `bridge_core`
+    /// `VAULT_WIND_DOWN_SLOT`). A hashed slot, not a declared variable, so no layout of this vault or
+    /// of `BridgeVault` (whose same-numbered slots may hold other values) ever writes it.
+    bytes32 public constant WIND_DOWN_SLOT = keccak256("RFP022/failsafe/wind-down/v1");
 
     // ------------------------------------------------------------------ immutables
 
@@ -213,10 +224,13 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
     uint64 public finalAt;
     /// Reclaims paused (freezer sets, admin clears; liveness only).
     bool public reclaimsFrozen;
+    /// M6: the LEZ block of the bridge's wind-down, from the G2 update that fixed `finalState`
+    /// (0: not yet). Never cleared.
+    uint64 public mintStoppedBlock;
     /// `g2State` when `windDown` was called.
     bytes32 public windDownState;
-    /// The G2 state commitment the first update after `windDown` reached; reclaims prove
-    /// non-membership in its claim-nullifier accumulator. Set once, never changed.
+    /// The G2 state commitment of the first update after `windDown` that shows LEZ minting
+    /// stopped; reclaims prove non-membership in its claim-nullifier accumulator. Set once.
     bytes32 public finalState;
     /// Reclaim nullifiers `SHA256("RFP022/nfrc" | s)` already paid.
     mapping(bytes32 => bool) public reclaimNullifierSpent;
@@ -237,7 +251,7 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
         bytes32 commitment; // E = SHA256("RFP022/exit" | k_j | ethDest | token | denom | maxRelayFee | cfgId)
     }
 
-    /// Public output of G2, ABI-encoded and committed as the guest journal.
+    /// Public output of G2 (`JournalVersion::V2`), ABI-encoded and committed as the guest journal.
     struct UpdateJournal {
         bytes32 cfgId;
         bytes32 prevState;
@@ -245,6 +259,10 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
         bytes32[] depositRootsUsed;
         ClaimDelta[] claims;
         Exit[] exits;
+        bytes32 claimAccRoot;
+        uint64 claimAccCount;
+        address[] woundDown; // GLOBAL once G2 has read the LEZ bridge's wind-down (kept after)
+        uint64 mintStoppedBlock; // that wind-down's LEZ block, in the update whose batch holds it; else 0
     }
 
     // ------------------------------------------------------------------ events
@@ -272,9 +290,8 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
     event FeeRecipientSet(address indexed feeRecipient);
     // FAILSAFE
     event WoundDown(bytes32 g2State);
-    event FinalStateFixed(bytes32 finalState);
+    event FinalStateFixed(bytes32 finalState, uint64 mintStoppedBlock);
     event ClaimsClamped(address indexed token, uint32 denomIndex, uint64 excess);
-    event ClaimsIgnored(address indexed token, uint32 denomIndex, uint64 count);
     event ExitUnbacked(address indexed token, uint32 denomIndex, bytes32 commitment);
     event Reclaimed(bytes32 indexed nullifier, address indexed token, uint32 denomIndex, address recipient, address relayer, uint256 relayFee);
     event ReclaimsFrozen(bool frozen);
@@ -324,10 +341,14 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
     error AlreadyWoundDown();
     /// reclaim before `windDown`.
     error NotWoundDown();
-    /// reclaim after `windDown` but before the first update fixed `finalState`.
+    /// reclaim after `windDown` but before a G2 update proved LEZ minting stopped and fixed `finalState`.
     error NotFinal();
     /// reclaim: claims + reclaims would exceed deposits for that token and denomination.
     error ReclaimsExceedDeposits();
+    /// update after the final whose `woundDown` lacks `GLOBAL` (G2 keeps it once set).
+    error MintNotStopped();
+    /// update after the final that reports claims (G2 refuses claims after the LEZ wind-down).
+    error ClaimsAfterMintStop();
 
     // ------------------------------------------------------------------ constructor
 
@@ -467,8 +488,10 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
     ///
     /// FAILSAFE: after `windDown` the global release freeze no longer blocks it (the final must
     /// land during an incident), claims above deposits are clamped and exits above the claimed
-    /// value dropped instead of reverting; the first update after `windDown` fixes `finalState`;
-    /// claims of later updates count nowhere (`ClaimsIgnored`).
+    /// value dropped instead of reverting. `finalState` is fixed only by the first update after
+    /// `windDown` whose journal shows LEZ minting stopped (`GLOBAL` in `woundDown`); updates before
+    /// it count their claims and fix nothing; updates after it must keep `GLOBAL` and carry no
+    /// claims.
     function update(bytes calldata journal, bytes calldata seal) external nonReentrant {
         bool wound = windDownAt != 0;
         bool fin = finalState != bytes32(0);
@@ -479,6 +502,14 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
         if (j.prevState != g2State) revert StaleState();
         if (j.newState == j.prevState) revert NoStateAdvance();
 
+        // FAILSAFE (M6): GLOBAL in woundDown = G2 read the LEZ bridge's wind-down by this state
+        bool stopped = _hasGlobal(j.woundDown);
+        if (stopped && !wound) revert NotWoundDown();
+        if (fin) {
+            if (!stopped) revert MintNotStopped();
+            if (j.claims.length != 0) revert ClaimsAfterMintStop();
+        }
+
         for (uint256 i; i < j.depositRootsUsed.length; ++i) {
             if (!isDepositRoot[j.depositRootsUsed[i]]) revert UnknownDepositRoot();
         }
@@ -486,11 +517,6 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
             ClaimDelta memory d = j.claims[i];
             uint256[] storage ds = _tokens[d.token].denoms;
             if (d.denomIndex >= ds.length) revert BadDenomination();
-            if (fin) {
-                // FAILSAFE: the claim list is final; a later LEZ claim backs nothing here
-                emit ClaimsIgnored(d.token, d.denomIndex, d.count);
-                continue;
-            }
             Counters storage k = counters[d.token][d.denomIndex];
             uint256 count = d.count;
             uint256 total = uint256(k.claims) + count;
@@ -533,12 +559,20 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
         if (n != 0) exitRootTime[root] = uint64(block.timestamp);
         g2State = j.newState;
         emit StateUpdated(j.prevState, j.newState, root, first, leaves);
-        if (wound && !fin) {
-            // FAILSAFE: the first update after windDown carries the final claim accumulator
+        if (wound && !fin && stopped) {
+            // FAILSAFE: LEZ minting has irreversibly stopped; this state's claim accumulator is final
             finalState = j.newState;
             finalAt = uint64(block.timestamp);
-            emit FinalStateFixed(j.newState);
+            mintStoppedBlock = j.mintStoppedBlock;
+            emit FinalStateFixed(j.newState, j.mintStoppedBlock);
         }
+    }
+
+    function _hasGlobal(address[] memory woundDown) internal pure returns (bool) {
+        for (uint256 i; i < woundDown.length; ++i) {
+            if (woundDown[i] == GLOBAL) return true;
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ FAILSAFE: reclaim (G4)
@@ -983,14 +1017,18 @@ contract BridgeVaultFailsafe is ReentrancyGuard {
         emit Unfrozen(GLOBAL, deposits, releases);
     }
 
-    /// FAILSAFE: declare the vulnerability. No deposit is accepted again, ever; the next G2 update
-    /// fixes `finalState` and opens reclaims. Moves no funds and names no one. Run it only once
-    /// the vault's g2State already covers the LEZ block of the bridge's mint freeze (the vault
-    /// cannot see LEZ: see the failsafe README, "what is not covered").
+    /// FAILSAFE: declare the vulnerability. No deposit is accepted again, ever. Sets
+    /// `WIND_DOWN_SLOT` to 1; once a finalized anchor covers it, anyone proves it on LEZ
+    /// (`WindDownAttested`), the bridge stops minting for good, and the first G2 update that has
+    /// read that fixes `finalState` and opens reclaims. Moves no funds and names no one.
     function windDown() external onlyAdmin {
         if (windDownAt != 0) revert AlreadyWoundDown();
         windDownAt = uint64(block.timestamp);
         windDownState = g2State;
+        bytes32 slot = WIND_DOWN_SLOT;
+        assembly ("memory-safe") {
+            sstore(slot, 1)
+        }
         emit WoundDown(g2State);
     }
 
