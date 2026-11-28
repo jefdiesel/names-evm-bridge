@@ -62,7 +62,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | U7 | "explain what is public and what is private at each step" | In | 7 | DES (`docs/rfp/USERS.md` §2) |
 | U8 | "clear, actionable error messages" that do not reveal the deposit | In | 1 | LOC |
 | U9 | "change the targeted Ethereum RPC … and … LEZ sequencer" | In | 5 | TST |
-| U10 | modules "in a module catalog of the team's own" | In | 5 | NS |
+| U10 | modules "in a module catalog of the team's own" | In | 5 | NS; catalog entries added (not yet released) |
 | R1 | "Minting is atomic" | In | 1 | LOC |
 | R2 | "Redemption is atomic at each stage" | In | 1 | PUB burns and releases (v4–v7); failure paths TST |
 | R3 | "No deposit can be claimed twice and no burn redeemed twice" | In | 1, 4 | LOC one chain; across chains TST (v3) |
@@ -86,7 +86,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | P7 | state growth "projected at 1M and 10M operations" | In | 7 | TST partial |
 | Sup1 | "deployed and tested on a public Ethereum testnet and LEZ testnet 0.4" | In | 7 | PUB Sepolia; testnet 0.4 NS [ext] |
 | Sup2 | "modules work on both Linux and MacOS" | In | 5 | NS (the judge demo runs on both; the modules have not) |
-| Sup3 | built with "logos-modules-release-action" | In | 5 | NS |
+| Sup3 | built with "logos-modules-release-action" | In | 5 | NS; catalog entries added (not yet released) |
 | Sup4 | "design decision log in repo" | In | 1 | DES (`docs/DECISIONS.md`; entries before 2026-11-19 reconstructed) |
 | S1 | "independent third-party … audit"; report published | Desc: Logos procures; we support (M8) | 8 | NS |
 | S2 | both sides "must reject invalid proofs" | In | 1, 4 | PUB a changed seal refused by Sepolia's verifier (v4 round trip) and the attester's root refused by the v6 bridge (LEZ 23349); LOC; TST |

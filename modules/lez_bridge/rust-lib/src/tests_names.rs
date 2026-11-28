@@ -190,7 +190,7 @@ case "$1" in
   attest) cat $D/attest-show.json;;
   claim-attested)
     K=$(arg --secret-file "$@"); P=$(arg --emit-call "$@")
-    echo "SECRET_FILE_MODE $(stat -f %Lp "$K") BYTES $(wc -c < "$K" | tr -d ' ')" >> "$TMPDIR/argv.log"
+    echo "SECRET_FILE_MODE $(stat -c %a "$K" 2>/dev/null || stat -f %Lp "$K") BYTES $(wc -c < "$K" | tr -d ' ')" >> "$TMPDIR/argv.log"
     echo '{{"event":"phase","phase":"fetch","at_ms":1}}'
     if [ "$(arg --index "$@")" = "6" ]; then
       echo '{{"event":"error","code":"already_claimed","message":"deposit already claimed: its nullifier is spent; nothing sent","sent":false,"local_only":true}}'; exit 1

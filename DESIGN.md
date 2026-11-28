@@ -927,7 +927,7 @@ State: (1) run on a chain (LEZ the local `seq2` unless a row names the public de
 | U7 | Docs on what is public at each step | 3 (document written) | `docs/rfp/USERS.md` §2; §8; M7 |
 | U8 | Clear errors that don't reveal the deposit | 1 | CLI local diagnosis vs program `claim refused`, on chain with v2 (§3.4); `the_refusal_texts_are_these`, `attested_refusals_are_the_one_claim_refusal_and_are_told_apart_natively` |
 | U9 | User can change the Ethereum RPC and the LEZ sequencer | 2 | CLI env `LEZ_BRIDGE_SEQUENCER`; module config (`config.rs`: sequencer, Ethereum RPC per chain); the deposit page's read-RPC setting; M5 |
-| U10 | Modules in our own catalog | 4, **NO TEST** | M5 |
+| U10 | Modules in our own catalog | 4, **NO TEST** | M5; catalog entries added (not yet released) |
 | R1 | Minting atomic | 1 / 2 | v2 repeat claim reverted, counters unchanged (block 2855); `a_mint_refused_after_the_nullifier_effect_undoes_the_claim`, `a_claim_whose_credit_fails_in_its_transaction_is_undone_entirely`, `a_claim_refused_by_a_token_freeze_leaves_the_nullifier_unspent` |
 | R2 | Redemption atomic at each stage | 1 burns and releases (Sepolia, v4–v7) / 2 failure paths | Odd burn reverted (the run public9 log block 2904); Sepolia block 12142503 (§4); `refused_burns_change_nothing`, `test_FailedReleaseKeepsEntitlement` |
 | R3 | No double claim or release, under adversarial retry | 1 claim, within one LEZ chain / 2; across LEZ chains not met (§2 known issue) | Block 2855; `a_claimed_deposit_is_refused_in_every_retry_shape`, `test_ReleaseReplayVariantsAllNullifierSpent`, `test_RevertStaleStateAndReplay`, `test_RevertNoStateAdvance`, `testFuzz_NoStateAdvanceNeverApplies`. A revisited state (A → B → A) is not refused on chain (§4) |
@@ -949,7 +949,7 @@ State: (1) run on a chain (LEZ the local `seq2` unless a row names the public de
 | P7 | State growth at 1M and 10M operations | 2 partial | New slots per deposit (§6.2); projections M7 |
 | Sup1 | Public Ethereum testnet and LEZ testnet 0.4 | 1 Ethereum (demo vault on Sepolia) / 4 LEZ testnet | `vault/DEPLOYMENTS.md`; `web/deposit/`; LEZ testnet 0.4 not live; M7 |
 | Sup2 | Linux and macOS | 4 | M5 |
-| Sup3 | Built with `logos-modules-release-action` | 4 | M5 |
+| Sup3 | Built with `logos-modules-release-action` | 4 | M5; catalog entries added (not yet released) |
 | Sup4 | Design decision log | 3 (log written) | `docs/DECISIONS.md` (entries before 2026-11-19 reconstructed); §11 deviations; M1 |
 | S1 | Independent audit | 4 | M8, contracted by Logos |
 | S2 | Invalid proofs rejected on both sides | 1 Sepolia (a changed seal refused by the verifier) and LEZ (the attester's root refused by the v6 bridge, LEZ 23349; v2 refusals) / 2 | `test_RevertUpdateBadSeal`, `test_TamperedJournalsRejected`, `test_CopiedSealCannotBeRedirected`, `an_attested_claim_is_refused_under_every_other_anchor_and_root`, `malformed_attested_claims_are_refused_cleanly`; `docs/VERIFY-ROUND-TRIP.md`; rows `v4-round-trip`, `v6` |

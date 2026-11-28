@@ -412,8 +412,9 @@ include!(concat!(env!("OUT_DIR"), "/provider_gen.rs"));
 pub const SCAFFOLD_LINE: &str = concat!("lez-bridge-scaffold-try-lock=", env!("LEZ_BRIDGE_SCAFFOLD_TRY_LOCK_SITES"));
 
 /// The source commit this module was built from and when (build.rs: `build-id.txt`, written by
-/// `modules/build-lgx.sh`): "unknown" only in unit tests; a module build refuses it. Kept whole
-/// in the library so a built file can be checked with `grep -a lez-bridge-build-commit=`.
+/// `modules/build-lgx.sh`, or `v<version>` / `"release"` in a pure Nix release build; `"unknown"`
+/// in unit tests). Kept whole in the library so a built file can be checked with
+/// `grep -a lez-bridge-build-commit=`.
 pub const BUILD_COMMIT_LINE: &str = concat!("lez-bridge-build-commit=", env!("LEZ_BRIDGE_BUILD_COMMIT"));
 pub const BUILD_DATE: &str = env!("LEZ_BRIDGE_BUILD_DATE");
 

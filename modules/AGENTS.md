@@ -89,8 +89,10 @@ modules/build-lgx.sh <out dir> both    # the module, then the mini-app against i
 
 The script writes the build identity into build-id.txt beside `lez_bridge/rust-lib/Cargo.toml`: this checkout's
 short git commit (`-dirty` with local changes) and the UTC date. It builds a copy of the sources,
-because Nix builds a git checkout from its tracked files only. A module build without that file
-refuses to build (`lez_bridge/rust-lib/build.rs`).
+because Nix builds a git checkout from its tracked files only. A pure Nix build without `build-id.txt`
+(such as `logos-modules-release-action`) falls back to `v<CARGO_PKG_VERSION>` / `release` (`lez_bridge/rust-lib/build.rs`).
+Known limit: catalog builds are told apart by version only, so a `force_build` republish of the same
+version reports the same build id. Bump the version for every catalog release.
 
 Checks on a built plugin:
 - `grep -a lez-bridge-scaffold-try-lock=3` shows the scaffold fix (a call that arrives while

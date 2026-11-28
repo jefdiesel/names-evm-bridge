@@ -41,7 +41,8 @@ fn the_busy_answer_is_the_usual_envelope() {
 }
 
 /// `config().build` tells one module build from another: the commit and date the build script
-/// wrote (in unit tests "unknown"; a module build refuses that), and the version.
+/// wrote (in unit tests "unknown"; pure Nix release builds fall back to `v<version>` / `release`),
+/// and the version.
 #[test]
 fn config_reports_the_build_and_lists_build_id() {
     let b = super::build_info();
