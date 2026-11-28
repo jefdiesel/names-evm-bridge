@@ -737,11 +737,11 @@ show "forge create src/desk/DepositDesk.sol:DepositDesk --constructor-args $VAUL
 (cd "$REPO/vault" && forge create src/desk/DepositDesk.sol:DepositDesk \
   --rpc-url "$ETH_RPC" --private-key "$ANVIL0" --broadcast --json \
   --constructor-args "$VAULT" "$ANVIL0_ADDR" "$DESK_FEE_BPS") > "$LAST_OUT" 2> "$RUN/deploy-desk.err" || { cat "$RUN/deploy-desk.err"; fail "deploy DepositDesk"; }
-# the JSON object is the last line forge prints that starts with "{"
+# forge prints one JSON object (pretty-printed); anything before its first "{" is skipped
 DESK=$(python3 -I -c '
 import json, sys
-lines = [l for l in open(sys.argv[1]) if l.lstrip().startswith("{")]
-print(json.loads(lines[-1])["deployedTo"])' "$LAST_OUT") || fail "parse DepositDesk address"
+t = open(sys.argv[1]).read()
+print(json.JSONDecoder().raw_decode(t[t.index("{"):])[0]["deployedTo"])' "$LAST_OUT") || fail "parse DepositDesk address"
 [ "$(cast call "$DESK" 'vault()(address)' --rpc-url "$ETH_RPC" | lower)" = "$(echo "$VAULT" | lower)" ] || fail "desk vault mismatch"
 [ "$(cast call "$DESK" 'feeBps()(uint256)' --rpc-url "$ETH_RPC" | cut -d' ' -f1)" = "$DESK_FEE_BPS" ] || fail "desk feeBps mismatch"
 note "DepositDesk deployed at $DESK (vault=$VAULT, feeBps=$DESK_FEE_BPS)"
