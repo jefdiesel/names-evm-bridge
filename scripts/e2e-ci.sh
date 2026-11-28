@@ -337,12 +337,31 @@ fi
 pass
 fi
 
+# risc0-circuit-recursion 4.0.4 (LEZ rc3's prover, in the kit and the bridge CLI) downloads its
+# recursion_zkr.zip at build time from RISC Zero's S3 bucket, which answers 403 since 2026-11
+# (seen 2026-11-28). The same file is in RISC Zero's own repository (Git LFS); its build script
+# takes it from RECURSION_SRC_PATH and checks the SHA-256 it pins, as this does first.
+ZKR_SHA256=744b999f0a35b3c86753311c7efb2a0054be21727095cf105af6ee7d3f4d8849
+ZKR_URL=${ZKR_URL:-https://media.githubusercontent.com/media/risc0/risc0/v3.0.5/risc0/circuit/recursion/src/recursion_zkr.zip}
+fetch_zkr() {
+  [ -n "${RECURSION_SRC_PATH:-}" ] && return 0
+  local z=$B/recursion_zkr.zip
+  if [ ! -f "$z" ] || [ "$(shasum -a 256 "$z" | cut -d' ' -f1)" != "$ZKR_SHA256" ]; then
+    run curl -fsSL --retry 3 -o "$z.part" "$ZKR_URL" || fail "download recursion_zkr.zip"
+    [ "$(shasum -a 256 "$z.part" | cut -d' ' -f1)" = "$ZKR_SHA256" ] || fail "recursion_zkr.zip: wrong SHA-256"
+    mv "$z.part" "$z"
+  fi
+  export RECURSION_SRC_PATH=$z
+  note "RECURSION_SRC_PATH=$z (sha256 ${ZKR_SHA256:0:16}..., risc0-circuit-recursion 4.0.4)"
+}
+
 # ===================================================================================== 3
 if want kit; then
 step "Build (or reuse cached) LEZ v0.4.0-rc3 sequencer and wallet"
 if [ -n "${SEQ_BIN:-}" ] && [ -n "${WALLET_BIN:-}" ] && [ -z "$BUILD_ONLY" ]; then
   CURLABEL="prebuilt: $SEQ_BIN, $WALLET_BIN"
 else
+  fetch_zkr
   show "P=$B/kit-bin CARGO_TARGET_DIR=$B/target-kit $B/kit/testnet/sequencer/build.sh"
   P=$B/kit-bin CARGO_TARGET_DIR=$B/target-kit LEZ_BUILD_WRAP="$BUILD_WRAP" CARGO_BUILD_JOBS=$JOBS \
     "$B/kit/testnet/sequencer/build.sh" || fail "kit build (logs in $B/kit-bin/logs)"
@@ -361,6 +380,7 @@ fi
 if want bridge || want outbound; then
 step "Build (or reuse cached) ${BUILD_ONLY:-bridge CLI (with token/bridge/attest guests), outbound host, and vault}"
 if want bridge && { [ -z "${LEZ_BRIDGE_BIN:-}" ] || [ -n "$BUILD_ONLY" ]; }; then
+  fetch_zkr
   show "(cd lez-bridge && CARGO_TARGET_DIR=$B/target-bridge $BUILD_WRAP cargo build --release --locked -j $JOBS -p lez_bridge_cli)"
   LAST_OUT=$B/build-cli.log
   # shellcheck disable=SC2086
