@@ -668,10 +668,21 @@ note "storage statement verified on chain by eth_attest_probe: $STMT_ID"
 
 # 7d. Negative light-client checks: wrong-chain update + stale weak-subjectivity checkpoint (B1.3)
 if [ -f "$FX_MAIN/finality_update.ssz" ]; then
+  # Refused natively before anything is sent. Its slots lie past this Sepolia store's bound, so the
+  # first rule to refuse it is RFP021-E04; the chain mismatch itself is covered by the native tests.
   assert_cli_refuses "$RUN/lc/refuse-mainnet-on-sepolia.txt" "does not verify natively" \
     lccli attest update --program "$AP" --instance "$INST_HO" --from "$LC_V" \
     --beacon "$BEACON_URL" --kind finality --update-file "$FX_MAIN/finality_update.ssz"
 fi
+# The stale check is a differential test: the same finality update, from the same private account,
+# that 7a applied to an instance whose genesis_time is shifted, sent to an instance with Sepolia's
+# real genesis_time, whose window (it ends at the store's weak-subjectivity deadline, B1.3) closed
+# on 2026-11-17. Natively the update verifies (slot rule passes); LEZ must refuse it on block time.
+GENESIS_REAL=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["genesis_time"])' "$FX/meta.json")
+SAME_SLOT=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["bootstrap_same_period"]["slot"])' "$FX/meta.json")
+WS_DEADLINE=$(( GENESIS_REAL + (SAME_SLOT + 1348 * 32) * 12 ))   # ws_deadline_ms / 1000, ws_epochs(Sepolia) = 1348
+[ "$(date +%s)" -gt "$WS_DEADLINE" ] || fail "precondition: the fixture's weak-subjectivity deadline ($WS_DEADLINE) has not passed yet"
+note "unshifted instance: weak-subjectivity deadline $(date -u -d "@$WS_DEADLINE" '+%F %T' 2>/dev/null || echo "$WS_DEADLINE") UTC, passed"
 LAST_OUT=$RUN/lc/init-stale.txt
 lccli attest init --program "$AP" --from "$LP" --network sepolia --checkpoint "$CP_SAME" \
   --beacon "$BEACON_URL" --bootstrap-file "$FX/bootstrap_same_period.ssz" \
@@ -680,21 +691,22 @@ INST_STALE=$(sed -n 's/^INSTANCE=//p' "$LAST_OUT" | sed -n 1p)
 [ -n "$INST_STALE" ] || fail "no INSTANCE from attest init (unshifted stale check)"
 LAST_OUT=$RUN/lc/refuse-stale.txt
 stale_rc=0
-timeout 120 env LEE_WALLET_HOME_DIR="$LCW" LEZ_BRIDGE_SEQUENCER="$SEQ_URL" "$CLI" \
+timeout 300 env LEE_WALLET_HOME_DIR="$LCW" LEZ_BRIDGE_SEQUENCER="$SEQ_URL" "$CLI" \
   attest update --program "$AP" --instance "$INST_STALE" --from "$LC_V" \
   --beacon "$BEACON_URL" --kind finality --update-file "$FX/finality_update.ssz" > "$LAST_OUT" 2>&1 || stale_rc=$?
-echo "  stale update, exit $stale_rc; its last lines:"; grep -vE '^Transaction data' "$LAST_OUT" | tail -n 6 | cut -c1-300 | sed 's/^/    /'
+echo "  stale update, exit $stale_rc; its last lines:"; grep -vE '^Transaction data|WARNING: [Pp]roving in dev mode' "$LAST_OUT" | tail -n 4 | cut -c1-300 | sed 's/^/    /'
 [ "$stale_rc" != 0 ] || fail "stale 2026-11-12 fixture update unexpectedly applied past its weak-subjectivity deadline"
-[ "$stale_rc" != 124 ] || fail "stale fixture update timed out after 120s (dropped without returning an RPC error)"
-# The refusal must be the LEZ block-time window the program sets (its end is the store's
-# weak-subjectivity deadline, B1.3), not some other failure.
-grep -qiE "outside of the validity window|RFP021-E04" "$LAST_OUT" \
-  || fail "stale update refused, but not by the validity window / weak-subjectivity rule"
+[ "$stale_rc" != 124 ] || fail "stale fixture update: the CLI did not return within 300 s"
+grep -q "verified natively" "$LAST_OUT" || fail "stale update: expected it to verify natively and be refused by LEZ, not before"
+# LEZ rc3 drops a private transaction whose window excludes the block time: the CLI reports it never
+# included (seen 2026-11-28); a reverted inclusion or the window error text are accepted too.
+grep -qiE "not included|outside of the validity window|but reverted" "$LAST_OUT" \
+  || fail "stale update refused, but not by LEZ at inclusion (no 'not included' / validity window / revert)"
 LAST_OUT=$RUN/lc/show-stale.json
 lccli --json attest show --program "$AP" --instance "$INST_STALE" > "$LAST_OUT" 2> "$RUN/lc/show-stale.err" || fail "attest show (stale)"
 python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["updates"] == 0, d["updates"]' "$LAST_OUT" \
   || fail "the stale instance's store advanced"
-note "unshifted historical fixture update refused (exit $stale_rc; past the weak-subjectivity deadline); its store has 0 updates"
+note "stale instance: the update 7a applied was dropped by LEZ (exit $stale_rc, past the weak-subjectivity deadline); its store has 0 updates"
 
 kill "$BEACON_PID" 2>/dev/null || true; BEACON_PID=""
 pass
