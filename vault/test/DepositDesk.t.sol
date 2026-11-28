@@ -28,7 +28,7 @@ contract ReenteringToken is ERC20 {
         super._update(from, to, value);
         if (armed && to == address(desk)) {
             armed = false;
-            desk.depositWithFee(address(this), 0, keccak256("re-entered"), bytes32(0));
+            desk.depositWithFee(address(this), 0, keccak256("re-entered"), bytes32(0), type(uint256).max);
         }
     }
 }
@@ -97,7 +97,9 @@ contract DepositDeskTest is VaultFixture {
 
     function test_SelectorsThePageUses() public view {
         assertEq(DepositDesk.depositETHWithFee.selector, bytes4(0x03321b04));
-        assertEq(DepositDesk.depositWithFee.selector, bytes4(0xa93bf283));
+        // depositWithFee(address,uint32,bytes32,bytes32,uint256): the fee cap; the deployed
+        // desks (v2 to v5) have the four-argument 0xa93bf283, which the page still sends them
+        assertEq(DepositDesk.depositWithFee.selector, bytes4(0xc5bbd0a1));
         assertEq(DepositDesk.quote.selector, bytes4(0xea48dc6c));
         assertEq(desk.feeBps.selector, bytes4(0x24a9d853));
         assertEq(desk.vault.selector, bytes4(0xfbfa77cf));
@@ -174,7 +176,7 @@ contract DepositDeskTest is VaultFixture {
         vm.expectEmit(true, true, true, true, address(desk));
         emit FeePaid(address(usdc), bytes32(0), c, 0, directIdx, 3e6);
         vm.prank(alice);
-        uint64 deskIdx = desk.depositWithFee(address(usdc), 0, c, bytes32(0));
+        uint64 deskIdx = desk.depositWithFee(address(usdc), 0, c, bytes32(0), total);
 
         assertEq(deskIdx, directIdx);
         assertEq(v.depositRoot(), directRoot);
@@ -190,7 +192,7 @@ contract DepositDeskTest is VaultFixture {
     function test_UsdtStyleTokenThroughDesk() public {
         uint256 alice0 = usdt.balanceOf(alice);
         vm.prank(alice);
-        desk.depositWithFee(address(usdt), 1, keccak256("usdt"), PK_P2);
+        desk.depositWithFee(address(usdt), 1, keccak256("usdt"), PK_P2, 1030e6);
         assertEq(alice0 - usdt.balanceOf(alice), 1030e6);
         assertEq(usdt.balanceOf(address(v)), 1000e6);
         assertEq(usdt.balanceOf(address(desk)), 30e6);
@@ -249,7 +251,7 @@ contract DepositDeskTest is VaultFixture {
             uint256 a0 = odd.balanceOf(alice);
             uint256 v0 = odd.balanceOf(address(v));
             vm.prank(alice);
-            desk.depositWithFee(address(odd), i, keccak256(abi.encode("odd", i)), bytes32(0));
+            desk.depositWithFee(address(odd), i, keccak256(abi.encode("odd", i)), bytes32(0), d[i] + wantFee[i]);
             assertEq(a0 - odd.balanceOf(alice), d[i] + wantFee[i]);
             assertEq(odd.balanceOf(address(v)) - v0, d[i]);
         }
@@ -280,7 +282,7 @@ contract DepositDeskTest is VaultFixture {
         value = bound(value, 1, 5 ether);
         vm.prank(alice);
         vm.expectRevert(DepositDesk.UnexpectedValue.selector);
-        desk.depositWithFee{value: value}(address(usdc), 0, keccak256("x"), PK_P2);
+        desk.depositWithFee{value: value}(address(usdc), 0, keccak256("x"), PK_P2, type(uint256).max);
     }
 
     /// An allowance below the total (for example the denomination alone, without the fee)
@@ -293,14 +295,81 @@ contract DepositDeskTest is VaultFixture {
         usdc.approve(address(desk), allowance_);
         uint256 a0 = usdc.balanceOf(alice);
         vm.expectRevert();
-        desk.depositWithFee(address(usdc), di, keccak256("x"), bytes32(0));
+        desk.depositWithFee(address(usdc), di, keccak256("x"), bytes32(0), total);
         vm.stopPrank();
         assertEq(usdc.balanceOf(alice), a0);
         assertEq(usdc.balanceOf(address(desk)), 0);
     }
 
-    /// A fee change between the page's quote and the transaction makes the deposit revert
-    /// (exact amounts), never charge a different fee.
+    // ------------------------------------------------------------------ maxTotal cap
+
+    /// Total strictly below maxTotal passes and pulls only the quoted total, never maxTotal.
+    function test_DepositWithFeeUnderCapPasses() public {
+        (uint256 denom, uint256 vaultFee, uint256 fee, uint256 total) = desk.quote(address(usdc), 0);
+        uint256 cap = total + 50e6;
+        uint256 a0 = usdc.balanceOf(alice);
+        bytes32 c = keccak256("under cap");
+        vm.prank(alice);
+        desk.depositWithFee(address(usdc), 0, c, bytes32(0), cap);
+        assertEq(a0 - usdc.balanceOf(alice), total);
+        assertEq(usdc.balanceOf(address(v)), denom + vaultFee);
+        assertEq(usdc.balanceOf(address(desk)), fee);
+        assertEq(desk.feesHeld(address(usdc)), fee);
+        assertTrue(v.commitmentUsed(c));
+    }
+
+    /// Total equal to maxTotal passes.
+    function test_DepositWithFeeExactCapPasses() public {
+        (,,, uint256 total) = desk.quote(address(usdc), 0);
+        uint256 a0 = usdc.balanceOf(alice);
+        bytes32 c = keccak256("exact cap");
+        vm.prank(alice);
+        desk.depositWithFee(address(usdc), 0, c, bytes32(0), total);
+        assertEq(a0 - usdc.balanceOf(alice), total);
+        assertTrue(v.commitmentUsed(c));
+    }
+
+    /// Total above maxTotal reverts even when the depositor has an unlimited standing allowance,
+    /// pulling nothing and leaving both desk and vault unchanged.
+    function test_DepositWithFeeOverCapReverts() public {
+        (,,, uint256 total) = desk.quote(address(usdc), 0);
+        uint256 a0 = usdc.balanceOf(alice);
+        bytes32 c = keccak256("over cap");
+        // alice has type(uint256).max approval from setUp()
+        assertEq(usdc.allowance(alice, address(desk)), type(uint256).max);
+        vm.startPrank(alice);
+        vm.expectRevert(DepositDesk.WrongAmount.selector);
+        desk.depositWithFee(address(usdc), 0, c, bytes32(0), total - 1);
+        vm.expectRevert(DepositDesk.WrongAmount.selector);
+        desk.depositWithFee(address(usdc), 0, c, bytes32(0), 0);
+        vm.stopPrank();
+        assertEq(usdc.balanceOf(alice), a0);
+        assertEq(usdc.balanceOf(address(desk)), 0);
+        assertEq(usdc.balanceOf(address(v)), 0);
+        assertEq(desk.feesHeld(address(usdc)), 0);
+        assertFalse(v.commitmentUsed(c));
+    }
+
+    function testFuzz_DepositWithFeeMaxTotal(uint256 maxTotal, uint8 d) public {
+        uint32 di = uint32(d % 2);
+        (,,, uint256 total) = desk.quote(address(usdc), di);
+        uint256 a0 = usdc.balanceOf(alice);
+        bytes32 c = keccak256(abi.encode("cap", maxTotal, di));
+        vm.prank(alice);
+        if (maxTotal < total) {
+            vm.expectRevert(DepositDesk.WrongAmount.selector);
+            desk.depositWithFee(address(usdc), di, c, bytes32(0), maxTotal);
+            assertEq(usdc.balanceOf(alice), a0);
+            assertFalse(v.commitmentUsed(c));
+        } else {
+            desk.depositWithFee(address(usdc), di, c, bytes32(0), maxTotal);
+            assertEq(a0 - usdc.balanceOf(alice), total);
+            assertTrue(v.commitmentUsed(c));
+        }
+    }
+
+    /// A fee change between the page's quote and the transaction makes the deposit revert:
+    /// ETH via exact msg.value, ERC-20 via maxTotal even with an unlimited standing approval.
     function test_FeeChangeAfterQuoteReverts() public {
         uint256 total = _ethTotal(0); // 0.103
         vm.prank(deskOwner);
@@ -309,24 +378,25 @@ contract DepositDeskTest is VaultFixture {
         vm.expectRevert(DepositDesk.WrongAmount.selector);
         desk.depositETHWithFee{value: total}(0, keccak256("x"), bytes32(0));
 
+        // Unlimited approval is already set in setUp(); raising feeBps above maxTotal still reverts.
         (,,, uint256 uTotal) = desk.quote(address(usdc), 0); // 102 at 1%
-        vm.prank(alice);
-        usdc.approve(address(desk), uTotal);
+        uint256 a0 = usdc.balanceOf(alice);
         vm.prank(deskOwner);
-        desk.setFeeBps(300);
+        desk.setFeeBps(300); // now 104
         vm.prank(alice);
-        vm.expectRevert(); // allowance 102 < 104
-        desk.depositWithFee(address(usdc), 0, keccak256("y"), bytes32(0));
+        vm.expectRevert(DepositDesk.WrongAmount.selector);
+        desk.depositWithFee(address(usdc), 0, keccak256("y"), bytes32(0), uTotal);
+        assertEq(usdc.balanceOf(alice), a0);
     }
 
     function test_BadTokenOrIndexReverts() public {
         vm.startPrank(alice);
         vm.expectRevert(DepositDesk.BadDenomination.selector);
-        desk.depositWithFee(address(0), 0, keccak256("x"), bytes32(0));
+        desk.depositWithFee(address(0), 0, keccak256("x"), bytes32(0), type(uint256).max);
         vm.expectRevert(DepositDesk.BadDenomination.selector);
         desk.depositETHWithFee{value: 1 ether}(7, keccak256("x"), bytes32(0));
         vm.expectRevert(DepositDesk.BadDenomination.selector);
-        desk.depositWithFee(address(0xBEEF), 0, keccak256("x"), bytes32(0)); // unregistered: no denoms
+        desk.depositWithFee(address(0xBEEF), 0, keccak256("x"), bytes32(0), type(uint256).max); // unregistered: no denoms
         vm.stopPrank();
     }
 
@@ -347,7 +417,7 @@ contract DepositDeskTest is VaultFixture {
         v.freeze(address(usdc), true, false);
         vm.prank(alice);
         vm.expectRevert(BridgeVault.IsFrozen.selector);
-        desk.depositWithFee(address(usdc), 0, keccak256("frozen"), bytes32(0));
+        desk.depositWithFee(address(usdc), 0, keccak256("frozen"), bytes32(0), type(uint256).max);
 
         assertEq(alice.balance, a0);
         assertEq(address(desk).balance, deskBal);
@@ -363,7 +433,7 @@ contract DepositDeskTest is VaultFixture {
         vm.startPrank(alice);
         fot.approve(address(desk), type(uint256).max);
         vm.expectRevert(DepositDesk.WrongAmount.selector);
-        desk.depositWithFee(address(fot), 0, keccak256("fot"), bytes32(0));
+        desk.depositWithFee(address(fot), 0, keccak256("fot"), bytes32(0), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -374,7 +444,7 @@ contract DepositDeskTest is VaultFixture {
         vm.prank(carol);
         usdc.transfer(address(desk), 5e6);
         vm.prank(alice);
-        desk.depositWithFee(address(usdc), 0, keccak256("after stray"), bytes32(0));
+        desk.depositWithFee(address(usdc), 0, keccak256("after stray"), bytes32(0), type(uint256).max);
         assertEq(desk.feesHeld(address(usdc)), 3e6);
         assertEq(usdc.balanceOf(address(desk)), 8e6);
         vm.prank(deskOwner);
@@ -410,9 +480,9 @@ contract DepositDeskTest is VaultFixture {
                 ethToVault += dn + vf;
                 ethFees += f;
             } else {
-                (uint256 dn, uint256 vf, uint256 f,) = desk.quote(address(usdc), di);
+                (uint256 dn, uint256 vf, uint256 f, uint256 tot) = desk.quote(address(usdc), di);
                 vm.prank(alice);
-                desk.depositWithFee(address(usdc), di, c, pk);
+                desk.depositWithFee(address(usdc), di, c, pk, tot);
                 usdcToVault += dn + vf;
                 usdcFees += f;
             }
@@ -439,7 +509,7 @@ contract DepositDeskTest is VaultFixture {
         rt.arm(desk);
         vm.prank(alice);
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        desk.depositWithFee(address(rt), 0, keccak256("outer"), bytes32(0));
+        desk.depositWithFee(address(rt), 0, keccak256("outer"), bytes32(0), type(uint256).max);
     }
 
     function test_ReentrantWithdrawRefused() public {
@@ -480,7 +550,7 @@ contract DepositDeskTest is VaultFixture {
     function test_WithdrawFeesEthAndToken() public {
         _deskEth(1, keccak256("a"), PK_P2);
         vm.prank(alice);
-        desk.depositWithFee(address(usdc), 1, keccak256("b"), bytes32(0));
+        desk.depositWithFee(address(usdc), 1, keccak256("b"), bytes32(0), type(uint256).max);
         vm.startPrank(deskOwner);
         vm.expectRevert(DepositDesk.ZeroAddress.selector);
         desk.withdrawFees(address(0), address(0));

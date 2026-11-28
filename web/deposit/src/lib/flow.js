@@ -21,7 +21,7 @@
 import { parseRequestInput } from './request.js';
 import { call, decode, decodeRevert, extractRevertData, decodeDepositLog, DEPOSIT_TOPIC, ETH, ZERO32 } from './vault.js';
 import { rpc as makeRpc, isUserRejection, scanLogs, fallbackProvider, failureWords, isTransportError } from './providers.js';
-import { findDeployment, findRetired, chainInfo, isSupportedChain, isTestChainAccount, LOGOS_SIDE, EXAMPLE_COMMITMENTS, DEPLOYMENTS, deskOf, DEV } from './deployments.js';
+import { findDeployment, findRetired, chainInfo, isSupportedChain, isTestChainAccount, LOGOS_SIDE, EXAMPLE_COMMITMENTS, DEPLOYMENTS, deskOf, deskTakesMaxTotal, DEV } from './deployments.js';
 import { parseLogosAccount, makeDeposit, claimFile as buildClaimFile } from './create.js';
 import { formatUnits } from './units.js';
 
@@ -703,6 +703,8 @@ export function createFlow({
     if (desk) {
       // one transaction through the desk: the vault's amount plus the bridge fee, the same commitment
       if (state.token.isEth) return { to: desk, data: call.depositETHWithFee(req.denomIndex, req.commitment, grantKey()), value: '0x' + total.toString(16), valueBig: total };
+      // a desk with the cap is told the total the person was shown: it reverts (WrongAmount) above it
+      if (deskTakesMaxTotal(state.deployment)) return { to: desk, data: call.depositWithFeeMax(req.token, req.denomIndex, req.commitment, grantKey(), total), value: undefined, valueBig: 0n };
       return { to: desk, data: call.depositWithFee(req.token, req.denomIndex, req.commitment, grantKey()), value: undefined, valueBig: 0n };
     }
     if (state.token.isEth) {

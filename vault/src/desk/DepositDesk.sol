@@ -135,10 +135,20 @@ contract DepositDesk is ReentrancyGuard {
         emit FeePaid(ETH, lezPublicKey, commitment, denomIndex, leafIndex, fee);
     }
 
-    /// Deposit an ERC-20: the depositor approves the desk for exactly
-    /// `quote(token, denomIndex).total`; the desk pulls that in one transfer, approves the vault
-    /// for the vault's amount, and the vault pulls it in the same call. No ETH.
-    function depositWithFee(address token, uint32 denomIndex, bytes32 commitment, bytes32 lezPublicKey)
+    /// Deposit an ERC-20: the depositor signs `maxTotal` as the maximum total they will pay
+    /// (denomination + vault deposit fee + bridge fee) and approves the desk for at least
+    /// `quote(token, denomIndex).total`. Reverts `WrongAmount` if the current quoted total exceeds
+    /// `maxTotal`, so a fee increase cannot pull more than the depositor signed even with a larger
+    /// allowance. The desk pulls `total` in one transfer, approves the vault for the vault's
+    /// amount, and the vault pulls it in the same call. No ETH. (`maxTotal` since 2026-11-27;
+    /// the desks deployed before that have the four-argument call without it.)
+    function depositWithFee(
+        address token,
+        uint32 denomIndex,
+        bytes32 commitment,
+        bytes32 lezPublicKey,
+        uint256 maxTotal
+    )
         external
         payable
         nonReentrant
@@ -147,6 +157,7 @@ contract DepositDesk is ReentrancyGuard {
         if (msg.value != 0) revert UnexpectedValue();
         if (token == ETH) revert BadDenomination();
         (uint256 denom, uint256 vaultFee, uint256 fee, uint256 total) = quote(token, denomIndex);
+        if (total > maxTotal) revert WrongAmount();
         IERC20 t = IERC20(token);
         uint256 before = t.balanceOf(address(this));
         t.safeTransferFrom(msg.sender, address(this), total);

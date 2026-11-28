@@ -7,6 +7,7 @@
 mod common;
 
 use common::*;
+use helios_consensus_core::types::FinalityUpdate;
 
 // ---------------------------------------------------------------------------------------------
 // Instance creation and updates
@@ -238,6 +239,93 @@ fn an_update_cannot_be_applied_before_its_signature_slot() {
     let start = (1_655_733_600u64 + 11_563_489 * 12) * 1000;
     assert!(r.validity.timestamps.is_valid_for(start));
     assert!(!r.validity.timestamps.is_valid_for(start - 1));
+}
+
+// --- the weak-subjectivity rule (F10, `RFP021-E04`; ported from branch `public-update`) ------------
+
+const E04: &str = "RFP021-E04 checkpoint stale or invalid: weak-subjectivity bound passed";
+
+/// The update with its signature slot replaced: `signature_slot` is the last field of a Gloas
+/// update, whose SSZ encoding has no variable-size part (the Sepolia fixtures).
+fn with_signature_slot(update: &[u8], slot: u64) -> Vec<u8> {
+    let mut t = update.to_vec();
+    let n = t.len();
+    t[n - 8..].copy_from_slice(&slot.to_le_bytes());
+    t
+}
+
+#[test]
+fn e04_an_instance_past_the_weak_subjectivity_bound_refuses_updates() {
+    let mut w = World::default();
+    let n = sepolia(&mut w);
+    let prev = w.store(&n.id);
+    assert_eq!(eth_attest::lc::ws_epochs(n.cfg.evm_chain_id), 1_348, "Sepolia: Gloas's guide, lower value");
+    assert_eq!(eth_attest::lc::ws_epochs(1), 3_532, "mainnet: Electra's guide");
+    let bound = prev.finalized.beacon.slot + 1_348 * 32;
+    let fin = fx("sepolia", "finality_update.ssz");
+    let period = fx("sepolia", "update_period_1411.ssz");
+    // Signed at the bound or later (a clock far ahead): refused with E04, and nothing changes.
+    for slot in [bound, bound + 1, bound + 1_000_000] {
+        let t = with_signature_slot(&fin, slot);
+        assert_eq!(*FinalityUpdate::<S>::from_ssz_bytes(&t).unwrap().signature_slot(), slot);
+        let before = w.attest_states();
+        err_contains(submit(&mut w, BOB, &n, LcUpdate::Finality(t)), E04);
+        let t = with_signature_slot(&period, slot);
+        assert_eq!(*Update::<S>::from_ssz_bytes(&t).unwrap().signature_slot(), slot);
+        err_contains(submit(&mut w, BOB, &n, LcUpdate::Period(t)), E04);
+        assert_eq!(w.attest_states(), before, "slot {slot}: the store is unchanged");
+    }
+    // One slot under the bound: not E04 (here the update is then refused for its period).
+    let t = with_signature_slot(&fin, bound - 1);
+    let e = submit(&mut w, BOB, &n, LcUpdate::Finality(t)).unwrap_err();
+    assert!(!e.contains("RFP021-E04"), "{e}");
+    // And the real update applies.
+    submit(&mut w, BOB, &n, LcUpdate::Finality(fin)).unwrap();
+}
+
+#[test]
+fn the_mainnet_bound_is_3_532_epochs() {
+    let mut w = World::default();
+    let m = init(&mut w, ALICE, "mainnet", "bootstrap_same_period", config("mainnet", "bootstrap_same_period")).unwrap();
+    let prev = w.store(&m.id);
+    let bound = prev.finalized.beacon.slot + 3_532 * 32;
+    let deadline = eth_attest::lc::ws_deadline_ms(&m.cfg, &prev).unwrap();
+    assert_eq!(deadline, (m.cfg.genesis_time + bound * m.cfg.seconds_per_slot) * 1000);
+    assert_eq!(eth_attest::lc::ws_check(&m.cfg, &prev, bound - 1), Ok(deadline));
+    for slot in [bound, bound + 1] {
+        let e = eth_attest::lc::ws_check(&m.cfg, &prev, slot).unwrap_err();
+        assert!(e.starts_with(E04), "{e}");
+    }
+    // Sepolia's shorter bound does not apply to mainnet.
+    assert!(eth_attest::lc::ws_check(&m.cfg, &prev, prev.finalized.beacon.slot + 1_348 * 32).is_ok());
+}
+
+#[test]
+fn the_clock_ends_every_update_s_window_at_the_store_s_deadline() {
+    // The sequencer applies an update only while the block time is inside the response's window
+    // (LEZ intersects every message's window into the transaction's and checks it per block):
+    // its end is the store's weak-subjectivity deadline, so past it no update applies even when
+    // its signature slot is old.
+    let mut w = World::default();
+    let n = sepolia(&mut w);
+    let prev = w.store(&n.id);
+    let deadline = eth_attest::lc::ws_deadline_ms(&n.cfg, &prev).unwrap();
+    assert_eq!(deadline, (n.cfg.genesis_time + (prev.finalized.beacon.slot + 1_348 * 32) * 12) * 1000);
+    let Message::Instruction(i) = update_msg(&w, &n, LcUpdate::Finality(fx("sepolia", "finality_update.ssz"))) else {
+        unreachable!()
+    };
+    let input = ReceiveInput {
+        receiver: Actor::new(BOB, ATTEST),
+        from: None,
+        is_authorized: true,
+        pre_state: ActorState::empty(),
+        message: Vec::new(),
+    };
+    let r = eth_attest::instruct(&input, i);
+    assert_eq!(r.validity.timestamps.end(), Some(deadline));
+    assert!(r.validity.timestamps.is_valid_for(deadline - 1));
+    assert!(!r.validity.timestamps.is_valid_for(deadline));
+    assert!(r.validity.timestamps.start() < r.validity.timestamps.end());
 }
 
 #[test]

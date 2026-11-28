@@ -107,7 +107,7 @@ those of `main` `5322a30`, before the fixes.
 3. `DESIGN.md:81` ("v5 has no deposit yet (read 2026-11-16)") and `vault/DEPLOYMENTS.md:49` ("No deposit, update or
    release yet") against the v5 private round trip and unattended updates of 2026-11-16 (`docs/EVIDENCE.md`).
 4. `DESIGN.md:877` (§11, "Weak subjectivity … Not enforced") against branch `public-update`'s E04 refusal, which the
-   light-client instance behind v6 and v7 runs (v6 record). True of `main`'s program only.
+   light-client instance behind v6 and v7 runs (v6 record). Resolved 2026-11-27: `main` enforces the same bound.
 5. `DESIGN.md:762-766` (§9.5 "Not built") lists typed error codes, the two reference consumers and receipt-log statements
    on real data; `docs/EVIDENCE.md` (local rows) records them run on branch `public-update`. `DESIGN.md:801` says the CLI
    picks the wrong update after two boundaries; the catch-up record says the CLI alone drove a three-period catch-up.

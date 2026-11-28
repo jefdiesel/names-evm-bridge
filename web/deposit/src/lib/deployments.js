@@ -240,6 +240,17 @@ export function deskOf(deployment) {
   return /^0x[0-9a-f]{40}$/.test(a) && !/^0x0{40}$/.test(a) ? a : null;
 }
 
+/**
+ * Whether a deployment's desk takes `maxTotal` on its ERC-20 deposit (`depositWithFee(address,
+ * uint32,bytes32,bytes32,uint256)`, vault/src/desk/DepositDesk.sol since 2026-11-27): only when its
+ * entry says `deskMaxTotal: true`. The desks deployed before that (v2 to v5) have the four-argument
+ * call without a cap, and keep it: the page sends them that call, and its exact approval of the
+ * desk bounds what they can pull.
+ */
+export function deskTakesMaxTotal(deployment) {
+  return !!deskOf(deployment) && deployment.deskMaxTotal === true;
+}
+
 /** Superseded deployments: requests for these are refused outright, with the reason. */
 export const RETIRED = [
   {

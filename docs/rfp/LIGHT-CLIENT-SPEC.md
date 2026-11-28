@@ -147,14 +147,14 @@ The Logos Ethereum core module has no checkpoint-verification API yet (RFP-021 F
    slot is at or below the node's finalized checkpoint (`/eth/v1/beacon/states/head/finality_checkpoints`).
 4. Optionally fetch the bootstrap for that root and check that it hashes to it, as `Init` did.
 
-**The weak-subjectivity bound (branch `public-update`; the image behind v6 and v7):** `ws_epochs` is 3,532 epochs
+**The weak-subjectivity bound (branch `public-update`, the image behind v6 and v7; on `main` since 2026-11-27):** `ws_epochs` is 3,532 epochs
 (about 15.7 days) for mainnet, from Electra's guide at 8.4M ETH or more, and 1,348 epochs (about 6 days) for every other
-chain, the lower value of Gloas's guide (`eth_attest_core::ws_epochs`). The deadline is the start of the store's
+chain, the lower value of Gloas's guide (`eth_attest_core::ws_epochs` on `public-update`, `eth_attest::lc::ws_epochs` on `main`). The deadline is the start of the store's
 finalized slot plus that bound. The program refuses, on every path, an update signed at or past the deadline (E04), and
 the deadline ends every update's timestamp window, so once the chain's clock passes it no update applies
 (`e04_an_instance_past_the_weak_subjectivity_bound_refuses_updates`,
-`the_clock_ends_every_update_s_window_at_the_store_s_deadline`). The program on `main` (private path) does not enforce
-it (`DESIGN.md` §11).
+`the_clock_ends_every_update_s_window_at_the_store_s_deadline`). The program on `main` (private path only) enforces the
+same bound with the same E04 text since 2026-11-27 (native tests in `attest/program/tests/instance.rs`; not deployed).
 
 **Replace an instance when:**
 - its store is past the weak-subjectivity deadline (it refuses every update; the follower stops itself at a margin

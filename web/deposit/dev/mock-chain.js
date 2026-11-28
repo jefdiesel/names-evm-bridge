@@ -26,8 +26,10 @@ export const ADDR = {
 
 export function createMockChain(opts = {}) {
   const isVault = (a) => a === ADDR.vault || (opts.altVault && a === opts.altVault.toLowerCase());
-  // opts.desk = { address, feeBps, vault? }: a DepositDesk (vault/src/desk/DepositDesk.sol) in front of the vault
-  // (the same object, so a test can change feeBps between the checks and the send)
+  // opts.desk = { address, feeBps, vault?, maxTotal? }: a DepositDesk (vault/src/desk/DepositDesk.sol) in front of the vault
+  // (the same object, so a test can change feeBps between the checks and the send). maxTotal: true is a desk
+  // built since 2026-11-27, whose ERC-20 call takes a fifth argument maxTotal; without it, the deployed desks'
+  // four-argument call. Each desk knows only its own call.
   const D = opts.desk || null;
   if (D) Object.assign(D, { feeBps: D.feeBps ?? 300n, vault: D.vault ?? ADDR.vault, address: D.address.toLowerCase() });
   const isDesk = (a) => !!D && a === D.address;
@@ -126,9 +128,11 @@ export function createMockChain(opts = {}) {
     return { denom, vaultFee, bridgeFee, total: denom + vaultFee + bridgeFee };
   }
 
-  function deskCheck(from, token, idx, c, value) {
+  function deskCheck(from, token, idx, c, value, maxTotal) {
     if (token !== ADDR.eth && value) throw err('UnexpectedValue()');
+    if (token !== ADDR.eth && (maxTotal !== undefined) !== !!D.maxTotal) throw Object.assign(new Error('execution reverted'), { code: 3, data: '0x' });
     const q = deskQuote(token, idx);
+    if (maxTotal !== undefined && q.total > maxTotal) throw err('WrongAmount()');
     if (token === ADDR.eth) {
       if (value !== q.total) throw err('WrongAmount()');
       if ((S.eth.get(from) || 0n) < value) throw Object.assign(new Error('insufficient funds for gas * price + value'), { code: -32000 });
@@ -141,8 +145,8 @@ export function createMockChain(opts = {}) {
     return q;
   }
 
-  function applyDeskDeposit(from, token, idx, c, value, pk) {
-    const q = deskCheck(from, token, idx, c, value);
+  function applyDeskDeposit(from, token, idx, c, value, pk, maxTotal) {
+    const q = deskCheck(from, token, idx, c, value, maxTotal);
     if (token === ADDR.eth) S.eth.set(from, S.eth.get(from) - q.total);
     else {
       S.usdcBal.set(from, S.usdcBal.get(from) - q.total);
@@ -218,6 +222,10 @@ export function createMockChain(opts = {}) {
       }
       if (is('depositWithFee(address,uint32,bytes32,bytes32)')) {
         deskCheck(from, addr(0), Number(BigInt('0x' + arg(1))), '0x' + arg(2), BigInt(tx.value || 0));
+        return '0x' + W(S.leaves);
+      }
+      if (is('depositWithFee(address,uint32,bytes32,bytes32,uint256)')) {
+        deskCheck(from, addr(0), Number(BigInt('0x' + arg(1))), '0x' + arg(2), BigInt(tx.value || 0), BigInt('0x' + arg(4)));
         return '0x' + W(S.leaves);
       }
     }
@@ -411,7 +419,9 @@ export function createMockWallet(chain, { walletChainId = 1n, behaviour = {}, on
             const w = (i) => d.slice(10 + 64 * i, 10 + 64 * (i + 1));
             const logs = d.startsWith(selector('depositETHWithFee(uint32,bytes32,bytes32)'))
               ? chain.applyDeskDeposit(tx.from, ADDR.eth, Number(BigInt('0x' + w(0))), '0x' + w(1), BigInt(tx.value || 0), '0x' + w(2))
-              : chain.applyDeskDeposit(tx.from, '0x' + w(0).slice(24), Number(BigInt('0x' + w(1))), '0x' + w(2), BigInt(tx.value || 0), '0x' + w(3));
+              : d.startsWith(selector('depositWithFee(address,uint32,bytes32,bytes32,uint256)'))
+                ? chain.applyDeskDeposit(tx.from, '0x' + w(0).slice(24), Number(BigInt('0x' + w(1))), '0x' + w(2), BigInt(tx.value || 0), '0x' + w(3), BigInt('0x' + w(4)))
+                : chain.applyDeskDeposit(tx.from, '0x' + w(0).slice(24), Number(BigInt('0x' + w(1))), '0x' + w(2), BigInt(tx.value || 0), '0x' + w(3));
             return chain.mine(tx, logs);
           }
           if (d.startsWith(selector('depositETH(uint32,bytes32)'))) {

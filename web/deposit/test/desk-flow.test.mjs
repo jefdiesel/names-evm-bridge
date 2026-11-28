@@ -8,9 +8,9 @@ import assert from 'node:assert/strict';
 import { createFlow, bpsText } from '../src/lib/flow.js';
 import { encodeRequest } from '../src/lib/request.js';
 import { verifyClaimFile } from '../src/lib/create.js';
-import { DEPLOYMENTS, deskOf } from '../src/lib/deployments.js';
+import { DEPLOYMENTS, deskOf, deskTakesMaxTotal } from '../src/lib/deployments.js';
 import { selector } from '../src/lib/keccak.js';
-import { ZERO32, decodeRevert } from '../src/lib/vault.js';
+import { ZERO32, decodeRevert, call } from '../src/lib/vault.js';
 import { createMockChain, createMockWallet, ADDR } from '../dev/mock-chain.js';
 import { readFileSync } from 'node:fs';
 
@@ -50,6 +50,18 @@ async function withDesk(address, fn) {
   }
 }
 
+/** The same with a desk that takes maxTotal (`deskMaxTotal: true`; no shipped deployment has one). */
+async function withCappedDesk(address, fn) {
+  const before = DEPLOYMENTS[0].deskMaxTotal;
+  DEPLOYMENTS[0].deskMaxTotal = true;
+  try {
+    await withDesk(address, fn);
+  } finally {
+    if (before === undefined) delete DEPLOYMENTS[0].deskMaxTotal;
+    else DEPLOYMENTS[0].deskMaxTotal = before;
+  }
+}
+
 const ethReq = () => encodeRequest({ chainId: 11155111n, vault: ADDR.vault, token: ADDR.eth, denomIndex: 0, amount: 10n ** 16n, commitment: C1 });
 const usdcReq = () => encodeRequest({ chainId: 11155111n, vault: ADDR.vault, token: ADDR.usdc, denomIndex: 0, amount: 100_000_000n, commitment: C1 });
 
@@ -68,6 +80,12 @@ test('the switch: the desk is empty (off) or a valid address (on), nothing else'
 test('the desk ABI the page encodes matches the Solidity selectors pinned in vault/test/DepositDesk.t.sol', () => {
   assert.equal(selector('depositETHWithFee(uint32,bytes32,bytes32)'), '0x03321b04');
   assert.equal(selector('depositWithFee(address,uint32,bytes32,bytes32)'), '0xa93bf283');
+  assert.equal(selector('depositWithFee(address,uint32,bytes32,bytes32,uint256)'), '0xc5bbd0a1');
+  const capped = call.depositWithFeeMax(ADDR.usdc, 0, C1, ZERO32, 103_000_000n);
+  assert.equal(capped.slice(0, 10), '0xc5bbd0a1');
+  assert.equal(capped.length, 2 + 8 + 5 * 64);
+  assert.equal(BigInt('0x' + capped.slice(10 + 4 * 64)), 103_000_000n);
+  assert.equal(call.depositWithFee(ADDR.usdc, 0, C1, ZERO32).length, 2 + 8 + 4 * 64);
   assert.equal(selector('quote(address,uint32)'), '0xea48dc6c');
   assert.equal(selector('feeBps()'), '0x24a9d853');
   assert.equal(selector('vault()'), '0xfbfa77cf');
@@ -124,10 +142,72 @@ test('desk on, dUSDC: one exact approval of the desk for denomination + 3%, then
     await flow.deposit();
     await until(flow, (s) => s.step === 'done', 'done');
     assert.deepEqual(sent, ['approve', 'deposit']);
+    assert.equal(txs[1].to, DESK);
+    assert.equal(txs[1].data.slice(0, 10), '0xa93bf283', 'a deployed desk (no deskMaxTotal) gets its own four-argument call');
+    assert.equal(txs[1].data.length, 2 + 8 + 4 * 64);
     assert.equal(chain.S.usdcBal.get(ADDR.me), 147_000_000n);
     assert.equal(chain.S.deskAllowance.get(ADDR.me), 0n);
     assert.equal(chain.S.deskFees.get(ADDR.usdc), 3_000_000n);
   }));
+
+// ------------------------------------------------------------------ the maxTotal cap
+
+test('maxTotal: only an entry with deskMaxTotal: true and a desk; every shipped deployment keeps the four-argument call', () => {
+  for (const d of DEPLOYMENTS) assert.equal(deskTakesMaxTotal(d), false, `${d.id}: its deployed desk has no maxTotal`);
+  assert.equal(deskTakesMaxTotal({ desk: DESK, deskMaxTotal: true }), true);
+  assert.equal(deskTakesMaxTotal({ desk: DESK, deskMaxTotal: 'yes' }), false);
+  assert.equal(deskTakesMaxTotal({ desk: '', deskMaxTotal: true }), false);
+});
+
+test('desk with maxTotal, dUSDC: the deposit carries the total the person was shown as maxTotal', () =>
+  withCappedDesk(DESK, async () => {
+    const { flow, sent, txs, chain } = setup({ chainOpts: { usdcBalance: 250_000_000n }, desk: { address: DESK, maxTotal: true } });
+    flow.load(usdcReq());
+    await flow.connect('mock');
+    const ready = await until(flow, (s) => s.step === 'ready' && s.needsApproval && !s.busy, 'approve');
+    assert.equal(ready.data.total, 103_000_000n);
+    await flow.approve();
+    assert.equal(BigInt('0x' + txs[0].data.slice(74)), 103_000_000n, 'still an exact approval');
+    await until(flow, (s) => s.step === 'ready' && !s.needsApproval && !s.busy, 'ready');
+    await flow.deposit();
+    await until(flow, (s) => s.step === 'done', 'done');
+    assert.deepEqual(sent, ['approve', 'deposit']);
+    assert.equal(txs[1].to, DESK);
+    assert.equal(txs[1].data.slice(0, 10), '0xc5bbd0a1');
+    assert.equal(BigInt('0x' + txs[1].data.slice(10 + 4 * 64)), ready.data.total, 'maxTotal = the shown total');
+    assert.equal(chain.S.usdcBal.get(ADDR.me), 147_000_000n);
+    assert.equal(chain.S.deskFees.get(ADDR.usdc), 3_000_000n);
+  }));
+
+test('desk with maxTotal, ETH: unchanged (msg.value is the cap)', () =>
+  withCappedDesk(DESK, async () => {
+    const { flow, sent, txs } = setup({ desk: { address: DESK, maxTotal: true } });
+    flow.load(ethReq());
+    await flow.connect('mock');
+    await until(flow, (s) => s.step === 'ready' && !s.busy, 'ready');
+    await flow.deposit();
+    await until(flow, (s) => s.step === 'done', 'done');
+    assert.deepEqual(sent, ['deposit']);
+    assert.ok(txs[0].data.startsWith('0x03321b04'));
+    assert.equal(BigInt(txs[0].value), 103n * 10n ** 14n);
+  }));
+
+test('the mock desks: a capped desk refuses a total above maxTotal even with an unlimited allowance; each desk knows only its own call', () => {
+  const capped = createMockChain({ usdcBalance: 500_000_000n, desk: { address: DESK, feeBps: 300n, maxTotal: true } });
+  capped.S.deskAllowance.set(ADDR.me, 2n ** 256n - 1n);
+  const total = 103_000_000n;
+  const eth = (chain, data) => chain.ethCall({ from: ADDR.me, to: DESK, data });
+  for (const max of [0n, total - 1n]) {
+    assert.throws(() => eth(capped, call.depositWithFeeMax(ADDR.usdc, 0, C1, ZERO32, max)), (e) => decodeRevert(e.data).code === 'wrong-amount');
+  }
+  assert.ok(eth(capped, call.depositWithFeeMax(ADDR.usdc, 0, C1, ZERO32, total)));
+  assert.ok(eth(capped, call.depositWithFeeMax(ADDR.usdc, 0, C1, ZERO32, total + 1n)));
+  assert.throws(() => eth(capped, call.depositWithFee(ADDR.usdc, 0, C1, ZERO32)));
+  const legacy = createMockChain({ usdcBalance: 500_000_000n, desk: { address: DESK, feeBps: 300n } });
+  legacy.S.deskAllowance.set(ADDR.me, total);
+  assert.ok(eth(legacy, call.depositWithFee(ADDR.usdc, 0, C1, ZERO32)));
+  assert.throws(() => eth(legacy, call.depositWithFeeMax(ADDR.usdc, 0, C1, ZERO32, total)));
+});
 
 test('desk on: the balance check counts the fee (0.01 ETH exactly is not enough)', () =>
   withDesk(DESK, async () => {

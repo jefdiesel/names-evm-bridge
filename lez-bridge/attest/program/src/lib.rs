@@ -184,7 +184,8 @@ pub fn instruct(input: &ReceiveInput, instruction: Instruction) -> Response {
             let seed = store_seed(&prev.instance_id);
             Response::keep_state()
                 .send(effect(seed, &program, Effect::Advance { prev, next: v.next }))
-                .timestamp_window(v.not_before_ms..)
+                .try_timestamp_window(v.not_before_ms..v.deadline_ms)
+                .unwrap_or_else(|_| panic!("RFP021-E04 checkpoint stale or invalid: weak-subjectivity bound passed"))
         }
     }
 }

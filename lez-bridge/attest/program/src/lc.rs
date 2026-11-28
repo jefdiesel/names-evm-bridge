@@ -4,6 +4,7 @@
 //! accounts, so they can be executed privately and proved by whoever submits. Each is Helios
 //! consensus-core 0.12.0, unmodified, plus the checks Helios leaves to its caller:
 //! - the committee witness must hash to the store's commitments;
+//! - the update must be signed before the store's weak-subjectivity deadline (`RFP021-E04`);
 //! - participation must meet the instance's policy (at least a 2/3 supermajority);
 //! - the store must actually advance (Helios's `apply_*` silently skips an update that lacks a
 //!   supermajority or is not newer).
@@ -34,6 +35,57 @@ pub struct Verified {
     /// slot. Helios's `expected_current_slot >= signature_slot` check, enforced by the sequencer
     /// through the response's timestamp window instead of a clock read.
     pub not_before_ms: u64,
+    /// The LEZ block time until which (exclusive) it may be applied: the weak-subjectivity
+    /// deadline of `prev` ([`ws_deadline_ms`]), the window's end.
+    pub deadline_ms: u64,
+}
+
+/// The weak-subjectivity bound (RFP-021 F10), in epochs: how far past the store's finalized
+/// header an update may be applied. Electra's guide gives 3,532 epochs (about 15.7 days) for
+/// mainnet at 8.4M ETH or more and a safety decay of 10 (`specs/electra/weak-subjectivity.md`);
+/// Gloas's guide, which Sepolia runs, gives 1,348 to 1,611 epochs for 4.2M to 67M ETH
+/// (`specs/gloas/weak-subjectivity.md`): its lower value is used for every chain but mainnet.
+/// `DESIGN.md` §9.6. The same values and rule as branch `public-update`, where they live in
+/// `eth_attest_core`; on main they stay in this crate so that `eth_attest_core`, which the bridge
+/// guest links, is unchanged.
+#[must_use]
+pub const fn ws_epochs(evm_chain_id: u64) -> u64 {
+    if evm_chain_id == 1 { 3_532 } else { 1_348 }
+}
+
+/// The LEZ block time (ms, exclusive) until which an update may still be applied to `store`: the
+/// start of its finalized slot plus the weak-subjectivity bound. Past it the instance refuses every
+/// update (`RFP021-E04`) and must be replaced by a new instance from a fresh checkpoint.
+#[must_use]
+pub fn ws_deadline_ms(config: &InstanceConfig, store: &LcSummary) -> Option<u64> {
+    let slots = ws_epochs(config.evm_chain_id).checked_mul(32)?;
+    let at = store.finalized.beacon.slot.checked_add(slots)?;
+    config.genesis_time.checked_add(at.checked_mul(config.seconds_per_slot)?)?.checked_mul(1000)
+}
+
+/// The weak-subjectivity rule (F10): an update signed at or after `prev`'s deadline is refused,
+/// and the deadline also ends the response's timestamp window, so the sequencer refuses any update
+/// once its block time passes it, whatever slot the update was signed in.
+///
+/// # Errors
+/// The update is signed past the bound (`RFP021-E04`).
+pub fn ws_check(config: &InstanceConfig, prev: &LcSummary, signature_slot: u64) -> Result<u64, String> {
+    let deadline = ws_deadline_ms(config, prev).ok_or("time overflow")?;
+    let signed = config
+        .genesis_time
+        .checked_add(signature_slot.checked_mul(config.seconds_per_slot).ok_or("slot overflow")?)
+        .and_then(|t| t.checked_mul(1000))
+        .ok_or("time overflow")?;
+    if signed >= deadline {
+        // Main has no typed error codes (`eth_attest_core::codes` is on branch `public-update`),
+        // so the code's prefix is written out: the text is the one `public-update` refuses with.
+        return Err(format!(
+            "RFP021-E04 checkpoint stale or invalid: weak-subjectivity bound passed: the store's finalized slot {} is more than {} epochs before this update's signature slot {signature_slot}; this instance must be replaced from a fresh checkpoint",
+            prev.finalized.beacon.slot,
+            ws_epochs(config.evm_chain_id)
+        ));
+    }
+    Ok(deadline)
 }
 
 fn forks(c: &InstanceConfig) -> Forks {
@@ -178,6 +230,7 @@ pub fn verify_update(
             check_participation(config, &GenericUpdate::from(&u))?;
             crate::mark!("lc: participation policy (GenericUpdate clone + popcount)");
             let slot = *u.signature_slot();
+            ws_check(config, prev, slot)?;
             helios_verify_finality(&u, slot, &store, genesis_root, &forks)?;
             crate::mark!("lc: Helios verify_finality_update");
             apply_finality_update(&mut store, &u);
@@ -190,6 +243,7 @@ pub fn verify_update(
             check_participation(config, &GenericUpdate::from(&u))?;
             crate::mark!("lc: participation policy (GenericUpdate clone + popcount)");
             let slot = *u.signature_slot();
+            ws_check(config, prev, slot)?;
             helios_verify_update(&u, slot, &store, genesis_root, &forks).map_err(|e| format!("update rejected: {e}"))?;
             crate::mark!("lc: Helios verify_update");
             apply_update(&mut store, &u);
@@ -235,6 +289,7 @@ pub fn verify_update(
     Ok(Verified {
         next: next_summary,
         not_before_ms: start.checked_mul(1000).ok_or("time overflow")?,
+        deadline_ms: ws_check(config, prev, signature_slot)?,
     })
 }
 

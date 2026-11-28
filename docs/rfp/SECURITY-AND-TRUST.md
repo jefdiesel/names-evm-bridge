@@ -151,7 +151,7 @@ before 2026-11-18 (`DESIGN.md` §7 is corrected on this branch) (marked
 | A proof replayed for another chain or instance | chain id and instance id in the anchor query and in every statement id | `an_update_for_another_instance_or_chain_is_refused`, `a_consumer_bound_to_another_instance_or_chain_refuses_the_statement`; E07 on a local chain (error-codes record, `public-update`) | TESTED; RUN locally |
 | A duplicate or racing update | the store applies `Advance{prev, next}` only if `prev` is its state | `replayed_older_and_stale_updates_are_refused` | TESTED |
 | Cycle griefing by low participation | the public path computes the signers' key from key witnesses; a low-participation update is split in two steps | `DESIGN.md` §9.3, §9.3a; finality-split record | RUN locally (synthetic committee) |
-| Catching an instance up past the weak-subjectivity period | updates past the deadline are refused (E04) | `e04_an_instance_past_the_weak_subjectivity_bound_refuses_updates` (branch `public-update`) | TESTED on a branch; the instance behind v6 and v7 runs that image (v6 record) |
+| Catching an instance up past the weak-subjectivity period | updates past the deadline are refused (E04) | `e04_an_instance_past_the_weak_subjectivity_bound_refuses_updates` (branch `public-update`; on `main` since 2026-11-27) | TESTED (native tests, branch and `main`); the instance behind v6 and v7 runs the branch's image (v6 record) |
 | **A colluding sync committee** (≥ 342 of 512 seats in one period) | **nothing inside the light client.** Bounded only by the consumer's caps, freeze and delay | `DESIGN.md` §9.8 | §5.3 below |
 
 ### 5.2 Against the bridge (RFP-022)

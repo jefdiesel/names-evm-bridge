@@ -29,7 +29,8 @@ export const SIG = {
   symbol: 'symbol()',
   // DepositDesk (vault/src/desk/DepositDesk.sol): the bridge fee in front of the vault
   depositETHWithFee: 'depositETHWithFee(uint32,bytes32,bytes32)',
-  depositWithFee: 'depositWithFee(address,uint32,bytes32,bytes32)',
+  depositWithFee: 'depositWithFee(address,uint32,bytes32,bytes32)', // the deployed desks (v2 to v5): no cap
+  depositWithFeeMax: 'depositWithFee(address,uint32,bytes32,bytes32,uint256)', // a desk with `deskMaxTotal`: reverts above maxTotal
   deskQuote: 'quote(address,uint32)',
   deskVault: 'vault()',
   deskFeeBps: 'feeBps()',
@@ -62,6 +63,7 @@ export const call = {
   symbol: () => encodeCall(SIG.symbol),
   depositETHWithFee: (denomIndex, c, pk) => encodeCall(SIG.depositETHWithFee, [denomIndex, c, pk]),
   depositWithFee: (token, denomIndex, c, pk) => encodeCall(SIG.depositWithFee, [token, denomIndex, c, pk]),
+  depositWithFeeMax: (token, denomIndex, c, pk, maxTotal) => encodeCall(SIG.depositWithFeeMax, [token, denomIndex, c, pk, maxTotal]),
   deskQuote: (token, denomIndex) => encodeCall(SIG.deskQuote, [token, denomIndex]),
   deskVault: () => encodeCall(SIG.deskVault),
   deskFeeBps: () => encodeCall(SIG.deskFeeBps),
