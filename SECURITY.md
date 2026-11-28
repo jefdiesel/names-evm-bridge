@@ -28,9 +28,20 @@ Known limits are written down rather than hidden: the trust model is in `DESIGN.
   re-extract blocks, checking neither privacy receipts nor public execution yet. Vault v7 uses
   stand-in keys of ours on our one sequencer, so v7 still trusts us (real accredited sequencer
   signatures are M6, subject to the week-2 gate).
-- **No admin timelock today:** neither the vault nor the LEZ bridge enforces a timelock on changing
-  the freezer (`setFreezer`) or lifting freezes (`unfreeze` / `unfreezeAll`), so a compromised admin
-  can unfreeze and replace the freezer immediately. M4 adds an admin timelock.
+- **Admin timelock (closed in code for the Ethereum vault, not deployed; LEZ bridge still open):**
+  `BridgeVault.sol` on main puts every safety-weakening admin action behind `schedule` → `execute`
+  no sooner than an immutable constructor-set `adminDelay` (at least `MIN_ADMIN_DELAY`, 1 hour) and
+  before `ADMIN_GRACE_PERIOD` (7 days) more, cancellable by the admin or the freezer: lifting
+  freezes, changing the freezer, proposing an admin, changing the fee recipient, raising or
+  disabling caps, lowering cap weights or release delays, and raising fees. Freezing and tightening
+  changes stay instant, and an unfreeze scheduled before the latest freeze cannot run. The verifier
+  and image ids have no setter at all. The deployed Sepolia vaults (v2–v7) are immutable and do not
+  have this timelock; it applies to new deployments, and the deploy scripts' delay is a placeholder
+  the owner decides before any deploy. Known limit: the freezer's veto has no exception, so a stolen
+  freezer key can freeze and then cancel every unfreeze and every change of the freezer, keeping
+  the vault frozen (no funds move; the remedy is a new vault;
+  `test_KnownLimit_FreezerCanVetoItsOwnReplacement`). The LEZ bridge program (`lez-bridge/bridge`)
+  does not have an admin timelock yet.
 - **Reproducible guest builds:** local guest builds embed machine/registry paths, and reproducible
   guest builds with RISC Zero's Docker builder are not done yet (set up in M1).
 

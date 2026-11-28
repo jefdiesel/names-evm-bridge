@@ -50,6 +50,8 @@ interface IRiscZeroGroth16Selector {
 ///                     before anything is sent. v4 (2026-11-15) used 3600 / 3600; v5 uses 0 / 0 (the
 ///                     owner's decision for the test network: the delay is the freezer's window
 ///                     against a stolen SUBMITTER key, and with 0 only the caps bound one).
+///   ADMIN_DELAY_SECONDS        optional, PLACEHOLDER default 172800 (2 days), not a decided value: ask the owner before deploy;
+///                     the vault's immutable `adminDelay` (must be in [MIN_ADMIN_DELAY, MAX_ADMIN_DELAY]).
 ///   Used for v4 and v5 (public-demo/V5-PLAN.md): the same script, the delays as inputs.
 ///
 ///   forge script script/SepoliaV4.s.sol --rpc-url <sepolia>                  # simulate
@@ -68,6 +70,8 @@ contract SepoliaV4 is Script {
     /// against a typo (milliseconds for seconds). v4: 1 hour; v5: 0.
     uint64 constant MAX_DELAY = 30 days;
     uint64 constant CAP_WINDOW = 1 days;
+    /// PLACEHOLDER admin timelock delay, not a decided value: adminDelay is immutable, ask the owner before deploy.
+    uint64 constant DEFAULT_ADMIN_DELAY = 2 days;
     bytes32 constant GATE_KIND_HASH = keccak256(
         "update-gated: RISC Zero Groth16 verifies every proof; updates only from SUBMITTER (LEZ finality is its word)"
     );
@@ -87,6 +91,7 @@ contract SepoliaV4 is Script {
         bytes32 initialG2State;
         uint64 minReleaseDelay;
         uint64 releaseDelay;
+        uint64 adminDelay;
     }
 
     /// Virtual only so the test harness can use a public test key (test/SepoliaV4Script.t.sol).
@@ -111,12 +116,20 @@ contract SepoliaV4 is Script {
         p.initialG2State = vm.envBytes32("INITIAL_G2_STATE");
         p.minReleaseDelay = _delayEnv("MIN_RELEASE_DELAY_SECONDS");
         p.releaseDelay = _delayEnv("RELEASE_DELAY_SECONDS");
+        p.adminDelay = _adminDelayEnv();
     }
 
     /// A required delay in seconds: no default, so the value is always a stated decision.
     function _delayEnv(string memory name) internal view returns (uint64) {
         uint256 s = vm.envUint(name);
         require(s <= MAX_DELAY, string.concat(name, " above 30 days (seconds, not milliseconds?)"));
+        return uint64(s);
+    }
+
+    /// Optional admin timelock delay in seconds; defaults to the placeholder (ask the owner before deploy).
+    function _adminDelayEnv() internal view returns (uint64) {
+        uint256 s = vm.envOr("ADMIN_DELAY_SECONDS", uint256(DEFAULT_ADMIN_DELAY));
+        require(s >= 1 hours && s <= MAX_DELAY, "ADMIN_DELAY_SECONDS out of bounds (1 hour .. 30 days)");
         return uint64(s);
     }
 
@@ -150,6 +163,7 @@ contract SepoliaV4 is Script {
         require(p.initialG2State != bytes32(0), "INITIAL_G2_STATE is zero");
         require(p.releaseDelay >= p.minReleaseDelay, "RELEASE_DELAY_SECONDS < MIN_RELEASE_DELAY_SECONDS");
         require(p.minReleaseDelay <= MAX_DELAY && p.releaseDelay <= MAX_DELAY, "delay above 30 days");
+        require(p.adminDelay >= 1 hours && p.adminDelay <= MAX_DELAY, "ADMIN_DELAY_SECONDS out of bounds (1 hour .. 30 days)");
         if (p.reuseUsdc != address(0)) {
             require(p.reuseUsdc.code.length > 0 && DemoUSDC(p.reuseUsdc).minter() == _deployer(), "REUSE_USDC");
         }
@@ -181,6 +195,7 @@ contract SepoliaV4 is Script {
         console.log("RELEASE_IMAGE_ID=%s", vm.toString(v.releaseImageId()));
         console.log("G2_STATE=%s (the first update's prevState)", vm.toString(v.g2State()));
         console.log("MIN_RELEASE_DELAY=%s s", uint256(v.minReleaseDelay()));
+        console.log("ADMIN_DELAY=%s s (placeholder default 2 days: ask the owner before deploy)", uint256(v.adminDelay()));
     }
 
     /// Creates the gate, the vault and (unless reused) the DemoUSDC from `pk`, and checks them.
@@ -205,7 +220,8 @@ contract SepoliaV4 is Script {
             p.minReleaseDelay,
             me, // admin
             me, // freezer
-            me // fee recipient
+            me, // fee recipient
+            p.adminDelay // placeholder default 2 days: ask the owner before deploy
         );
         vm.stopBroadcast();
 
@@ -216,6 +232,7 @@ contract SepoliaV4 is Script {
         require(keccak256(bytes(g.KIND())) == GATE_KIND_HASH, "gate KIND");
         require(v.updateImageId() == p.updateImageId && v.releaseImageId() == p.releaseImageId, "image ids");
         require(v.minReleaseDelay() == p.minReleaseDelay, "minReleaseDelay");
+        require(v.adminDelay() == p.adminDelay, "adminDelay");
         require(v.g2State() == p.initialG2State, "g2State");
         require(v.cfgId() == v.computeCfgId(SEPOLIA, address(v), p.lezChainId, p.zoneId, p.programId), "cfgId");
     }

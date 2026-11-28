@@ -106,9 +106,14 @@ contract FreezeMatrixTest is VaultFixture {
             _check(r.releaseOther, ok, err, "USDT release", i);
 
             // unfreezing everything restores every operation that was refused
+            bytes memory pAll = abi.encode(true, true);
+            bytes memory pTok = abi.encode(address(usdc), true, true);
             vm.startPrank(admin);
-            v.unfreezeAll(true, true);
-            v.unfreeze(address(usdc), true, true);
+            bytes32 idAll = v.schedule(BridgeVault.Action.UnfreezeAll, pAll);
+            v.schedule(BridgeVault.Action.Unfreeze, pTok);
+            vm.warp(v.scheduledEta(idAll));
+            v.execute(BridgeVault.Action.UnfreezeAll, pAll);
+            v.execute(BridgeVault.Action.Unfreeze, pTok);
             vm.stopPrank();
             vm.startPrank(alice);
             if (!r.depositT) v.deposit(address(usdc), 0, keccak256(abi.encode("d", i)));

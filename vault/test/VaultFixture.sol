@@ -25,6 +25,7 @@ abstract contract VaultFixture is Test {
     bytes32 constant PROGRAM = keccak256("program");
     bytes32 constant S0 = keccak256("checkpoint");
     uint64 constant DELAY = 1 days;
+    uint64 constant ADMIN_DELAY = 2 days;
 
     address admin = address(0xA11CE);
     address freezer = address(0xF2EE);
@@ -35,7 +36,20 @@ abstract contract VaultFixture is Test {
 
     function setUp() public virtual {
         mv = new MockVerifier();
-        v = new BridgeVault(IRiscZeroVerifier(address(mv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo);
+        v = new BridgeVault(
+            IRiscZeroVerifier(address(mv)),
+            G2,
+            G3,
+            LEZ_CHAIN,
+            ZONE,
+            PROGRAM,
+            S0,
+            1 hours,
+            admin,
+            freezer,
+            feeTo,
+            ADMIN_DELAY
+        );
         usdc = new TestToken("USDC", 6);
         usdt = new NoReturnToken();
 
@@ -177,5 +191,18 @@ abstract contract VaultFixture is Test {
     function _bal(address token, address who) internal view returns (uint256) {
         if (token == address(0)) return who.balance;
         return TestToken(token).balanceOf(who); // same selector on NoReturnToken
+    }
+
+    /// Schedule and execute a timelocked admin action on `v` (warps to `scheduledEta`).
+    function _execAsAdmin(BridgeVault.Action action, bytes memory params) internal {
+        _execTimelocked(v, admin, action, params);
+    }
+
+    function _execTimelocked(BridgeVault vault, address who, BridgeVault.Action action, bytes memory params) internal {
+        vm.prank(who);
+        bytes32 id = vault.schedule(action, params);
+        vm.warp(vault.scheduledEta(id));
+        vm.prank(who);
+        vault.execute(action, params);
     }
 }

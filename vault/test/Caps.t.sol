@@ -95,6 +95,11 @@ contract CapsFuzzTest is VaultFixture {
     function testFuzz_CapsBoundAcceptedValue(uint256 seed, uint8 capA, uint8 capB, uint8 capG, bool longWindow) public {
         Run memory r;
         r.clock = T0;
+        // Pre-schedule the delay lowering so it executes right at T0 without shifting the test clock.
+        bytes memory delayParams = abi.encode(address(usdc), uint64(1 hours));
+        vm.warp(T0 - ADMIN_DELAY);
+        vm.prank(admin);
+        v.schedule(BridgeVault.Action.SetReleaseDelay, delayParams);
         vm.warp(r.clock);
         // 30 USDC exits of 100 and 6 of 1000, created before the caps (setCaps starts empty)
         for (uint256 i; i < 36; ++i) _deposit(i < 30 ? 0 : 1, keccak256(abi.encode("pre", i)));
@@ -116,7 +121,7 @@ contract CapsFuzzTest is VaultFixture {
         v.setGlobalCaps(uint64(r.window), globalCap, globalCap);
         v.setCapWeight(address(usdc), 1e18);
         v.setCapWeight(address(usdt), 1e18);
-        v.setReleaseDelay(address(usdc), 1 hours);
+        v.execute(BridgeVault.Action.SetReleaseDelay, delayParams);
         vm.stopPrank();
         r.clock += 1 hours; // the exits become releasable
         vm.warp(r.clock);

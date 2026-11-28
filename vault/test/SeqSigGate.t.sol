@@ -117,7 +117,7 @@ contract SeqSigGateTest is Test {
         );
         w = new BridgeVault(
             IRiscZeroVerifier(address(g)), UPDATE_ID, RELEASE_ID, LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID, G0, 0,
-            address(this), address(this), address(this)
+            address(this), address(this), address(this), 1 hours
         );
         assertEq(address(w), predicted);
         assertEq(w.cfgId(), g.CFG_ID());
@@ -495,7 +495,7 @@ contract SeqSigGateTest is Test {
         );
         BridgeVault w = new BridgeVault(
             IRiscZeroVerifier(address(mv)), UPDATE_ID, RELEASE_ID, LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID, G0, 0,
-            address(this), address(this), address(this)
+            address(this), address(this), address(this), 1 hours
         );
         assertEq(address(w), predicted);
         (, bytes memory full) = _goodFor(g, w, 0x7);
@@ -508,7 +508,7 @@ contract SeqSigGateTest is Test {
         );
         w = new BridgeVault(
             IRiscZeroVerifier(address(g)), UPDATE_ID, RELEASE_ID, LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID, G0, 0,
-            address(this), address(this), address(this)
+            address(this), address(this), address(this), 1 hours
         );
         (, full) = _goodFor(g, w, 0x7);
         s = _seal(UPDATE_ID, full);
@@ -528,7 +528,7 @@ contract SeqSigGateTest is Test {
 
         BridgeVault w = new BridgeVault(
             IRiscZeroVerifier(address(gate)), UPDATE_ID, RELEASE_ID, LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID, G0, 0,
-            address(this), address(this), address(this)
+            address(this), address(this), address(this), 1 hours
         );
         bytes memory vjw = _vjFor(w, w.cfgId(), G0, keccak256("w1"), 0, 0);
         bytes memory s = _seal(UPDATE_ID, vjw);
@@ -583,7 +583,10 @@ contract SeqSigGateTest is Test {
         vm.expectRevert(BridgeVault.IsFrozen.selector);
         gate.finalize(vj);
         assertTrue(_pendingAt(v) != 0, "still pending");
-        v.unfreezeAll(false, true);
+        bytes memory p = abi.encode(false, true);
+        bytes32 id = v.schedule(BridgeVault.Action.UnfreezeAll, p);
+        vm.warp(v.scheduledEta(id));
+        v.execute(BridgeVault.Action.UnfreezeAll, p);
         gate.finalize(vj);
         assertEq(v.exitCount(), 1);
     }

@@ -29,6 +29,8 @@ contract RoundTripDeploy is Script {
         bytes32 lezChainId = vm.envOr("LEZ_CHAIN_ID", bytes32(0));
         bytes32 zoneId = vm.envOr("ZONE_ID", bytes32(0));
         uint64 delay = uint64(vm.envOr("RELEASE_DELAY", uint256(20)));
+        // Local anvil default: MIN_ADMIN_DELAY. Any real deploy's adminDelay is immutable: ask the owner before deploy.
+        uint64 adminDelay = uint64(vm.envOr("ADMIN_DELAY_SECONDS", uint256(1 hours)));
 
         vm.startBroadcast();
         address feeRecipient = vm.envOr("FEE_RECIPIENT", msg.sender);
@@ -45,7 +47,8 @@ contract RoundTripDeploy is Script {
             0,
             msg.sender,
             msg.sender,
-            feeRecipient
+            feeRecipient,
+            adminDelay
         );
 
         uint256[] memory d = new uint256[](2);

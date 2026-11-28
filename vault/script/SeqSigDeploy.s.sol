@@ -41,6 +41,8 @@ contract SeqSigDeploy is Script {
             uint64(vm.envUint("CONTEST_WINDOW")),
             vm.envOr("TEST_ONLY_SHORT_WINDOW", false)
         );
+        // Local anvil default: MIN_ADMIN_DELAY. Any real deploy's adminDelay is immutable: ask the owner before deploy.
+        uint64 adminDelay = uint64(vm.envOr("ADMIN_DELAY_SECONDS", uint256(1 hours)));
         BridgeVault v = new BridgeVault(
             IRiscZeroVerifier(address(gate)),
             vm.envBytes32("UPDATE_IMAGE_ID"),
@@ -52,7 +54,8 @@ contract SeqSigDeploy is Script {
             0,
             msg.sender,
             msg.sender,
-            msg.sender
+            msg.sender,
+            adminDelay
         );
         require(address(v) == predicted, "vault not at the address the gate is bound to");
         require(v.cfgId() == gate.CFG_ID(), "gate CFG_ID differs from the vault's");

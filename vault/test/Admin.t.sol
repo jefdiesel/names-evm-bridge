@@ -16,16 +16,19 @@ contract AdminTest is VaultFixture {
 
     function setUp() public override {
         super.setUp();
-        v2 = new BridgeVault(IRiscZeroVerifier(address(mv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin2, freezer2, feeTo);
+        v2 = new BridgeVault(
+            IRiscZeroVerifier(address(mv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin2, freezer2, feeTo, ADMIN_DELAY
+        );
         newToken = new TestToken("NEW", 18);
     }
 
     // ------------------------------------------------------------------ the classification
 
-    /// Every admin-only function, with arguments that succeed when the admin sends them.
+    /// Every admin-only function, with arguments that succeed when the admin sends them
+    /// (assuming `Action.SetFreezer(bob)` is pre-scheduled and ready to execute).
     function _adminCalls() internal view returns (bytes[] memory c) {
         uint256[][] memory menus = _menu2(_one(1e6), new uint256[](0));
-        c = new bytes[](14);
+        c = new bytes[](11);
         c[0] = abi.encodeCall(BridgeVault.registerToken, (address(newToken), 18, _arr(1 ether, 2 ether), _arr(0, 0), _arr(0, 0), DELAY));
         c[1] = abi.encodeCall(BridgeVault.deregisterToken, (address(usdc)));
         c[2] = abi.encodeCall(BridgeVault.addDenomination, (address(usdc), 10_000e6, 0, 0));
@@ -35,24 +38,23 @@ contract AdminTest is VaultFixture {
         c[6] = abi.encodeCall(BridgeVault.setGlobalCaps, (1 days, 1, 1));
         c[7] = abi.encodeCall(BridgeVault.setCapWeight, (address(usdc), 1e18));
         c[8] = abi.encodeCall(BridgeVault.setReleaseDelay, (address(usdc), 2 days));
-        c[9] = abi.encodeCall(BridgeVault.unfreeze, (address(usdc), true, true));
-        c[10] = abi.encodeCall(BridgeVault.unfreezeAll, (true, true));
-        c[11] = abi.encodeCall(BridgeVault.proposeAdmin, (bob));
-        c[12] = abi.encodeCall(BridgeVault.setFreezer, (bob));
-        c[13] = abi.encodeCall(BridgeVault.setFeeRecipient, (bob));
+        c[9] = abi.encodeCall(BridgeVault.schedule, (BridgeVault.Action.Unfreeze, abi.encode(address(usdc), true, true)));
+        c[10] = abi.encodeCall(BridgeVault.execute, (BridgeVault.Action.SetFreezer, abi.encode(bob)));
     }
 
-    function _freezerCalls() internal pure returns (bytes[] memory c) {
-        c = new bytes[](2);
+    /// Every freezer-or-admin function (assuming `Action.UnfreezeAll(true, true)` is pre-scheduled).
+    function _freezerCalls() internal view returns (bytes[] memory c) {
+        c = new bytes[](3);
         c[0] = abi.encodeCall(BridgeVault.freeze, (address(0xdead), true, true));
         c[1] = abi.encodeCall(BridgeVault.freezeAll, (true, true));
+        c[2] = abi.encodeCall(BridgeVault.cancel, (v.actionId(BridgeVault.Action.UnfreezeAll, abi.encode(true, true))));
     }
 
     /// The complete list of state-changing functions, by access rule. S#8 checks it against the
     /// compiled ABI, so a new function (e.g. a verifier setter) fails the test until classified.
     function _stateChanging() internal pure returns (string[] memory s, uint8[] memory rule) {
-        s = new string[](22);
-        rule = new uint8[](22);
+        s = new string[](20);
+        rule = new uint8[](20);
         // 0 admin, 1 freezer or admin, 2 pending admin, 3 anyone
         (s[0], rule[0]) = ("registerToken(address,uint8,uint256[],uint256[],uint256[],uint64)", 0);
         (s[1], rule[1]) = ("deregisterToken(address)", 0);
@@ -63,19 +65,17 @@ contract AdminTest is VaultFixture {
         (s[6], rule[6]) = ("setGlobalCaps(uint64,uint256,uint256)", 0);
         (s[7], rule[7]) = ("setCapWeight(address,uint256)", 0);
         (s[8], rule[8]) = ("setReleaseDelay(address,uint64)", 0);
-        (s[9], rule[9]) = ("unfreeze(address,bool,bool)", 0);
-        (s[10], rule[10]) = ("unfreezeAll(bool,bool)", 0);
-        (s[11], rule[11]) = ("proposeAdmin(address)", 0);
-        (s[12], rule[12]) = ("setFreezer(address)", 0);
-        (s[13], rule[13]) = ("setFeeRecipient(address)", 0);
-        (s[14], rule[14]) = ("freeze(address,bool,bool)", 1);
-        (s[15], rule[15]) = ("freezeAll(bool,bool)", 1);
-        (s[16], rule[16]) = ("acceptAdmin()", 2);
-        (s[17], rule[17]) = ("deposit(address,uint32,bytes32)", 3);
-        (s[18], rule[18]) = ("depositETH(uint32,bytes32)", 3);
-        (s[19], rule[19]) = ("update(bytes,bytes)", 3);
-        (s[20], rule[20]) = ("release(bytes,bytes32,bytes32,address,uint32,address,address,uint256)", 3);
-        (s[21], rule[21]) = ("withdrawFees(address)", 3);
+        (s[9], rule[9]) = ("schedule(uint8,bytes)", 0);
+        (s[10], rule[10]) = ("execute(uint8,bytes)", 0);
+        (s[11], rule[11]) = ("freeze(address,bool,bool)", 1);
+        (s[12], rule[12]) = ("freezeAll(bool,bool)", 1);
+        (s[13], rule[13]) = ("cancel(bytes32)", 1);
+        (s[14], rule[14]) = ("acceptAdmin()", 2);
+        (s[15], rule[15]) = ("deposit(address,uint32,bytes32)", 3);
+        (s[16], rule[16]) = ("depositETH(uint32,bytes32)", 3);
+        (s[17], rule[17]) = ("update(bytes,bytes)", 3);
+        (s[18], rule[18]) = ("release(bytes,bytes32,bytes32,address,uint32,address,address,uint256)", 3);
+        (s[19], rule[19]) = ("withdrawFees(address)", 3);
     }
 
     // ------------------------------------------------------------------ A5: access control
@@ -91,6 +91,9 @@ contract AdminTest is VaultFixture {
     /// tested) and reverts NotAdmin for a stranger, the freezer, and the second vault's admin
     /// and freezer.
     function test_AdminOnlyFunctionsRefuseEveryoneElse() public {
+        vm.prank(admin);
+        bytes32 id = v.schedule(BridgeVault.Action.SetFreezer, abi.encode(bob));
+        vm.warp(v.scheduledEta(id));
         bytes[] memory calls = _adminCalls();
         address[4] memory others = [stranger, freezer, admin2, freezer2];
         for (uint256 i; i < calls.length; ++i) {
@@ -103,8 +106,10 @@ contract AdminTest is VaultFixture {
         }
     }
 
-    /// The freezer (and admin) can freeze; a stranger and the other vault's roles cannot.
+    /// The freezer (and admin) can freeze and cancel; a stranger and the other vault's roles cannot.
     function test_FreezeFunctionsRefuseNonFreezers() public {
+        vm.prank(admin);
+        v.schedule(BridgeVault.Action.UnfreezeAll, abi.encode(true, true));
         bytes[] memory calls = _freezerCalls();
         address[3] memory others = [stranger, admin2, freezer2];
         for (uint256 i; i < calls.length; ++i) {
@@ -117,19 +122,23 @@ contract AdminTest is VaultFixture {
             vm.prank(admin);
             (ok,) = address(v).call(calls[i]);
             assertTrue(ok);
+            vm.revertToState(snap);
         }
     }
 
-    /// The freezer can do nothing but freeze: every admin call, and accepting adminship
-    /// it wasn't offered, is refused. Freezing one vault doesn't touch the other.
+    /// The freezer can do nothing but freeze and cancel scheduled actions: every admin call, and
+    /// accepting adminship it wasn't offered, is refused. Freezing one vault doesn't touch the other.
     function test_FreezerCanOnlyFreeze() public {
+        vm.prank(admin);
+        bytes32 pendingId = v.schedule(BridgeVault.Action.UnfreezeAll, abi.encode(true, true));
         vm.startPrank(freezer);
         v.freeze(address(usdc), true, true);
         v.freezeAll(true, true);
+        v.cancel(pendingId);
         vm.expectRevert(BridgeVault.NotAdmin.selector);
-        v.unfreeze(address(usdc), true, true);
+        v.schedule(BridgeVault.Action.Unfreeze, abi.encode(address(usdc), true, true));
         vm.expectRevert(BridgeVault.NotAdmin.selector);
-        v.unfreezeAll(true, true);
+        v.execute(BridgeVault.Action.UnfreezeAll, abi.encode(true, true));
         vm.expectRevert(BridgeVault.NotPendingAdmin.selector);
         v.acceptAdmin();
         vm.stopPrank();
@@ -143,8 +152,7 @@ contract AdminTest is VaultFixture {
     }
 
     function test_AcceptAdminOnlyByPending() public {
-        vm.prank(admin);
-        v.proposeAdmin(bob);
+        _execAsAdmin(BridgeVault.Action.ProposeAdmin, abi.encode(bob));
         address[4] memory others = [stranger, freezer, admin2, admin];
         for (uint256 k; k < others.length; ++k) {
             _expectRefused(others[k], abi.encodeCall(BridgeVault.acceptAdmin, ()), BridgeVault.NotPendingAdmin.selector);
@@ -157,8 +165,7 @@ contract AdminTest is VaultFixture {
         bytes[] memory calls = _adminCalls();
         for (uint256 i; i < calls.length; ++i) _expectRefused(admin, calls[i], BridgeVault.NotAdmin.selector);
         // a second vault's admin cannot be offered this vault by its own admin
-        vm.prank(admin2);
-        v2.proposeAdmin(admin2);
+        _execTimelocked(v2, admin2, BridgeVault.Action.ProposeAdmin, abi.encode(admin2));
         _expectRefused(admin2, abi.encodeCall(BridgeVault.acceptAdmin, ()), BridgeVault.NotPendingAdmin.selector);
     }
 
@@ -167,6 +174,10 @@ contract AdminTest is VaultFixture {
     /// Fees set to zero: a deposit takes exactly the denomination and a release pays exactly
     /// the denomination minus the relay fee. Non-zero fees take exactly what is set.
     function test_SetFeesZeroAndNonZeroExact() public {
+        bytes memory raiseParams = abi.encode(address(usdc), _arr(2e6, 0), _arr(0.5e6, 0));
+        vm.warp(1_000_000 - ADMIN_DELAY);
+        vm.prank(admin);
+        v.schedule(BridgeVault.Action.SetFees, raiseParams);
         vm.warp(1_000_000);
         vm.prank(admin);
         v.setFees(address(usdc), _arr(0, 0), _arr(0, 0));
@@ -176,9 +187,9 @@ contract AdminTest is VaultFixture {
         assertEq(usdc.balanceOf(address(v)), 100e6);
         assertEq(_fees(address(usdc)), 0);
 
-        // a second deposit with non-zero fees (2% max on deposit, 0.5% on withdraw)
+        // a second deposit with non-zero fees (2% max on deposit, 0.5% on withdraw; raising is timelocked)
         vm.prank(admin);
-        v.setFees(address(usdc), _arr(2e6, 0), _arr(0.5e6, 0));
+        v.execute(BridgeVault.Action.SetFees, raiseParams);
         a0 = usdc.balanceOf(alice);
         _deposit(0, keccak256("z1"));
         assertEq(a0 - usdc.balanceOf(alice), 102e6);
@@ -200,7 +211,7 @@ contract AdminTest is VaultFixture {
         assertEq(usdc.balanceOf(relayer), 2e6);
         assertEq(_fees(address(usdc)), 2.5e6);
 
-        // back to zero: the release pays exactly denomination - relay fee
+        // back to zero (lowering is instant): the release pays exactly denomination - relay fee
         vm.prank(admin);
         v.setFees(address(usdc), _arr(0, 0), _arr(0, 0));
         bytes32 nf2 = keccak256("nf2");
@@ -213,9 +224,9 @@ contract AdminTest is VaultFixture {
     }
 
     function test_SetFeesBounds() public {
+        // exactly 2% is allowed on either side (raising goes through the timelock)
+        _execAsAdmin(BridgeVault.Action.SetFees, abi.encode(address(usdc), _arr(2e6, 20e6), _arr(2e6, 20e6)));
         vm.startPrank(admin);
-        // exactly 2% is allowed on either side
-        v.setFees(address(usdc), _arr(2e6, 20e6), _arr(2e6, 20e6));
         vm.expectRevert(BridgeVault.FeeTooHigh.selector);
         v.setFees(address(usdc), _arr(2e6 + 1, 0), _arr(0, 0));
         vm.expectRevert(BridgeVault.FeeTooHigh.selector);
@@ -316,21 +327,34 @@ contract AdminTest is VaultFixture {
     }
 
     /// Every admin and freezer function, then an admin handover, called one after another:
-    /// the verifier, both image ids, the LEZ ids, cfgId and the runtime code are unchanged.
+    /// the verifier, both image ids, the LEZ ids, cfgId, adminDelay and the runtime code are unchanged.
     function test_VerificationUnchangedAfterEveryAdminCall() public {
         bytes32 codeHash = address(v).codehash;
         bytes32 cfg = v.cfgId();
+        vm.startPrank(admin);
+        bytes32 setFreezerId = v.schedule(BridgeVault.Action.SetFreezer, abi.encode(bob));
+        v.schedule(BridgeVault.Action.ProposeAdmin, abi.encode(bob));
+        v.schedule(BridgeVault.Action.SetFeeRecipient, abi.encode(bob));
+        v.schedule(BridgeVault.Action.UnfreezeAll, abi.encode(true, true));
+        vm.stopPrank();
+        vm.warp(v.scheduledEta(setFreezerId));
+
         bytes[] memory calls = _adminCalls();
         // addDenomination (2) after setFees/setRelayFeeMenu (they take one entry per denomination),
-        // deregisterToken (1) after the calls that need USDC registered; proposeAdmin, setFreezer
-        // and setFeeRecipient are last in the list already
-        uint8[14] memory order = [0, 3, 4, 5, 6, 7, 8, 9, 10, 2, 1, 11, 12, 13];
+        // deregisterToken (1) after the calls that need USDC registered; execute SetFreezer (10) last.
+        uint8[11] memory order = [0, 3, 4, 5, 6, 7, 8, 9, 2, 1, 10];
         for (uint256 i; i < order.length; ++i) {
             vm.prank(admin);
             (bool ok,) = address(v).call(calls[order[i]]);
             assertTrue(ok, vm.toString(uint256(order[i])));
             _assertVerificationFixed(codeHash, cfg);
         }
+        vm.startPrank(admin);
+        v.execute(BridgeVault.Action.ProposeAdmin, abi.encode(bob));
+        v.execute(BridgeVault.Action.SetFeeRecipient, abi.encode(bob));
+        vm.stopPrank();
+        _assertVerificationFixed(codeHash, cfg);
+
         calls = _freezerCalls();
         for (uint256 i; i < calls.length; ++i) {
             vm.prank(bob); // bob is the freezer now
@@ -352,6 +376,7 @@ contract AdminTest is VaultFixture {
         assertEq(v.programId(), PROGRAM);
         assertEq(v.cfgId(), cfg);
         assertEq(v.minReleaseDelay(), 1 hours);
+        assertEq(v.adminDelay(), ADMIN_DELAY);
         assertEq(address(v).codehash, codeHash);
     }
 }

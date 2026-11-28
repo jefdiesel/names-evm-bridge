@@ -460,6 +460,12 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         ok[WARP]++;
     }
 
+    /// Used only by AdminHandler when advancing past the admin timelock (not a fuzz target).
+    function advanceClock(uint256 dt) external {
+        clock += dt;
+        vm.warp(clock);
+    }
+
     /// Permissionless; pays exactly the accrued fees to the fee recipient.
     function withdrawFees(uint256 tSeed) external {
         vm.warp(clock);
@@ -511,6 +517,16 @@ contract AdminHandler is CommonBase, StdCheats, StdUtils {
         return w[s % 4];
     }
 
+    function _exec(BridgeVault.Action action, bytes memory params) internal {
+        vm.prank(admin);
+        bytes32 id = v.schedule(action, params);
+        uint64 eta = v.scheduledEta(id);
+        uint256 nowTs = main.clock();
+        if (eta > nowTs) main.advanceClock(eta - nowTs);
+        vm.prank(admin);
+        v.execute(action, params);
+    }
+
     function setCaps(uint256 tSeed, uint256 wSeed, uint256 depK, uint256 relK) external {
         vm.warp(main.clock());
         address t = tokens[tSeed % 3];
@@ -522,8 +538,13 @@ contract AdminHandler is CommonBase, StdCheats, StdUtils {
         vm.prank(admin);
         try v.setCaps(t, w, dc, rc) {
             ok[SET_CAPS]++;
-        } catch {
-            rej[SET_CAPS]++;
+        } catch (bytes memory err) {
+            if (bytes4(err) == BridgeVault.TimelockRequired.selector) {
+                _exec(BridgeVault.Action.SetCaps, abi.encode(t, w, dc, rc));
+                ok[SET_CAPS]++;
+            } else {
+                rej[SET_CAPS]++;
+            }
         }
     }
 
@@ -536,8 +557,13 @@ contract AdminHandler is CommonBase, StdCheats, StdUtils {
         vm.prank(admin);
         try v.setGlobalCaps(w, dc, rc) {
             ok[SET_GLOBAL_CAPS]++;
-        } catch {
-            rej[SET_GLOBAL_CAPS]++;
+        } catch (bytes memory err) {
+            if (bytes4(err) == BridgeVault.TimelockRequired.selector) {
+                _exec(BridgeVault.Action.SetGlobalCaps, abi.encode(w, dc, rc));
+                ok[SET_GLOBAL_CAPS]++;
+            } else {
+                rej[SET_GLOBAL_CAPS]++;
+            }
         }
     }
 
@@ -565,13 +591,23 @@ contract AdminHandler is CommonBase, StdCheats, StdUtils {
     function unfreeze(uint256 target, uint256 flags) external {
         vm.warp(main.clock());
         if (flags % 2 == 0) {
-            // clear every flag (global and each token), so freezes don't starve the other actions
-            vm.prank(admin);
-            v.unfreezeAll(true, true);
+            // clear every flag (global and each token) through one timelock window, so freezes don't starve the other actions
+            bytes memory pAll = abi.encode(true, true);
+            vm.startPrank(admin);
+            bytes32 idAll = v.schedule(BridgeVault.Action.UnfreezeAll, pAll);
             for (uint256 i; i < 3; ++i) {
-                vm.prank(admin);
-                v.unfreeze(tokens[i], true, true);
+                v.schedule(BridgeVault.Action.Unfreeze, abi.encode(tokens[i], true, true));
             }
+            vm.stopPrank();
+            uint64 eta = v.scheduledEta(idAll);
+            uint256 nowTs = main.clock();
+            if (eta > nowTs) main.advanceClock(eta - nowTs);
+            vm.startPrank(admin);
+            v.execute(BridgeVault.Action.UnfreezeAll, pAll);
+            for (uint256 i; i < 3; ++i) {
+                v.execute(BridgeVault.Action.Unfreeze, abi.encode(tokens[i], true, true));
+            }
+            vm.stopPrank();
             ok[UNFREEZE]++;
             return;
         }
@@ -579,32 +615,31 @@ contract AdminHandler is CommonBase, StdCheats, StdUtils {
         // mostly clear both flags, so freezes don't starve the other actions
         bool dep = flags % 4 != 1;
         bool rel = flags % 4 != 2;
-        vm.prank(admin);
         if (target % 4 == 3) {
-            try v.unfreezeAll(dep, rel) {
-                ok[UNFREEZE]++;
-            } catch {
-                rej[UNFREEZE]++;
-            }
+            _exec(BridgeVault.Action.UnfreezeAll, abi.encode(dep, rel));
+            ok[UNFREEZE]++;
         } else {
-            try v.unfreeze(tokens[target % 4], dep, rel) {
-                ok[UNFREEZE]++;
-            } catch {
-                rej[UNFREEZE]++;
-            }
+            _exec(BridgeVault.Action.Unfreeze, abi.encode(tokens[target % 4], dep, rel));
+            ok[UNFREEZE]++;
         }
     }
 
     function setReleaseDelay(uint256 tSeed, uint256 dSeed) external {
         vm.warp(main.clock());
+        address t = tokens[tSeed % 3];
         uint64 d = uint64(_bound(dSeed, 30 minutes, 3 days)); // below 1 hour is refused
         vm.prank(admin);
-        try v.setReleaseDelay(tokens[tSeed % 3], d) {
+        try v.setReleaseDelay(t, d) {
             ok[SET_DELAY]++;
         } catch (bytes memory err) {
-            rej[SET_DELAY]++;
-            // the only possible refusal for the admin on a registered token
-            require(bytes4(err) == BridgeVault.DelayTooShort.selector, "unexpected setReleaseDelay refusal");
+            bytes4 sel = bytes4(err);
+            if (sel == BridgeVault.TimelockRequired.selector) {
+                _exec(BridgeVault.Action.SetReleaseDelay, abi.encode(t, d));
+                ok[SET_DELAY]++;
+            } else {
+                rej[SET_DELAY]++;
+                require(sel == BridgeVault.DelayTooShort.selector, "unexpected setReleaseDelay refusal");
+            }
         }
     }
 
@@ -664,7 +699,9 @@ contract InvariantTest is Test {
     function setUp() public {
         vm.warp(T0);
         mv = new MockVerifier();
-        v = new BridgeVault(IRiscZeroVerifier(address(mv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, keccak256("s0"), 1 hours, ADMIN, FREEZER, FEE_TO);
+        v = new BridgeVault(
+            IRiscZeroVerifier(address(mv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, keccak256("s0"), 1 hours, ADMIN, FREEZER, FEE_TO, 1 hours
+        );
         emptyRoot = v.depositRoot();
         cfg0 = v.cfgId();
         usdc = new TestToken("USDC", 6);
@@ -818,6 +855,7 @@ contract InvariantTest is Test {
         assertEq(v.zoneId(), ZONE, "zoneId");
         assertEq(v.programId(), PROGRAM, "programId");
         assertEq(v.minReleaseDelay(), 1 hours, "minReleaseDelay");
+        assertEq(v.adminDelay(), 1 hours, "adminDelay");
         assertEq(v.admin(), ADMIN, "admin");
     }
 

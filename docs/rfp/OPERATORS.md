@@ -106,7 +106,7 @@ are the only operator of each on our public chain ([SECURITY-AND-TRUST.md](SECUR
 ## 4. Release relayer and the settlement service
 
 - **Anyone can release.** `release(seal, root, nullifier, token, denomIndex, recipient, relayer, relayFee)` on the vault
-  is open; recipient, relayer and fee are bound in the proof (`vault/src/BridgeVault.sol` 461-515). A release code
+  is open; recipient, relayer and fee are bound in the proof (`vault/src/BridgeVault.sol` 517-571). A release code
   (`logosrel1…`) carries these; the deposit page's `#release` view checks it and sends the call from any Ethereum wallet
   (`web/deposit/src/lib/send-back.js`).
 - **Making the seal:** the release proof (about 36K cycles, 20.9 s, 1.1 GB) from the exit secret

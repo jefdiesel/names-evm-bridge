@@ -22,7 +22,7 @@ contract CrossConfigTest is VaultFixture {
     bytes32 constant EXIT_COMMIT = keccak256("exit-commitment");
 
     function _args(bytes32 program) internal view returns (bytes memory) {
-        return abi.encode(address(mv), G2, G3, LEZ_CHAIN, ZONE, program, S0, uint64(1 hours), admin, freezer, feeTo);
+        return abi.encode(address(mv), G2, G3, LEZ_CHAIN, ZONE, program, S0, uint64(1 hours), admin, freezer, feeTo, uint64(ADMIN_DELAY));
     }
 
     /// Deploy at `at` and register USDC with the fixture's terms; alice approves it.

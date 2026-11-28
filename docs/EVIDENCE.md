@@ -10,7 +10,7 @@ Nothing here ran on a Logos network: LEZ testnet 0.4 is not live. "Our public ch
 
 - **Failsafe (not deployed):** `BridgeVaultFailsafe.sol` fixes `finalState` on the first update after `windDown()` without checking that LEZ minting has stopped, so a late exit can be paid while the same deposit is reclaimed (forged mints before the final also consume reclaim room). The variant is not deployed; M6's irreversible LEZ mint freeze closes it (`public-demo/prove/failsafe-20261117/README.md`).
 - **v7 signers:** today's signers check neither privacy receipts nor public execution yet (they re-hash and re-extract blocks). With our stand-in keys on our one sequencer, v7 trusts us.
-- **No admin timelock today:** freezer changes (`setFreezer`) and lifting freezes (`unfreeze` / `unfreezeAll`) take effect immediately with no timelock; M4 adds one.
+- **Admin timelock: closed in code for the vault, not deployed; LEZ bridge still open.** On main, `BridgeVault.sol` puts freezer changes, lifting freezes and every other weakening admin change behind `schedule` → `execute` after the immutable `adminDelay`, cancellable by the admin or the freezer; freezing stays instant (tests in `vault/test/AdminTimelock*.t.sol`; not run on any chain). The deployed vaults v2–v7 don't have it: on them these changes take effect at once. The LEZ bridge program has no timelock yet.
 - **Reproducible guest builds:** reproducible guest builds with RISC Zero's Docker builder are not done yet (set up in M1).
 
 ## On public networks

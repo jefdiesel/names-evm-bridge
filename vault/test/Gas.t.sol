@@ -20,7 +20,7 @@ abstract contract GasBase is Test {
 
     function setUp() public {
         mv = new MockVerifier();
-        v = new BridgeVault(IRiscZeroVerifier(address(mv)), G2, G3, bytes32(0), bytes32(0), keccak256("program"), bytes32(0), 1 hours, address(this), address(this), address(this));
+        v = new BridgeVault(IRiscZeroVerifier(address(mv)), G2, G3, bytes32(0), bytes32(0), keccak256("program"), bytes32(0), 1 hours, address(this), address(this), address(this), 1 hours);
         usdc = new TestToken("USDC", 6);
         usdt = new NoReturnToken();
         uint256[] memory d = new uint256[](1);
@@ -175,9 +175,12 @@ abstract contract GasBase is Test {
             uint256 g0 = gasleft();
             v.setReleaseDelay(address(usdc), cur + 1 hours);
             uint256 raise = g0 - gasleft();
+            bytes memory lowerParams = abi.encode(address(usdc), uint64(1 hours + 30 minutes));
+            bytes32 lowerId = v.schedule(BridgeVault.Action.SetReleaseDelay, lowerParams);
+            vm.warp(v.scheduledEta(lowerId));
             vm.cool(address(v));
             g0 = gasleft();
-            v.setReleaseDelay(address(usdc), 1 hours + 30 minutes);
+            v.execute(BridgeVault.Action.SetReleaseDelay, lowerParams);
             uint256 lower = g0 - gasleft();
             console.log("delay history %d steps: release (old root, search) gas %d", n, slow);
             console.log("  release (root after last change) gas %d", fast);

@@ -49,7 +49,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | F11 | "Global and per-token deposit and redemption caps" | In-dev (no LEZ cap) | 4 | TST; set on Sepolia |
 | F12 | finality depth "configurable by the admin authority per deployment" | In-dev; outbound Cond | 4, 6 | inbound PUB (v6, v7: Ethereum finality through the light client, fixed per instance); outbound NS (not configurable) |
 | F13 | "protocol fee … on both minting and burning … on LEZ" | In-dev (Ethereum side) | 1 | TST |
-| F14 | freeze "globally or for a single registered token … independently" | In-dev (own code) | 1, 4 | TST; LEZ global freeze LOC; no admin timelock today on freezer changes or lifting freezes (M4 adds one) |
+| F14 | freeze "globally or for a single registered token … independently" | In-dev (own code) | 1, 4 | TST; LEZ global freeze LOC; the vault's admin timelock is closed in code on main, not deployed (no vault v2–v7 has it); the LEZ bridge has none yet |
 | F15 | each deployment "refers to a specific" deployment on the other chain | In | 1, 4 | Ethereum side PUB; LEZ side PUB our public chain (v3 onward; v6, v7 bind the light-client instance in `zoneId`) |
 | F16 | "multiple entities each operate under their own independent configuration" | In-dev (one config per program) | 1, 7 | TST |
 | F17 | ERC-20s whose transfer "do not return a boolean (USDT)" | In | 1 | TST. Branch `erc20-path`: USDT in a four-token matrix, TST |
@@ -92,7 +92,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | S2 | both sides "must reject invalid proofs" | In | 1, 4 | PUB a changed seal refused by Sepolia's verifier (v4 round trip) and the attester's root refused by the v6 bridge (LEZ 23349); LOC; TST |
 | S3 | a submitter cannot "redirect funds, inflate their fee, or replay" | In | 1, 4 | TST (H2 fix, v3) |
 | S4 | caps: "document recommended defaults and the reasoning" | In | 4 | DES (`DESIGN.md` §6.1a) |
-| S5 | freeze "exercisable independently on each half" | In | 1, 4 | LOC; TST; no admin timelock today on freezer changes or lifting freezes (M4 adds one) |
+| S5 | freeze "exercisable independently on each half" | In | 1, 4 | LOC; TST; the vault's admin timelock is closed in code on main, not deployed (no vault v2–v7 has it); the LEZ bridge has none yet |
 | S6 | "total wrapped supply on LEZ must never exceed the vault's holdings" | In | 1, 4 | LOC; TST (C1 fix, v3) |
 | S7 | user docs state "the trustless verification model" | In | 7 | DES (`docs/rfp/USERS.md` §1) |
 | S8 | "The verification logic cannot be swapped" | In | 1 | PUB immutable LEZ programs on our public chain; v4 still releasing beside v5 (a migration); TST |

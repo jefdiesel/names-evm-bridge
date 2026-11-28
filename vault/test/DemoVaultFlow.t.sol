@@ -29,7 +29,9 @@ contract DemoVaultFlowTest is VaultFixture {
         att = vm.addr(attPk);
         mv = new MockVerifier();
         dv = new DAV(att, LIFETIME);
-        v = new BridgeVault(IRiscZeroVerifier(address(dv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo);
+        v = new BridgeVault(
+            IRiscZeroVerifier(address(dv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo, ADMIN_DELAY
+        );
         usdc = new TestToken("USDC", 6);
         usdt = new NoReturnToken();
         _registerFixtureTokens(v);
@@ -272,7 +274,9 @@ contract DemoVaultFlowTest is VaultFixture {
     /// attestation made for one verifier fails at the other (the EIP-712 domain names it).
     function test_UpdateSignedForAnotherVaultRejected_SeparateVerifiers() public {
         DAV dv2 = new DAV(att, LIFETIME);
-        BridgeVault v2 = new BridgeVault(IRiscZeroVerifier(address(dv2)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo);
+        BridgeVault v2 = new BridgeVault(
+            IRiscZeroVerifier(address(dv2)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo, ADMIN_DELAY
+        );
         _registerFixtureTokens(v2);
         _deposit(0, keccak256("c"));
         BridgeVault.ClaimDelta[] memory cl = new BridgeVault.ClaimDelta[](1);
@@ -296,7 +300,9 @@ contract DemoVaultFlowTest is VaultFixture {
     /// cfgId binds the vault, so the other vault refuses it (WrongConfig). Same for a release:
     /// the digest includes cfgId.
     function test_UpdateSignedForAnotherVaultRejected_SharedVerifier() public {
-        BridgeVault v3 = new BridgeVault(IRiscZeroVerifier(address(dv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo);
+        BridgeVault v3 = new BridgeVault(
+            IRiscZeroVerifier(address(dv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo, ADMIN_DELAY
+        );
         _registerFixtureTokens(v3);
         assertTrue(v3.cfgId() != v.cfgId());
         _deposit(0, keccak256("c"));
@@ -465,8 +471,7 @@ contract DemoVaultFlowTest is VaultFixture {
         v.setCaps(address(usdc), 1 days, 1e30, 50e6); // release cap below one denomination
         vm.expectRevert(BridgeVault.CapExceeded.selector);
         v.release(rs, root, nf, address(usdc), 0, bob, relayer, 0);
-        vm.prank(admin);
-        v.setCaps(address(usdc), 0, 0, 0);
+        _execAsAdmin(BridgeVault.Action.SetCaps, abi.encode(address(usdc), uint64(0), uint256(0), uint256(0)));
 
         vm.prank(freezer);
         v.freeze(address(usdc), false, true);
@@ -478,9 +483,14 @@ contract DemoVaultFlowTest is VaultFixture {
         bytes memory seal2 = _att(G2, sha256(j2));
         vm.expectRevert(BridgeVault.IsFrozen.selector);
         v.update(j2, seal2);
+        bytes memory pAll = abi.encode(false, true);
+        bytes memory pTok = abi.encode(address(usdc), false, true);
         vm.startPrank(admin);
-        v.unfreezeAll(false, true);
-        v.unfreeze(address(usdc), false, true);
+        bytes32 idAll = v.schedule(BridgeVault.Action.UnfreezeAll, pAll);
+        v.schedule(BridgeVault.Action.Unfreeze, pTok);
+        vm.warp(v.scheduledEta(idAll));
+        v.execute(BridgeVault.Action.UnfreezeAll, pAll);
+        v.execute(BridgeVault.Action.Unfreeze, pTok);
         vm.stopPrank();
         v.release(rs, root, nf, address(usdc), 0, bob, relayer, 0);
         v.update(j2, seal2);
@@ -551,8 +561,12 @@ contract DemoVaultFlowTest is VaultFixture {
     /// here are low because the vault's slots are warm (see Gas.t.sol for real per-op figures).
     function test_GasDemoVsMock() public {
         DAV dvG = new DAV(att, LIFETIME);
-        BridgeVault vd = new BridgeVault(IRiscZeroVerifier(address(dvG)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo);
-        BridgeVault m = new BridgeVault(IRiscZeroVerifier(address(mv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo);
+        BridgeVault vd = new BridgeVault(
+            IRiscZeroVerifier(address(dvG)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo, ADMIN_DELAY
+        );
+        BridgeVault m = new BridgeVault(
+            IRiscZeroVerifier(address(mv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo, ADMIN_DELAY
+        );
         _registerFixtureTokens(m);
         _registerFixtureTokens(vd);
         vm.startPrank(alice);

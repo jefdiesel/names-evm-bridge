@@ -15,7 +15,7 @@
 
 [`DESIGN.md`](DESIGN.md) is the design as built: refusals, gas, privacy, deviations, and requirement matrices with test names. Where it and the code disagree, the code wins.
 
-Security problems: report them privately as [`SECURITY.md`](SECURITY.md) says. Everything deployed is on test networks with test coins, and nothing has been audited. Known limits (the undeployed failsafe variant's wind-down, v7's signers, no admin timelock yet, no reproducible guest builds yet): [`SECURITY.md`](SECURITY.md) "Known limits".
+Security problems: report them privately as [`SECURITY.md`](SECURITY.md) says. Everything deployed is on test networks with test coins, and nothing has been audited. Known limits (the undeployed failsafe variant's wind-down, v7's signers, the vault's admin timelock closed in code but not deployed and none yet on the LEZ bridge, no reproducible guest builds yet): [`SECURITY.md`](SECURITY.md) "Known limits".
 
 ## Current status (2026-11-17)
 

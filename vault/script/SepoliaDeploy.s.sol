@@ -52,6 +52,8 @@ contract SepoliaDeploy is Script {
     uint64 constant MIN_RELEASE_DELAY = 1 days;
     uint64 constant RELEASE_DELAY = 1 days;
     uint64 constant CAP_WINDOW = 1 days;
+    /// PLACEHOLDER admin timelock delay, not a decided value (historical v2 script, kept compilable): ask the owner before deploy.
+    uint64 constant ADMIN_DELAY = 2 days;
 
     function _pk() internal view returns (uint256 pk) {
         pk = vm.envUint("SEPOLIA_PK");
@@ -85,7 +87,8 @@ contract SepoliaDeploy is Script {
             MIN_RELEASE_DELAY,
             DEPLOYER, // admin
             DEPLOYER, // freezer
-            DEPLOYER // fee recipient
+            DEPLOYER, // fee recipient
+            ADMIN_DELAY // placeholder: ask the owner before deploy
         );
         vm.stopBroadcast();
 

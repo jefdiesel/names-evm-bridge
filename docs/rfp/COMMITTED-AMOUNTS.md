@@ -31,7 +31,7 @@
   denomination (`vault/src/BridgeVault.sol` `deposit`, `release`). The deposit leaf and the exit leaf bind the
   denomination: `SHA256(tag ‖ cfgId ‖ token ‖ denom ‖ C)`. The vault counts deposits, claims, burns and releases per
   (token, denomination index) and enforces claims ≤ deposits and releases ≤ burns per (token, denomination), and burned
-  value ≤ claimed value per token (`update`, lines 404-443; `release`, 461-515).
+  value ≤ claimed value per token (`update`, lines 460-499; `release`, 517-571).
 - **LEZ.** A claim mints exactly one denomination; a burn destroys exactly one (`DESIGN.md` §3.2, §4). The bridge config
   keeps public counters per (token, denomination) and per-token `claimed_value` / `burned_value`
   (`lez-bridge/bridge/src/lib.rs` lines 1151-1152, 1279-1280).

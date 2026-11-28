@@ -27,7 +27,7 @@ contract OutboundVectorTest is Test {
         mv = new MockVerifier();
         bytes memory args = abi.encode(
             address(mv), OV.UPDATE_IMAGE_ID, keccak256("g3"), bytes32(0), bytes32(0), PROGRAM_ID, OV.GENESIS_STATE,
-            uint64(0), address(this), address(this), address(this)
+            uint64(0), address(this), address(this), address(this), uint64(1 hours)
         );
         deployCodeTo("BridgeVault.sol:BridgeVault", args, VAULT);
         v = BridgeVault(VAULT);

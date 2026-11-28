@@ -82,7 +82,7 @@ contract UpdateGatedVerifierTest is Test {
     function _vault(UpdateGatedVerifier g, bytes32 genesis) internal returns (BridgeVault) {
         return new BridgeVault(
             IRiscZeroVerifier(address(g)), UPDATE_ID, RELEASE_ID, LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID, genesis, 0,
-            address(this), address(this), address(this)
+            address(this), address(this), address(this), 1 hours
         );
     }
 
@@ -362,7 +362,7 @@ contract OutboundVectorGatedTest is Test {
         gate = new UpdateGatedVerifier(r0, OV.UPDATE_IMAGE_ID, submitter);
         bytes memory args = abi.encode(
             address(gate), OV.UPDATE_IMAGE_ID, keccak256("g3"), bytes32(0), bytes32(0), PROGRAM_ID, OV.GENESIS_STATE,
-            uint64(0), address(this), address(this), address(this)
+            uint64(0), address(this), address(this), address(this), uint64(1 hours)
         );
         deployCodeTo("BridgeVault.sol:BridgeVault", args, VAULT);
         v = BridgeVault(VAULT);

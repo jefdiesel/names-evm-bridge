@@ -55,6 +55,11 @@ contract BridgeVault is ReentrancyGuard {
     /// Token address used in freeze events for the global flags.
     address public constant GLOBAL = address(type(uint160).max);
     uint256 internal constant MAX112 = type(uint112).max;
+    /// Bounds on the immutable admin timelock delay (B1.5).
+    uint64 public constant MIN_ADMIN_DELAY = 1 hours;
+    uint64 public constant MAX_ADMIN_DELAY = 30 days;
+    /// Window after `eta` during which a scheduled admin action may be executed before it expires.
+    uint64 public constant ADMIN_GRACE_PERIOD = 7 days;
 
     // ------------------------------------------------------------------ immutables
 
@@ -72,6 +77,9 @@ contract BridgeVault is ReentrancyGuard {
     bytes32 public immutable cfgId;
     /// Lower bound on any token's release delay; the admin can't go below it.
     uint64 public immutable minReleaseDelay;
+    /// Minimum delay between scheduling and executing any safety-weakening admin action (B1.5).
+    /// Enforced in [MIN_ADMIN_DELAY, MAX_ADMIN_DELAY] at deployment.
+    uint64 public immutable adminDelay;
 
     // ------------------------------------------------------------------ roles
 
@@ -182,6 +190,32 @@ contract BridgeVault is ReentrancyGuard {
     mapping(address => mapping(uint256 => DelayStep)) public delaySteps;
     mapping(address => uint256) internal _delayStepCount;
 
+    // ------------------------------------------------------------------ admin timelock (B1.5)
+    // Declared after every older variable so existing slots (isDepositRoot = 83, exitRootTime = 84) don't move.
+
+    /// Admin actions that can weaken safety and therefore require the timelock.
+    /// Verification (verifier, image IDs, LEZ IDs, cfgId, minReleaseDelay, adminDelay) is
+    /// immutable with no setter at all (S#8).
+    enum Action {
+        Unfreeze,        // abi.encode(address token, bool deposits, bool releases)
+        UnfreezeAll,     // abi.encode(bool deposits, bool releases)
+        SetFreezer,      // abi.encode(address next)
+        ProposeAdmin,    // abi.encode(address next)
+        SetFeeRecipient, // abi.encode(address next)
+        SetCaps,         // abi.encode(address token, uint64 window, uint256 depositCap, uint256 releaseCap)
+        SetGlobalCaps,   // abi.encode(uint64 window, uint256 depositCap, uint256 releaseCap)
+        SetCapWeight,    // abi.encode(address token, uint256 weight)
+        SetReleaseDelay, // abi.encode(address token, uint64 delay)
+        SetFees          // abi.encode(address token, uint256[] depositFees, uint256[] withdrawFees)
+    }
+
+    /// Action id -> earliest execution timestamp (`eta`), or 0 if not scheduled (or executed/cancelled).
+    mapping(bytes32 => uint64) public scheduledEta;
+    /// Time of the latest `freeze`/`freezeAll`. An `Unfreeze`/`UnfreezeAll` scheduled before it
+    /// can't be executed, so every unfreeze waits `adminDelay` after the latest freeze (no
+    /// unfreeze queued ahead of an incident can lift the freeze at once).
+    uint64 public lastFreezeAt;
+
     // ------------------------------------------------------------------ journal types
 
     struct ClaimDelta {
@@ -229,6 +263,9 @@ contract BridgeVault is ReentrancyGuard {
     event AdminAccepted(address indexed admin);
     event FreezerSet(address indexed freezer);
     event FeeRecipientSet(address indexed feeRecipient);
+    event ActionScheduled(bytes32 indexed id, Action indexed action, bytes params, uint64 eta);
+    event ActionExecuted(bytes32 indexed id, Action indexed action, bytes params, uint64 eta);
+    event ActionCancelled(bytes32 indexed id, address indexed cancelledBy);
 
     // ------------------------------------------------------------------ errors
 
@@ -268,6 +305,20 @@ contract BridgeVault is ReentrancyGuard {
     error BadRecipient();
     /// release: a non-zero relay fee named the vault itself as relayer.
     error BadRelayer();
+    /// constructor: adminDelay_ outside [MIN_ADMIN_DELAY, MAX_ADMIN_DELAY].
+    error AdminDelayOutOfBounds();
+    /// direct admin setter: change weakens safety and must go through schedule/execute.
+    error TimelockRequired();
+    /// schedule: an active (unexpired) action with this id is already queued.
+    error AlreadyScheduled();
+    /// execute / cancel: no scheduled action with this id.
+    error NotScheduled();
+    /// execute: block.timestamp < eta.
+    error ActionTooEarly();
+    /// execute: block.timestamp >= eta + ADMIN_GRACE_PERIOD.
+    error ActionExpired();
+    /// execute: an Unfreeze/UnfreezeAll scheduled before the latest freeze.
+    error ScheduledBeforeFreeze();
 
     // ------------------------------------------------------------------ constructor
 
@@ -282,10 +333,14 @@ contract BridgeVault is ReentrancyGuard {
         uint64 minReleaseDelay_,
         address admin_,
         address freezer_,
-        address feeRecipient_
+        address feeRecipient_,
+        uint64 adminDelay_
     ) {
         if (address(verifier_) == address(0) || admin_ == address(0) || feeRecipient_ == address(0)) {
             revert ZeroAddress();
+        }
+        if (adminDelay_ < MIN_ADMIN_DELAY || adminDelay_ > MAX_ADMIN_DELAY) {
+            revert AdminDelayOutOfBounds();
         }
         verifier = verifier_;
         updateImageId = updateImageId_;
@@ -295,6 +350,7 @@ contract BridgeVault is ReentrancyGuard {
         programId = programId_;
         cfgId = computeCfgId(block.chainid, address(this), lezChainId_, zoneId_, programId_);
         minReleaseDelay = minReleaseDelay_;
+        adminDelay = adminDelay_;
         g2State = initialG2State;
         admin = admin_;
         freezer = freezer_;
@@ -659,9 +715,17 @@ contract BridgeVault is ReentrancyGuard {
         emit DenominationAdded(token, uint32(c.denoms.length - 1), denom);
     }
 
+    /// Lowering or keeping fees unchanged is instant; raising any deposit or withdraw fee
+    /// weakens safety for users and must go through `schedule(Action.SetFees, ...)` / `execute`.
     function setFees(address token, uint256[] calldata depositFees, uint256[] calldata wFees)
         external
         onlyAdmin
+    {
+        _setFees(token, depositFees, wFees, true);
+    }
+
+    function _setFees(address token, uint256[] memory depositFees, uint256[] memory wFees, bool mustNotRaise)
+        internal
     {
         TokenConfig storage c = _tokens[token];
         if (c.denoms.length == 0) revert NotRegistered();
@@ -671,6 +735,9 @@ contract BridgeVault is ReentrancyGuard {
         for (uint256 i; i < c.denoms.length; ++i) {
             _checkFee(c.denoms[i], depositFees[i]);
             _checkFee(c.denoms[i], wFees[i]);
+            if (mustNotRaise && (depositFees[i] > c.depositFees[i] || wFees[i] > c.withdrawFees[i])) {
+                revert TimelockRequired();
+            }
         }
         c.depositFees = depositFees;
         c.withdrawFees = wFees;
@@ -712,7 +779,19 @@ contract BridgeVault is ReentrancyGuard {
         emit RelayFeeMenuSet(token, menus);
     }
 
+    /// Enabling caps from disabled, lowering either cap, or lengthening the window is instant;
+    /// raising either cap, shortening the window, or disabling caps (`window == 0`) requires the
+    /// admin timelock (`Action.SetCaps`).
     function setCaps(address token, uint64 window, uint256 depositCap, uint256 releaseCap) external onlyAdmin {
+        TokenConfig storage c = _tokens[token];
+        if (c.denoms.length == 0) revert NotRegistered();
+        if (!_isCapTightening(c.capWindow, c.depositCap, c.releaseCap, window, depositCap, releaseCap)) {
+            revert TimelockRequired();
+        }
+        _setCaps(token, window, depositCap, releaseCap);
+    }
+
+    function _setCaps(address token, uint64 window, uint256 depositCap, uint256 releaseCap) internal {
         TokenConfig storage c = _tokens[token];
         if (c.denoms.length == 0) revert NotRegistered();
         // usage already recorded is kept (carried over on a window change)
@@ -724,8 +803,17 @@ contract BridgeVault is ReentrancyGuard {
         emit CapsSet(token, window, depositCap, releaseCap);
     }
 
-    /// Caps across all tokens with a nonzero `capWeight`, in normalised units. Window 0 disables.
+    /// Caps across all tokens with a nonzero `capWeight`, in normalised units. Window 0 disables
+    /// (requires the admin timelock). Enabling, lowering caps, or lengthening the window is instant;
+    /// loosening requires `Action.SetGlobalCaps`.
     function setGlobalCaps(uint64 window, uint256 depositCap, uint256 releaseCap) external onlyAdmin {
+        if (!_isCapTightening(globalCapWindow, globalDepositCap, globalReleaseCap, window, depositCap, releaseCap)) {
+            revert TimelockRequired();
+        }
+        _setGlobalCaps(window, depositCap, releaseCap);
+    }
+
+    function _setGlobalCaps(uint64 window, uint256 depositCap, uint256 releaseCap) internal {
         _rewindow(_globalDep, globalCapWindow, window);
         _rewindow(_globalRel, globalCapWindow, window);
         globalCapWindow = window;
@@ -734,9 +822,29 @@ contract BridgeVault is ReentrancyGuard {
         emit GlobalCapsSet(window, depositCap, releaseCap);
     }
 
+    function _isCapTightening(
+        uint64 curWindow,
+        uint256 curDep,
+        uint256 curRel,
+        uint64 newWindow,
+        uint256 newDep,
+        uint256 newRel
+    ) internal pure returns (bool) {
+        if (newWindow == 0) return false;
+        if (curWindow == 0) return true;
+        return newWindow >= curWindow && newDep <= curDep && newRel <= curRel;
+    }
+
     /// Global units per smallest token unit, scaled by 1e18 (e.g. USD with 6 decimals: USDC
-    /// 1e18, ETH at $3000 3e9). 0 exempts the token from the global caps.
+    /// 1e18, ETH at $3000 3e9). 0 exempts the token from the global caps. Raising or keeping
+    /// the weight is instant; lowering it (including to 0) requires `Action.SetCapWeight`.
     function setCapWeight(address token, uint256 weight) external onlyAdmin {
+        if (_tokens[token].denoms.length == 0) revert NotRegistered();
+        if (weight < capWeight[token]) revert TimelockRequired();
+        _setCapWeight(token, weight);
+    }
+
+    function _setCapWeight(address token, uint256 weight) internal {
         if (_tokens[token].denoms.length == 0) revert NotRegistered();
         capWeight[token] = weight;
         emit CapWeightSet(token, weight);
@@ -749,6 +857,9 @@ contract BridgeVault is ReentrancyGuard {
     /// the same second as a change gets the lower of the two (the order inside a block is not
     /// recorded). Every delay is >= minReleaseDelay, so no root ever waits less than that.
     ///
+    /// Raising or keeping the delay is instant (an emergency brake); lowering it weakens safety
+    /// and requires `Action.SetReleaseDelay` through the admin timelock.
+    ///
     /// The delay is per token but an exit root covers exits of many tokens, so nothing per root
     /// is stored; each token keeps the history it needs (`delaySteps`), a stack where a past
     /// delay survives only while it is below every later delay (one it isn't below can never be
@@ -760,6 +871,14 @@ contract BridgeVault is ReentrancyGuard {
     /// current delay already allows it. No cap: refusing a raise when full would block an
     /// emergency raise, and merging steps would change some root's wait.
     function setReleaseDelay(address token, uint64 delay) external onlyAdmin {
+        TokenConfig storage c = _tokens[token];
+        if (c.denoms.length == 0) revert NotRegistered();
+        if (delay < minReleaseDelay) revert DelayTooShort();
+        if (delay < c.releaseDelay) revert TimelockRequired();
+        _setReleaseDelay(token, delay);
+    }
+
+    function _setReleaseDelay(address token, uint64 delay) internal {
         TokenConfig storage c = _tokens[token];
         if (c.denoms.length == 0) revert NotRegistered();
         if (delay < minReleaseDelay) revert DelayTooShort();
@@ -800,42 +919,29 @@ contract BridgeVault is ReentrancyGuard {
         emit FeesWithdrawn(token, feeRecipient, amount);
     }
 
-    // ------------------------------------------------------------------ admin: freeze and roles
+    // ------------------------------------------------------------------ admin: freeze, roles and timelock
 
-    /// The freezer (or admin) can freeze; only the admin can unfreeze (F#14). Deposits and
-    /// releases are separate flags: a true argument sets (or clears) that flag, false leaves
-    /// it as it is. A release freeze also stops `update` when global, not when per token.
+    /// The freezer (or admin) can freeze immediately; lifting a freeze goes through the admin
+    /// timelock (`Action.Unfreeze` / `Action.UnfreezeAll`) (F#14, B1.5). Deposits and releases
+    /// are separate flags: a true argument sets (or clears) that flag, false leaves it as it is.
+    /// A release freeze also stops `update` when global, not when per token.
     function freeze(address token, bool deposits, bool releases) external onlyFreezer {
         TokenConfig storage c = _tokens[token];
         if (deposits) c.depositsFrozen = true;
         if (releases) c.releasesFrozen = true;
+        lastFreezeAt = uint64(block.timestamp);
         emit Frozen(token, deposits, releases);
     }
 
     function freezeAll(bool deposits, bool releases) external onlyFreezer {
         if (deposits) globalDepositsFrozen = true;
         if (releases) globalReleasesFrozen = true;
+        lastFreezeAt = uint64(block.timestamp);
         emit Frozen(GLOBAL, deposits, releases);
     }
 
-    function unfreeze(address token, bool deposits, bool releases) external onlyAdmin {
-        TokenConfig storage c = _tokens[token];
-        if (deposits) c.depositsFrozen = false;
-        if (releases) c.releasesFrozen = false;
-        emit Unfrozen(token, deposits, releases);
-    }
-
-    function unfreezeAll(bool deposits, bool releases) external onlyAdmin {
-        if (deposits) globalDepositsFrozen = false;
-        if (releases) globalReleasesFrozen = false;
-        emit Unfrozen(GLOBAL, deposits, releases);
-    }
-
-    function proposeAdmin(address next) external onlyAdmin {
-        pendingAdmin = next;
-        emit AdminProposed(next);
-    }
-
+    /// Second step of the two-step admin handover. `pendingAdmin` can only be set through
+    /// `schedule(Action.ProposeAdmin, ...)` / `execute`.
     function acceptAdmin() external {
         if (msg.sender != pendingAdmin) revert NotPendingAdmin();
         admin = msg.sender;
@@ -843,15 +949,91 @@ contract BridgeVault is ReentrancyGuard {
         emit AdminAccepted(msg.sender);
     }
 
-    function setFreezer(address next) external onlyAdmin {
-        freezer = next;
-        emit FreezerSet(next);
+    /// Deterministic id of a timelocked admin action.
+    function actionId(Action action, bytes calldata params) public pure returns (bytes32) {
+        return keccak256(abi.encode(action, params));
     }
 
-    function setFeeRecipient(address next) external onlyAdmin {
-        if (next == address(0)) revert ZeroAddress();
-        feeRecipient = next;
-        emit FeeRecipientSet(next);
+    /// Queue a safety-weakening admin action for execution at `eta = block.timestamp + adminDelay`.
+    /// An already-scheduled action cannot be overwritten until it is executed, cancelled, or
+    /// expired (`block.timestamp >= eta + ADMIN_GRACE_PERIOD`).
+    function schedule(Action action, bytes calldata params) external onlyAdmin returns (bytes32 id) {
+        id = actionId(action, params);
+        uint64 existing = scheduledEta[id];
+        if (existing != 0 && block.timestamp < uint256(existing) + ADMIN_GRACE_PERIOD) {
+            revert AlreadyScheduled();
+        }
+        uint64 eta = uint64(block.timestamp) + adminDelay;
+        scheduledEta[id] = eta;
+        emit ActionScheduled(id, action, params, eta);
+    }
+
+    /// Execute a scheduled admin action once `block.timestamp >= eta` and strictly before
+    /// `eta + ADMIN_GRACE_PERIOD`. Clears `scheduledEta[id]` first so it cannot execute twice.
+    function execute(Action action, bytes calldata params) external onlyAdmin {
+        bytes32 id = actionId(action, params);
+        uint64 eta = scheduledEta[id];
+        if (eta == 0) revert NotScheduled();
+        if (block.timestamp < eta) revert ActionTooEarly();
+        if (block.timestamp >= uint256(eta) + ADMIN_GRACE_PERIOD) revert ActionExpired();
+        if ((action == Action.Unfreeze || action == Action.UnfreezeAll) && eta - adminDelay < lastFreezeAt) {
+            revert ScheduledBeforeFreeze();
+        }
+        scheduledEta[id] = 0;
+
+        if (action == Action.Unfreeze) {
+            (address token, bool deposits, bool releases) = abi.decode(params, (address, bool, bool));
+            TokenConfig storage c = _tokens[token];
+            if (deposits) c.depositsFrozen = false;
+            if (releases) c.releasesFrozen = false;
+            emit Unfrozen(token, deposits, releases);
+        } else if (action == Action.UnfreezeAll) {
+            (bool deposits, bool releases) = abi.decode(params, (bool, bool));
+            if (deposits) globalDepositsFrozen = false;
+            if (releases) globalReleasesFrozen = false;
+            emit Unfrozen(GLOBAL, deposits, releases);
+        } else if (action == Action.SetFreezer) {
+            address next = abi.decode(params, (address));
+            freezer = next;
+            emit FreezerSet(next);
+        } else if (action == Action.ProposeAdmin) {
+            address next = abi.decode(params, (address));
+            pendingAdmin = next;
+            emit AdminProposed(next);
+        } else if (action == Action.SetFeeRecipient) {
+            address next = abi.decode(params, (address));
+            if (next == address(0)) revert ZeroAddress();
+            feeRecipient = next;
+            emit FeeRecipientSet(next);
+        } else if (action == Action.SetCaps) {
+            (address token, uint64 window, uint256 depositCap, uint256 releaseCap) =
+                abi.decode(params, (address, uint64, uint256, uint256));
+            _setCaps(token, window, depositCap, releaseCap);
+        } else if (action == Action.SetGlobalCaps) {
+            (uint64 window, uint256 depositCap, uint256 releaseCap) =
+                abi.decode(params, (uint64, uint256, uint256));
+            _setGlobalCaps(window, depositCap, releaseCap);
+        } else if (action == Action.SetCapWeight) {
+            (address token, uint256 weight) = abi.decode(params, (address, uint256));
+            _setCapWeight(token, weight);
+        } else if (action == Action.SetReleaseDelay) {
+            (address token, uint64 delay) = abi.decode(params, (address, uint64));
+            _setReleaseDelay(token, delay);
+        } else {
+            (address token, uint256[] memory depositFees, uint256[] memory wFees) =
+                abi.decode(params, (address, uint256[], uint256[]));
+            _setFees(token, depositFees, wFees, false);
+        }
+
+        emit ActionExecuted(id, action, params, eta);
+    }
+
+    /// Cancel a scheduled admin action. Callable by the admin OR the freezer, so the freezer
+    /// can veto a hostile change (e.g. swapping the freezer or lifting a freeze).
+    function cancel(bytes32 id) external onlyFreezer {
+        if (scheduledEta[id] == 0) revert NotScheduled();
+        scheduledEta[id] = 0;
+        emit ActionCancelled(id, msg.sender);
     }
 
     // ------------------------------------------------------------------ views

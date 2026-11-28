@@ -69,6 +69,8 @@ contract SepoliaDemoV3 is Script {
     uint64 constant MIN_RELEASE_DELAY = 10 minutes;
     uint64 constant RELEASE_DELAY = 10 minutes;
     uint64 constant CAP_WINDOW = 1 days;
+    /// PLACEHOLDER admin timelock delay, not a decided value: adminDelay is immutable, ask the owner before deploy.
+    uint64 constant ADMIN_DELAY = 2 days;
     uint256 constant DEFAULT_LIFETIME = 180 days;
     bytes32 constant DEMO_KIND_HASH = keccak256("demo-attested: an operator checked the proof off chain; NOT trustless");
 
@@ -182,7 +184,8 @@ contract SepoliaDemoV3 is Script {
             MIN_RELEASE_DELAY,
             me, // admin
             me, // freezer
-            me // fee recipient
+            me, // fee recipient
+            ADMIN_DELAY // placeholder: ask the owner before deploy
         );
         vm.stopBroadcast();
 
@@ -192,6 +195,7 @@ contract SepoliaDemoV3 is Script {
         require(dv.EXPIRES_AT() == block.timestamp + p.lifetime, "EXPIRES_AT");
         require(v.updateImageId() == p.updateImageId && v.releaseImageId() == p.releaseImageId, "image ids");
         require(v.minReleaseDelay() == MIN_RELEASE_DELAY, "minReleaseDelay");
+        require(v.adminDelay() == ADMIN_DELAY, "adminDelay");
         require(v.g2State() == p.initialG2State, "g2State");
         require(v.cfgId() == v.computeCfgId(SEPOLIA, address(v), p.lezChainId, p.zoneId, p.programId), "cfgId");
     }

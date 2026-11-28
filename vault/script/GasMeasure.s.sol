@@ -39,7 +39,7 @@ contract GasMeasure is Script {
         MockVerifier mv = new MockVerifier();
         TestToken usdc = new TestToken("USDC", 6);
         NoReturnToken usdt = new NoReturnToken();
-        BridgeVault v = new BridgeVault(IRiscZeroVerifier(address(mv)), G2, G3, bytes32(0), bytes32(0), keccak256("program"), bytes32(0), 1 hours, d, d, d);
+        BridgeVault v = new BridgeVault(IRiscZeroVerifier(address(mv)), G2, G3, bytes32(0), bytes32(0), keccak256("program"), bytes32(0), 1 hours, d, d, d, 1 hours);
         uint256[] memory dn = new uint256[](1);
         dn[0] = 100e6;
         uint256[] memory f = new uint256[](1);

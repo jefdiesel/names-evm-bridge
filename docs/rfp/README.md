@@ -98,8 +98,8 @@ those of `main` `5322a30`, before the fixes.
 
 1. `DESIGN.md:539` (§7, Admin row) lists what the admin can do without the LEZ bridge admin's `SetAttestor`
    (`lez-bridge/bridge/src/lib.rs:1228`), which on a stand-in config (v2–v5) lets the admin mint unbacked wrapped
-   tokens; nor that the vault admin can freeze (`vault/src/BridgeVault.sol:324-327`) or stop a token's releases with a
-   cap of 0 (`BridgeVault.sol:564-571`).
+   tokens; nor that the vault admin can freeze (`vault/src/BridgeVault.sol:380-383`) or stop a token's releases with a
+   cap of 0 (`BridgeVault.sol:620-627`).
 2. `DESIGN.md:408` and `:413` say the sequencer-signature route ran "on throwaway local chains only" and list "real proofs
    on Sepolia" as not shown; vault v7 ran it with real proofs on Sepolia, including an ejection (`docs/EVIDENCE.md`,
    rows `v7` and `v7-equivocation`). (`DESIGN.md:55` and `:407` concern G2's own fork contest on Logos Blockchain

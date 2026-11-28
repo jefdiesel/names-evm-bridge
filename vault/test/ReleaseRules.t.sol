@@ -97,8 +97,18 @@ contract ReleaseRulesTest is VaultFixture {
             } else if (op <= 2) {
                 DelayModel memory dm = m[op - 1];
                 uint64 d = _pickDelay(s, dm.current);
-                vm.prank(admin);
-                v.setReleaseDelay(toks[op - 1], d);
+                if (d < dm.current) {
+                    bytes memory p = abi.encode(toks[op - 1], d);
+                    vm.prank(admin);
+                    bytes32 id = v.schedule(BridgeVault.Action.SetReleaseDelay, p);
+                    clock = v.scheduledEta(id);
+                    vm.warp(clock);
+                    vm.prank(admin);
+                    v.execute(BridgeVault.Action.SetReleaseDelay, p);
+                } else {
+                    vm.prank(admin);
+                    v.setReleaseDelay(toks[op - 1], d);
+                }
                 if (d != dm.current) {
                     dm.at[dm.n] = clock;
                     dm.delay[dm.n++] = d;
@@ -145,6 +155,10 @@ contract ReleaseRulesTest is VaultFixture {
     /// may lengthen that: it is releasable at T0 + 1 day. A root recorded during the raise waits
     /// min(7 days, 3 days). A later emergency raise applies only to roots recorded after it.
     function test_LaterLoweringNeverLengthensRecordedWait() public {
+        bytes memory lowerParams = abi.encode(address(usdc), uint64(3 days));
+        vm.warp(T0 + 2 hours - ADMIN_DELAY);
+        vm.prank(admin);
+        v.schedule(BridgeVault.Action.SetReleaseDelay, lowerParams);
         vm.warp(T0);
         bytes32 r = _batch(1, "r"); // recorded under 1 day
         vm.warp(T0 + 1 hours);
@@ -154,7 +168,7 @@ contract ReleaseRulesTest is VaultFixture {
         bytes32 r7 = _batch(1, "r7"); // recorded under 7 days
         vm.warp(T0 + 2 hours);
         vm.prank(admin);
-        v.setReleaseDelay(address(usdc), 3 days); // a lowering
+        v.execute(BridgeVault.Action.SetReleaseDelay, lowerParams); // a lowering (timelocked)
         assertEq(v.releasableAt(address(usdc), r), T0 + DELAY);
         assertEq(v.releasableAt(address(usdc), r7), T0 + 1 hours + 1 + 3 days);
 
@@ -399,14 +413,12 @@ contract ReleaseRulesTest is VaultFixture {
         v.freeze(address(usdc), false, true);
         vm.expectRevert(BridgeVault.IsFrozen.selector);
         v.release(seal, root, nf, address(usdc), 0, bob, relayer, 2e6);
-        vm.prank(admin);
-        v.unfreeze(address(usdc), false, true);
+        _execAsAdmin(BridgeVault.Action.Unfreeze, abi.encode(address(usdc), false, true));
         vm.prank(admin);
         v.setCaps(address(usdc), 1 days, type(uint256).max, 50e6);
         vm.expectRevert(BridgeVault.CapExceeded.selector);
         v.release(seal, root, nf, address(usdc), 0, bob, relayer, 2e6);
-        vm.prank(admin);
-        v.setCaps(address(usdc), 0, 0, 0);
+        _execAsAdmin(BridgeVault.Action.SetCaps, abi.encode(address(usdc), uint64(0), uint256(0), uint256(0)));
         vm.expectRevert(MockVerifier.BadSeal.selector);
         v.release(seal, root, nf, address(usdc), 0, address(0xBAD), relayer, 2e6);
         assertFalse(v.releaseNullifierSpent(nf));

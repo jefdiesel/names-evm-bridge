@@ -13,9 +13,13 @@ contract DepositsTest is VaultFixture {
     // ------------------------------------------------------------------ A3: USDT-style full path
 
     function test_UsdtFullPathExactBalances() public {
+        bytes memory feeParams = abi.encode(address(usdt), _arr(1e6, 10e6), _arr(1.5e6, 20e6)); // deposit 1 / withdraw 1.5 on 100
+        vm.warp(T0 - ADMIN_DELAY);
+        vm.prank(admin);
+        v.schedule(BridgeVault.Action.SetFees, feeParams);
         vm.warp(T0);
         vm.startPrank(admin);
-        v.setFees(address(usdt), _arr(1e6, 10e6), _arr(1.5e6, 20e6)); // deposit 1 / withdraw 1.5 on 100
+        v.execute(BridgeVault.Action.SetFees, feeParams);
         v.setRelayFeeMenu(address(usdt), _menu2(_one(2e6), new uint256[](0)));
         vm.stopPrank();
 
@@ -75,8 +79,7 @@ contract DepositsTest is VaultFixture {
         uint256 denom = big ? 1 ether : 0.1 ether;
         uint256 fee = bound(feeSeed, 0, denom * 200 / 10_000);
         uint256[] memory dfees = big ? _arr(0, fee) : _arr(fee, 0);
-        vm.prank(admin);
-        v.setFees(address(0), dfees, _arr(0.001 ether, 0.01 ether));
+        _execAsAdmin(BridgeVault.Action.SetFees, abi.encode(address(0), dfees, _arr(0.001 ether, 0.01 ether)));
         value = bound(value, 0, 100 ether);
         vm.assume(value != denom + fee);
 
@@ -108,8 +111,9 @@ contract DepositsTest is VaultFixture {
     /// The values next to the right one: denom + fee +- 1, the bare denomination when a fee is
     /// due, the denomination plus twice the fee, and 0. All refused, nothing recorded.
     function test_DepositEthNearMissAmounts() public {
-        vm.prank(admin);
-        v.setFees(address(0), _arr(0.002 ether, 0.02 ether), _arr(0.001 ether, 0.01 ether));
+        _execAsAdmin(
+            BridgeVault.Action.SetFees, abi.encode(address(0), _arr(0.002 ether, 0.02 ether), _arr(0.001 ether, 0.01 ether))
+        );
         uint256[2] memory denoms = [uint256(0.1 ether), 1 ether];
         uint256[2] memory fees = [uint256(0.002 ether), 0.02 ether];
         for (uint32 d; d < 2; ++d) {
@@ -151,8 +155,7 @@ contract DepositsTest is VaultFixture {
         uint256 denom = big ? 1000e6 : 100e6;
         uint256 fee = bound(depFee, 0, denom * 200 / 10_000);
         uint256 wf = bound(wFee, 0, 2e6);
-        vm.prank(admin);
-        v.setFees(t, big ? _arr(1e6, fee) : _arr(fee, 10e6), _arr(wf, 0));
+        _execAsAdmin(BridgeVault.Action.SetFees, abi.encode(t, big ? _arr(1e6, fee) : _arr(fee, 10e6), _arr(wf, 0)));
 
         uint256 aliceBefore = _bal(t, alice);
         uint256 vaultBefore = _bal(t, address(v));

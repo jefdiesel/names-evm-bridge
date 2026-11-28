@@ -253,6 +253,9 @@ flow: its secrets derive from the recovery phrase and the account id under a sep
 - Context and decision: today neither `BridgeVault.sol` nor the LEZ bridge has a timelock on changing the freezer
   (`setFreezer`, `SetFreezer`) or lifting freezes (`unfreeze`/`unfreezeAll`, `Unfreeze`): the admin can do both at once.
   This is disclosed as a known limit, and M4 adds an admin timelock.
+- Follow-up (2026-11-27): the vault half is closed in code on main (`BridgeVault.sol` `schedule`/`execute`/`cancel`,
+  immutable `adminDelay`; `vault/README.md`), not deployed; the deploy value of `adminDelay` is the owner's decision at
+  deploy time. The LEZ bridge half is still open.
 - Source: proposal #281 Technical Approach §6; `SECURITY.md` "Known limits".
 
 **D38 (2026-11-27, owner's decision). Reproducible guest builds with RISC Zero's Docker builder are set up in M1 (not

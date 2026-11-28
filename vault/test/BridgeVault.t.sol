@@ -198,15 +198,17 @@ contract BridgeVaultTest is VaultFixture {
     /// Same constructor arguments on another chain, or at another address, give another cfgId.
     function test_CfgIdBindsChainAndAddress() public {
         bytes32 base = v.cfgId();
-        BridgeVault other =
-            new BridgeVault(IRiscZeroVerifier(address(mv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo);
+        BridgeVault other = new BridgeVault(
+            IRiscZeroVerifier(address(mv)), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, 1 hours, admin, freezer, feeTo, ADMIN_DELAY
+        );
         assertTrue(address(other) != address(v));
         assertTrue(other.cfgId() != base);
         assertEq(other.cfgId(), _cfgRef(block.chainid, address(other), LEZ_CHAIN, ZONE, PROGRAM));
 
         // same address, other chain id: redeploy at v's address with chain id changed
         uint256 chain0 = block.chainid;
-        bytes memory args = abi.encode(address(mv), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, uint64(1 hours), admin, freezer, feeTo);
+        bytes memory args =
+            abi.encode(address(mv), G2, G3, LEZ_CHAIN, ZONE, PROGRAM, S0, uint64(1 hours), admin, freezer, feeTo, uint64(ADMIN_DELAY));
         address at = address(0xC0FFEE);
         deployCodeTo("BridgeVault.sol:BridgeVault", args, at);
         bytes32 here = BridgeVault(at).cfgId();
@@ -232,9 +234,8 @@ contract BridgeVaultTest is VaultFixture {
         v.deposit(address(usdc), 0, keccak256("c"));
         vm.prank(freezer);
         vm.expectRevert(BridgeVault.NotAdmin.selector);
-        v.unfreeze(address(usdc), true, true);
-        vm.prank(admin);
-        v.unfreeze(address(usdc), true, true);
+        v.schedule(BridgeVault.Action.Unfreeze, abi.encode(address(usdc), true, true));
+        _execAsAdmin(BridgeVault.Action.Unfreeze, abi.encode(address(usdc), true, true));
         _deposit(0, keccak256("c"));
 
         vm.prank(freezer);
@@ -248,12 +249,11 @@ contract BridgeVaultTest is VaultFixture {
         v.freezeAll(true, false);
         vm.prank(freezer);
         vm.expectRevert(BridgeVault.NotAdmin.selector);
-        v.unfreezeAll(true, true);
+        v.schedule(BridgeVault.Action.UnfreezeAll, abi.encode(true, true));
     }
 
     function test_AdminTwoStep() public {
-        vm.prank(admin);
-        v.proposeAdmin(bob);
+        _execAsAdmin(BridgeVault.Action.ProposeAdmin, abi.encode(bob));
         vm.expectRevert(BridgeVault.NotPendingAdmin.selector);
         v.acceptAdmin();
         vm.prank(bob);
@@ -974,65 +974,83 @@ contract BridgeVaultTest is VaultFixture {
     }
 
     function test_GlobalReleaseCapAndExemption() public {
+        uint256 t0 = 1_000_000;
+        vm.warp(t0);
         bytes32 root = _bridgeOut(3, 3);
+        bytes memory pWeight0 = abi.encode(address(usdc), uint256(0));
         vm.startPrank(admin);
         v.setGlobalCaps(1 days, type(uint256).max, 300e6);
         v.setCapWeight(address(usdc), 2e18); // 100 USDC counts 200 units
+        bytes32 id = v.schedule(BridgeVault.Action.SetCapWeight, pWeight0);
         vm.stopPrank();
-        vm.warp(block.timestamp + DELAY);
+        vm.warp(v.scheduledEta(id));
         _rel(root, keccak256("nf1"));
         (,,,, uint256 relUsed) = v.globalCapState();
         assertEq(relUsed, 200e6);
         _relExpect(root, keccak256("nf2"), BridgeVault.CapExceeded.selector);
         vm.prank(admin);
-        v.setCapWeight(address(usdc), 0);
+        v.execute(BridgeVault.Action.SetCapWeight, pWeight0);
         _rel(root, keccak256("nf2"));
         _rel(root, keccak256("nf3"));
     }
 
     /// Lowering, raising, re-windowing and disabling caps never leaves releases stuck.
     function test_ChangingCapsDoesNotBrickReleases() public {
+        uint256 t0 = 1_000_000;
+        vm.warp(t0);
         bytes32 root = _bridgeOut(6, 6);
+        bytes memory pRaise = abi.encode(address(usdc), uint64(1 days), type(uint256).max, uint256(1000e6));
+        bytes memory pShort = abi.encode(address(usdc), uint64(1 hours), type(uint256).max, uint256(250e6));
+        bytes memory pOff = abi.encode(address(usdc), uint64(0), uint256(0), uint256(0));
+        bytes memory pGOff = abi.encode(uint64(0), uint256(0), uint256(0));
+        bytes memory pLift = abi.encode(address(usdc), uint64(1 days), type(uint256).max, type(uint256).max);
         vm.startPrank(admin);
         v.setCaps(address(usdc), 1 days, type(uint256).max, 150e6);
         v.setGlobalCaps(1 days, type(uint256).max, 1000e6);
         v.setCapWeight(address(usdc), 1e18);
+        // Pre-schedule the weakening cap changes so they execute at t1 without rolling cap buckets.
+        v.schedule(BridgeVault.Action.SetCaps, pRaise);
+        v.schedule(BridgeVault.Action.SetCaps, pShort);
+        v.schedule(BridgeVault.Action.SetCaps, pOff);
+        v.schedule(BridgeVault.Action.SetGlobalCaps, pGOff);
+        v.schedule(BridgeVault.Action.SetCaps, pLift);
         vm.stopPrank();
-        vm.warp(block.timestamp + DELAY);
+        uint256 t1 = t0 + ADMIN_DELAY;
+        vm.warp(t1);
         _rel(root, keccak256("nf1"));
-        // lower below current usage: refused, not broken
+        // lower below current usage: refused, not broken (tightening is instant)
         vm.prank(admin);
         v.setCaps(address(usdc), 1 days, type(uint256).max, 50e6);
         _relExpect(root, keccak256("nf2"), BridgeVault.CapExceeded.selector);
-        // raise: goes through at once
+        // raise (timelocked): goes through once executed
         vm.prank(admin);
-        v.setCaps(address(usdc), 1 days, type(uint256).max, 1000e6);
+        v.execute(BridgeVault.Action.SetCaps, pRaise);
         _rel(root, keccak256("nf2"));
-        // shorter window: usage (200) carries over, and a cap of 250 refuses a third 100
+        // shorter window (timelocked): usage (200) carries over, and a cap of 250 refuses a third 100
         vm.prank(admin);
-        v.setCaps(address(usdc), 1 hours, type(uint256).max, 250e6);
+        v.execute(BridgeVault.Action.SetCaps, pShort);
         (,,,, uint256 relUsed) = v.capState(address(usdc));
         assertEq(relUsed, 200e6);
         _relExpect(root, keccak256("nf3"), BridgeVault.CapExceeded.selector);
-        vm.warp(block.timestamp + 2 hours);
+        vm.warp(t1 + 2 hours);
         _rel(root, keccak256("nf3"));
-        // longer global window (usage carries over), then the token cap off entirely
+        // longer global window (instant; usage carries over), then the token cap off entirely (timelocked)
         vm.startPrank(admin);
         v.setGlobalCaps(7 days, type(uint256).max, 1000e6);
-        v.setCaps(address(usdc), 0, 0, 0);
+        v.execute(BridgeVault.Action.SetCaps, pOff);
         vm.stopPrank();
         (,,,, uint256 gUsed) = v.globalCapState();
         assertEq(gUsed, 300e6);
         _rel(root, keccak256("nf4"));
-        // re-enable with a window it never had: starts empty
+        // re-enable with a window it never had (instant): starts empty
         vm.prank(admin);
         v.setCaps(address(usdc), 1 days, type(uint256).max, 100e6);
         _rel(root, keccak256("nf5"));
         _relExpect(root, keccak256("nf6"), BridgeVault.CapExceeded.selector);
-        // global off too, token cap lifted
+        // global off too, token cap lifted (both timelocked)
         vm.startPrank(admin);
-        v.setGlobalCaps(0, 0, 0);
-        v.setCaps(address(usdc), 1 days, type(uint256).max, type(uint256).max);
+        v.execute(BridgeVault.Action.SetGlobalCaps, pGOff);
+        v.execute(BridgeVault.Action.SetCaps, pLift);
         vm.stopPrank();
         _rel(root, keccak256("nf6"));
     }
@@ -1070,13 +1088,16 @@ contract BridgeVaultTest is VaultFixture {
         // a per-token release freeze doesn't stop update
         _batch(1, "b1");
         // unfreezing deposits only leaves releases frozen
-        vm.prank(admin);
-        v.unfreeze(address(usdc), true, false);
+        _execAsAdmin(BridgeVault.Action.Unfreeze, abi.encode(address(usdc), true, false));
         _relExpect(root, keccak256("nf1"), BridgeVault.IsFrozen.selector);
+        bytes memory pRel = abi.encode(address(usdc), false, true);
+        vm.prank(admin);
+        bytes32 idRel = v.schedule(BridgeVault.Action.Unfreeze, pRel);
+        vm.warp(v.scheduledEta(idRel));
         vm.expectEmit(true, false, false, true, address(v));
         emit BridgeVault.Unfrozen(address(usdc), false, true);
         vm.prank(admin);
-        v.unfreeze(address(usdc), false, true);
+        v.execute(BridgeVault.Action.Unfreeze, pRel);
         _rel(root, keccak256("nf1"));
     }
 
@@ -1097,8 +1118,7 @@ contract BridgeVaultTest is VaultFixture {
         _update(_journal(v.g2State(), keccak256("s9"), new bytes32[](0), new BridgeVault.ClaimDelta[](0), new BridgeVault.Exit[](0)));
         vm.warp(block.timestamp + DELAY);
         _rel(root, keccak256("nf1"));
-        vm.prank(admin);
-        v.unfreezeAll(true, false);
+        _execAsAdmin(BridgeVault.Action.UnfreezeAll, abi.encode(true, false));
         _deposit(0, keccak256("x"));
     }
 
@@ -1118,11 +1138,9 @@ contract BridgeVaultTest is VaultFixture {
         vm.prank(alice);
         v.depositETH{value: 0.1 ether}(0, keccak256("z"));
         // clearing the deposit flag leaves the release flag set
-        vm.prank(admin);
-        v.unfreezeAll(true, false);
+        _execAsAdmin(BridgeVault.Action.UnfreezeAll, abi.encode(true, false));
         _relExpect(root, keccak256("nf1"), BridgeVault.IsFrozen.selector);
-        vm.prank(admin);
-        v.unfreezeAll(false, true);
+        _execAsAdmin(BridgeVault.Action.UnfreezeAll, abi.encode(false, true));
         v.update(j, seal);
         _rel(root, keccak256("nf1"));
     }
@@ -1135,11 +1153,9 @@ contract BridgeVaultTest is VaultFixture {
         v.freeze(address(usdc), false, true);
         v.freezeAll(false, true);
         vm.stopPrank();
-        vm.prank(admin);
-        v.unfreezeAll(false, true);
+        _execAsAdmin(BridgeVault.Action.UnfreezeAll, abi.encode(false, true));
         _relExpect(root, keccak256("nf1"), BridgeVault.IsFrozen.selector); // token flag still set
-        vm.prank(admin);
-        v.unfreeze(address(usdc), false, true);
+        _execAsAdmin(BridgeVault.Action.Unfreeze, abi.encode(address(usdc), false, true));
         _rel(root, keccak256("nf1"));
         // admin can freeze too
         vm.prank(admin);
@@ -1179,11 +1195,15 @@ contract BridgeVaultTest is VaultFixture {
     function test_LowerDelayAppliesToAll() public {
         // a literal, not block.timestamp: via-IR may re-read TIMESTAMP after a warp
         uint256 t0 = 1_000_000;
+        bytes memory lowerParams = abi.encode(address(usdc), uint64(2 hours));
+        vm.warp(t0 + 1 hours - ADMIN_DELAY);
+        vm.prank(admin);
+        v.schedule(BridgeVault.Action.SetReleaseDelay, lowerParams);
         vm.warp(t0);
         bytes32 r0 = _bridgeOut(2, 2);
         vm.warp(t0 + 1 hours);
         vm.prank(admin);
-        v.setReleaseDelay(address(usdc), 2 hours);
+        v.execute(BridgeVault.Action.SetReleaseDelay, lowerParams);
         bytes32 r1 = _batch(2, "b1");
         vm.warp(t0 + 2 hours);
         _rel(r0, keccak256("nf0")); // old root, new shorter delay
@@ -1203,13 +1223,16 @@ contract BridgeVaultTest is VaultFixture {
         vm.warp(t0);
         bytes32 r0 = _bridgeOut(2, 2);
         vm.warp(t0 + DELAY); // r0 releasable
-        vm.prank(admin);
+        bytes memory adjParams = abi.encode(address(usdc), uint64(3 days));
+        vm.startPrank(admin);
         v.setReleaseDelay(address(usdc), 7 days);
+        v.schedule(BridgeVault.Action.SetReleaseDelay, adjParams);
+        vm.stopPrank();
         vm.warp(t0 + DELAY + 1);
         bytes32 r1 = _batch(2, "b1"); // seen under 7 days
         vm.warp(t0 + DELAY + 2 days);
         vm.prank(admin);
-        v.setReleaseDelay(address(usdc), 3 days);
+        v.execute(BridgeVault.Action.SetReleaseDelay, adjParams);
         _rel(r0, keccak256("nf0"));
         vm.warp(t0 + DELAY + 1 + 3 days - 1);
         _relExpect(r1, keccak256("nf1"), BridgeVault.ReleaseTooEarly.selector); // not DELAY

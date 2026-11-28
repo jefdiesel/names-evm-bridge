@@ -20,7 +20,7 @@ contract VectorsTest is Test {
         MockVerifier mv = new MockVerifier();
         bytes memory args = abi.encode(
             address(mv), bytes32(0), bytes32(0), LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID, bytes32(0), uint64(0),
-            address(this), address(this), address(this)
+            address(this), address(this), address(this), uint64(1 hours)
         );
         deployCodeTo("BridgeVault.sol:BridgeVault", args, VAULT);
         BridgeVault v = BridgeVault(VAULT);

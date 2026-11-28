@@ -25,7 +25,7 @@ contract ReleaseVectorTest is Test {
         mv = new MockVerifier();
         bytes memory args = abi.encode(
             address(mv), G2, G3, RV.LEZ_CHAIN_ID, RV.ZONE_ID, RV.PROGRAM_ID, bytes32(0), uint64(0),
-            address(this), address(this), address(this)
+            address(this), address(this), address(this), uint64(1 hours)
         );
         deployCodeTo("BridgeVault.sol:BridgeVault", args, RV.VAULT);
         v = BridgeVault(RV.VAULT);

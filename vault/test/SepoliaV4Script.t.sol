@@ -50,7 +50,7 @@ contract SepoliaV4ScriptTest is Test {
     function _p() internal view returns (SepoliaV4.Params memory) {
         return SepoliaV4.Params(
             address(r0), submitter, RELEASE_ID, UPDATE_ID, PROGRAM_ID, address(0), LEZ_CHAIN_ID, ZONE_ID, G2_STATE0,
-            1 hours, 1 hours // v4's delays
+            1 hours, 1 hours, 2 days // v4's delays + placeholder adminDelay
         );
     }
 
@@ -65,6 +65,7 @@ contract SepoliaV4ScriptTest is Test {
         assertEq(v.updateImageId(), UPDATE_ID);
         assertEq(v.releaseImageId(), RELEASE_ID);
         assertEq(v.minReleaseDelay(), 1 hours);
+        assertEq(v.adminDelay(), 2 days);
         assertEq(v.admin(), ANVIL0);
         assertEq(v.freezer(), ANVIL0);
         assertEq(v.g2State(), G2_STATE0);
@@ -167,6 +168,12 @@ contract SepoliaV4ScriptTest is Test {
         p.releaseDelay = 31 days;
         p.minReleaseDelay = 31 days;
         _expectDeployRevert(p, "delay above 30 days");
+        p = _p();
+        p.adminDelay = 1 hours - 1;
+        _expectDeployRevert(p, "ADMIN_DELAY_SECONDS out of bounds (1 hour .. 30 days)");
+        p = _p();
+        p.adminDelay = 30 days + 1;
+        _expectDeployRevert(p, "ADMIN_DELAY_SECONDS out of bounds (1 hour .. 30 days)");
         vm.chainId(1);
         _expectDeployRevert(_p(), "not Sepolia");
     }
@@ -175,7 +182,7 @@ contract SepoliaV4ScriptTest is Test {
     function test_ConfigureRefusesOtherVaults() public {
         (, BridgeVault v, DemoUSDC usdc) = h.deploy(ANVIL0_PK, _p());
         BridgeVault plain = new BridgeVault(
-            r0, UPDATE_ID, RELEASE_ID, LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID, G2_STATE0, 0, ANVIL0, ANVIL0, ANVIL0
+            r0, UPDATE_ID, RELEASE_ID, LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID, G2_STATE0, 0, ANVIL0, ANVIL0, ANVIL0, 2 days
         );
         vm.expectRevert();
         h.configureVault(ANVIL0_PK, plain, address(usdc), 1 hours);
@@ -197,6 +204,7 @@ contract SepoliaV4ScriptTest is Test {
         SepoliaV4.Params memory p = h.params();
         assertEq(p.minReleaseDelay, 0);
         assertEq(p.releaseDelay, 0);
+        assertEq(p.adminDelay, 2 days);
         assertEq(p.risc0Verifier, address(r0));
         assertEq(p.submitter, submitter);
         assertEq(p.releaseImageId, RELEASE_ID);
@@ -244,10 +252,19 @@ contract SepoliaV4ScriptTest is Test {
         assertEq(bob.balance, 0.01 ether);
         vm.expectRevert(BridgeVault.NullifierSpent.selector);
         v.release(rs, root, nf, address(0), 0, bob, address(0), 0);
-        // The admin can still raise the delay later (an emergency brake); a lowering back to 0 is allowed.
+        // The admin can still raise the delay later (an emergency brake); a lowering back to 0 goes through the timelock.
         vm.prank(ANVIL0);
         v.setReleaseDelay(address(0), 1 hours);
         vm.prank(ANVIL0);
+        vm.expectRevert(BridgeVault.TimelockRequired.selector);
         v.setReleaseDelay(address(0), 0);
+        bytes memory lowerParams = abi.encode(address(0), uint64(0));
+        vm.prank(ANVIL0);
+        bytes32 id = v.schedule(BridgeVault.Action.SetReleaseDelay, lowerParams);
+        vm.warp(v.scheduledEta(id));
+        vm.prank(ANVIL0);
+        v.execute(BridgeVault.Action.SetReleaseDelay, lowerParams);
+        (,,,, delay,,,,) = v.tokenConfig(address(0));
+        assertEq(delay, 0);
     }
 }

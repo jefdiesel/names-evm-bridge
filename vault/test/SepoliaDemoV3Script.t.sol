@@ -63,6 +63,7 @@ contract SepoliaDemoV3ScriptTest is Test {
         assertEq(v.updateImageId(), UPDATE_ID);
         assertEq(v.releaseImageId(), RELEASE_ID);
         assertEq(v.minReleaseDelay(), 10 minutes);
+        assertEq(v.adminDelay(), 2 days);
         assertEq(v.admin(), ANVIL0);
         assertEq(v.freezer(), ANVIL0);
         assertEq(v.cfgId(), v.computeCfgId(SEPOLIA, address(v), LEZ_CHAIN_ID, ZONE_ID, PROGRAM_ID));
