@@ -72,7 +72,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | R7 | "interrupted user-side operation does not consume … entitlement" | In | 4 | DES |
 | R8 | "mature, audited proof-system implementations" | In | 1 | TST (RISC Zero: Ethereum-side provers and verifier 3.1.0, LEZ side 3.0.5 as LEZ rc3; Helios; `docs/rfp/REUSE.md`) |
 | R9 | third-party outage: "document the effect, and mitigate it" | In | 7 | DES (`docs/rfp/SECURITY-AND-TRUST.md` §8) |
-| R10 | "full deposit and redemption round trip … included in CI" | In; with real proofs Cond | 6, 7 | PUB round trips with real proofs: v4, v5 (private), v6 (public and private), v7 (LEZ blocks never proved final); LOC the judge demo (executed); not in CI (the judge-demo workflow runs on demand only) |
+| R10 | "full deposit and redemption round trip … included in CI" | In; with real proofs Cond | 6, 7 | PUB round trips with real proofs: v4, v5 (private), v6 (public and private), v7 (LEZ blocks never proved final); LOC the judge demo (executed); in CI, executed and mock-verified, on every push to main (`e2e.yml`, [run 46157619959](https://github.com/jefdiesel/names-evm-bridge/actions/runs/46157619959)) |
 | R11 | "Every hard requirement has at least one corresponding test" | In | 7 | DES (NO TEST rows remain) |
 | R12 | developer docs for the core module "including position recovery" | In | 5, 7 | NS as one journey (pieces: `modules/CLI-CONTRACT.md`, `modules/NAMES-*.md`) |
 | R13 | docs for "the CLI and any operator-facing components" | In | 5, 7 | DES (`docs/rfp/USERS.md`, `docs/rfp/OPERATORS.md`) |
@@ -157,7 +157,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | P8 | "cycle-count delta" to "a hypothetical native precompile" | In | 1 | TST |
 | P9 | "No action's cycle count or gas cost scales with accumulated on-chain storage" | In | 1 | DES (fixed-size store) |
 | Sup1 | "deployed and tested on LEZ testnet 0.4" | In | 3, 7 | NS [ext] |
-| Sup2 | "End-to-end integration tests … included in CI" | In | 7 | NS. CI workflow e2e.yml (not yet run) |
+| Sup2 | "End-to-end integration tests … included in CI" | In | 7 | LOC in CI: `.github/workflows/e2e.yml` on every push to main ([run 46157619959](https://github.com/jefdiesel/names-evm-bridge/actions/runs/46157619959)): light client from recorded Sepolia fixtures (finality update, committee handoff, storage proof, refusals; updates as private development-receipt transactions), the bridge round trip and local security cases on a local rc3 chain and anvil, MockVerifier; LEZ testnet 0.4 NS [ext] |
 | Sup3–5 | docs: core module, "Recommended Consumer Pattern", CLI and operators | In | 7 | DES (`docs/rfp/LIGHT-CLIENT-SPEC.md` §7–§9, `docs/rfp/OPERATORS.md`) |
 | Sup6 | "trust assumptions document … the cost of the attack it admits" | In | 7 | DES (`docs/rfp/SECURITY-AND-TRUST.md`) |
 | Sup7 | "Document the operator role" | In | 3 | DES (`docs/rfp/OPERATORS.md` §1–§2) |
