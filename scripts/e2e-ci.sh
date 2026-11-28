@@ -105,7 +105,7 @@ FX=$REPO/lez-bridge/attest/fixtures/sepolia
 FX_MAIN=$REPO/lez-bridge/attest/fixtures/mainnet
 T_START=$(date +%s)
 
-mkdir -p "$RUN"
+mkdir -p "$RUN" "$B"
 chmod 700 "$RUN"
 
 # Mirror output to the full transcript and truncate overlong lines on stdout (CI log limit).
@@ -574,7 +574,7 @@ lccli attest update --program "$AP" --instance "$INST_SAME" --from "$LC_V" \
   || fail "attest update (same-period finality)"
 
 LAST_OUT=$RUN/lc/show-same.json
-lccli --json attest show --program "$AP" --instance "$INST_SAME" --anchor-block-hash "$FIN_ANCHOR" > "$LAST_OUT" 2>&1 \
+lccli --json attest show --program "$AP" --instance "$INST_SAME" --anchor-block-hash "$FIN_ANCHOR" > "$LAST_OUT" 2> "$RUN/lc/show-same.err" \
   || fail "attest show (same period)"
 python3 -I - "$LAST_OUT" "$FIN_SLOT" "$FIN_ANCHOR" <<'PY' || fail "same-period finality assertions"
 import json, sys
@@ -657,14 +657,24 @@ lccli attest init --program "$AP" --from "$LP" --network sepolia --checkpoint "$
   --beacon "$BEACON_URL" --bootstrap-file "$FX/bootstrap_same_period.ssz" \
   --salt "$SALT3" > "$LAST_OUT" 2>&1 || fail "attest init (unshifted stale check)"
 INST_STALE=$(sed -n 's/^INSTANCE=//p' "$LAST_OUT" | sed -n 1p)
+[ -n "$INST_STALE" ] || fail "no INSTANCE from attest init (unshifted stale check)"
 LAST_OUT=$RUN/lc/refuse-stale.txt
 stale_rc=0
 timeout 120 env LEE_WALLET_HOME_DIR="$LCW" LEZ_BRIDGE_SEQUENCER="$SEQ_URL" "$CLI" \
   attest update --program "$AP" --instance "$INST_STALE" --from "$LC_V" \
   --beacon "$BEACON_URL" --kind finality --update-file "$FX/finality_update.ssz" > "$LAST_OUT" 2>&1 || stale_rc=$?
+echo "  stale update, exit $stale_rc; its last lines:"; grep -vE '^Transaction data' "$LAST_OUT" | tail -n 6 | cut -c1-300 | sed 's/^/    /'
 [ "$stale_rc" != 0 ] || fail "stale 2026-11-12 fixture update unexpectedly applied past its weak-subjectivity deadline"
 [ "$stale_rc" != 124 ] || fail "stale fixture update timed out after 120s (dropped without returning an RPC error)"
-note "unshifted historical fixture update refused on live sequencer (exit $stale_rc; weak-subjectivity deadline passed)"
+# The refusal must be the LEZ block-time window the program sets (its end is the store's
+# weak-subjectivity deadline, B1.3), not some other failure.
+grep -qiE "outside of the validity window|RFP021-E04" "$LAST_OUT" \
+  || fail "stale update refused, but not by the validity window / weak-subjectivity rule"
+LAST_OUT=$RUN/lc/show-stale.json
+lccli --json attest show --program "$AP" --instance "$INST_STALE" > "$LAST_OUT" 2> "$RUN/lc/show-stale.err" || fail "attest show (stale)"
+python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["updates"] == 0, d["updates"]' "$LAST_OUT" \
+  || fail "the stale instance's store advanced"
+note "unshifted historical fixture update refused (exit $stale_rc; past the weak-subjectivity deadline); its store has 0 updates"
 
 kill "$BEACON_PID" 2>/dev/null || true; BEACON_PID=""
 pass
@@ -849,7 +859,9 @@ LEZ_CHAIN_ID=$(pcli chain-id | sed -n 's/^LEZ_CHAIN_ID=//p')
 ZONE_ID=$("$CLI" source-id | sed -n 's/^ZONE_ID=//p')
 CONFIG_PDA=$("$CLI" program-id --bridge "$BP" | sed -n 's/^CONFIG=//p')
 
-# 10a. Double-claim refused (CLI pre-check AND on-chain revert, supply unchanged)
+# 10a. Double-claim refused (CLI pre-check AND on-chain revert, supply unchanged). X signs and pays
+# the repeat itself, and an included revert costs its whole gas limit: top X up first.
+pcli wallet auth-transfer send --from "Public/$F" --to-pk "$XPK" --amount 50000000 > "$RUN/sec/topup-x.txt" 2>&1 || fail "top up X for the repeat claim"
 s_eth_0=$(supply_of pcli definition --token-program "$TP" --definition "$DEF_ETH")
 assert_cli_refuses "$RUN/sec/double-claim-cli.txt" "already claimed" xcli "${XCLAIM[@]}"
 assert_reverts_onchain "$RUN/sec/double-claim-chain.txt" xcli --no-precheck --allow-revert "${XCLAIM[@]}"

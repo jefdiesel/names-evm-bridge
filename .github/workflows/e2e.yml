@@ -135,12 +135,21 @@ jobs:
         timeout-minutes: 320
         run: bash scripts/e2e-ci.sh --build-only ${{ matrix.part }}
 
+      # A finished build under the exact key; a bridge or outbound build that failed or ran out of
+      # time under a one-off key the next run's restore prefix still finds (so it resumes).
       - name: Save the build cache
-        if: always() && steps.cache.outputs.cache-hit != 'true' && steps.build.outcome != 'skipped' && (matrix.part != 'kit' || hashFiles('run/e2e-ci/build/kit-bin/bin/wallet') != '')
+        if: always() && steps.cache.outputs.cache-hit != 'true' && steps.build.outcome == 'success'
         uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ${{ steps.keys.outputs.dir }}
           key: ${{ steps.keys.outputs.key }}
+
+      - name: Save the partial build cache
+        if: always() && matrix.part != 'kit' && steps.build.outcome != 'success' && steps.build.outcome != 'skipped'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ steps.keys.outputs.dir }}
+          key: ${{ steps.keys.outputs.prefix }}partial-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Save the cargo registry
         if: steps.build.outcome == 'success' && steps.registry.outputs.cache-hit != 'true'
