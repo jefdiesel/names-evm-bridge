@@ -8,6 +8,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      run_repro_builds:
+        description: Run Docker reproducible guest builds (scripts/repro-build.sh + check-image-ids.mjs)
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -46,6 +51,7 @@ jobs:
           persist-credentials: false
       - run: node --version
       - run: node --test scripts/check-versions.test.mjs
+      - run: node --test scripts/check-image-ids.test.mjs
       - run: node scripts/check-versions.mjs
 
   # The public demo's services (RPC filter, faucet, claim relay, attester readers, settlement,
@@ -151,3 +157,92 @@ jobs:
       - name: Failsafe reclaim statement (reclaim_core, native)
         working-directory: lez-bridge/reclaim
         run: cargo test --locked -j 4 -p reclaim_core --no-fail-fast
+
+  # Reproducible zkVM guest builds in RISC Zero's digest-pinned Docker builder (M1,
+  # docs/REPRODUCIBLE-BUILDS.md). Two clean builds on two fresh runners (no cache of any kind),
+  # then a third job compares them byte for byte and checks the ids against VERSIONS.toml.
+  repro-guest-builds:
+    name: Reproducible guest build ${{ matrix.build }} (Docker, scripts/repro-build.sh)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    if: github.event_name == 'workflow_dispatch' && inputs.run_repro_builds
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [a, b]
+    env:
+      CARGO_TERM_COLOR: never
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Runner
+        run: |
+          echo "CPUs $(nproc), memory $(awk '/MemTotal/ {print int($2 / 1048576)}' /proc/meminfo) GB"
+          docker version --format 'docker {{.Server.Version}}'
+          df -h / | tail -1
+          echo "CARGO_DIR=$HOME/.cargo" >> "$GITHUB_ENV"
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h / | tail -1
+      - name: Rust toolchain from lez-bridge/rust-toolchain.toml
+        working-directory: lez-bridge
+        run: |
+          rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
+          rustc --version
+      # risc0-build asks rzup for the installed RISC Zero Rust version even for a Docker build (it
+      # only picks the `lower-atomic` LLVM pass name by it: any version above 1.81 gives the same
+      # flags); the guests themselves compile inside the builder image. Same versions as judge-demo.
+      - name: Restore rzup
+        id: rzup
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.CARGO_DIR }}/bin/rzup
+          key: judge-demo-rzup-0.5.0-${{ runner.os }}-${{ runner.arch }}
+      - name: RISC Zero Rust toolchain (rzup 0.5.0, rust 1.97.0)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          [ -x "$CARGO_DIR/bin/rzup" ] || cargo install rzup --version 0.5.0 --locked
+          rzup install rust 1.97.0
+          rzup show
+      - name: Save rzup
+        if: steps.rzup.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.CARGO_DIR }}/bin/rzup
+          key: judge-demo-rzup-0.5.0-${{ runner.os }}-${{ runner.arch }}
+      - name: Build every deployable guest in Docker
+        run: |
+          start=$(date +%s)
+          bash scripts/repro-build.sh --out "$RUNNER_TEMP/out/repro-ids.txt" --elf-dir "$RUNNER_TEMP/out/elf" --jobs "$(nproc)"
+          echo "build took $(( $(date +%s) - start )) s"
+          docker image ls --digests risczero/risc0-guest-builder
+      - uses: actions/upload-artifact@v4
+        with:
+          name: repro-guests-${{ matrix.build }}
+          path: ${{ runner.temp }}/out
+          if-no-files-found: error
+
+  repro-guest-compare:
+    name: Reproducible guest builds agree and match VERSIONS.toml
+    needs: repro-guest-builds
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.run_repro_builds
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/builds
+      - name: Build a equals build b (image ids and ELF sha256)
+        run: |
+          cd "$RUNNER_TEMP/builds"
+          cat repro-guests-a/repro-ids.txt
+          diff -u repro-guests-a/repro-ids.txt repro-guests-b/repro-ids.txt
+          diff -u repro-guests-a/elf/SHA256SUMS repro-guests-b/elf/SHA256SUMS
+          cat repro-guests-a/elf/SHA256SUMS
+      - name: Image ids against VERSIONS.toml and the deployment records
+        run: node scripts/check-image-ids.mjs --input "$RUNNER_TEMP/builds/repro-guests-a/repro-ids.txt" --verbose

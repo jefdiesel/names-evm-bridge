@@ -161,6 +161,7 @@ reason = "v2's deploy script, kept as the record: it hard-pins the 3.0.0 verifie
 [deployments.v2]
 label = "Sepolia demo vault v2 (2026-11-13), deposits only"
 status = "deployed"
+repro_build = false
 lez = "rc3"
 chain_id = 11155111
 web_id = "sepolia-demo-v2"
@@ -218,6 +219,7 @@ risc0_groth16 = { v = "3.0.5", src = "git show 5e2ce69:lez-bridge/release/Cargo.
 [deployments.v3]
 label = "Sepolia demo vault v3 (2026-11-14), operator-attested, can never release"
 status = "deployed"
+repro_build = false
 lez = "rc3"
 chain_id = 11155111
 web_id = "sepolia-demo-v3"
@@ -269,6 +271,7 @@ risc0_groth16 = { v = "3.0.5", src = "git show c9ec880:lez-bridge/outbound/Cargo
 [deployments.v4]
 label = "Sepolia vault v4 (2026-11-15): RISC Zero Groth16 verifier 3.1.0 behind an UpdateGatedVerifier, genesis G2 state at LEZ block 10265"
 status = "deployed"
+repro_build = false
 lez = "rc3"
 chain_id = 11155111
 web_id = "sepolia-v4"
@@ -339,6 +342,7 @@ risc0_zkvm = { v = "3.0.5", src = "= lez_chain (they link lee_core)" }
 [deployments.v5]
 label = "Sepolia vault v5 (2026-11-15): v4's design (RISC Zero Groth16 3.1.0 behind an UpdateGatedVerifier), no release delay, genesis G2 state at LEZ block 11598"
 status = "deployed"
+repro_build = false
 lez = "rc3"
 chain_id = 11155111
 web_id = "sepolia-v5"
@@ -407,9 +411,91 @@ rust = { v = "1.98.1", src = "lez-bridge/rust-toolchain.toml; LEZ v0.4.0-rc3 rus
 rzup = { v = "0.5.0", src = ".github/workflows/judge-demo.yml; scripts/judge-demo.sh" }
 risc0_rust = { v = "1.97.0", src = ".github/workflows/judge-demo.yml" }
 cargo_risczero = { v = "3.0.5", src = ".github/workflows/judge-demo.yml (= LEZ rc3's risc0-zkvm)" }
+docker_builder_image = { v = "risczero/risc0-guest-builder", src = "scripts/repro-build.sh; docs/REPRODUCIBLE-BUILDS.md" }
+docker_builder_tag = { v = "r0.1.97.0", src = "risc0-build 3.0.7 src/lib.rs DEFAULT_DOCKER_TAG (3.0.5's is r0.1.88.0; scripts/repro-build.sh overrides both with RISC0_DOCKER_CONTAINER_TAG); = toolchain.risc0_rust 1.97.0" }
+docker_builder_digest = { v = "sha256:7ae0a27fa72b10fb5c1066005bd949ae43dc4ead8a284f2d6572b99c82ab4468", src = "Docker Hub risczero/risc0-guest-builder tag r0.1.97.0 (pushed 2026-07-20; index of linux/amd64 + attestation), read 2026-11-28; scripts/repro-build.sh builds FROM tag@digest" }
 foundry = { v = "v1.5.1", src = ".github/workflows/ci.yml" }
 solc = { v = "0.8.28", src = "vault/foundry.toml (the same at 5e2ce69 and c9ec880)" }
 optimizer_runs = { v = 200, src = "vault/foundry.toml" }
+
+# ---------------------------------------------------------------------------------------------
+# Reproducible Docker guest builds (M1, docs/REPRODUCIBLE-BUILDS.md).
+# `scripts/repro-build.sh` builds each deployable guest inside the digest-pinned Docker builder
+# above and `scripts/check-image-ids.mjs` compares the output to these pins and deployment records.
+# Legacy deployments (v2..v5, `repro_build = false`) were built natively without Docker and keep
+# their immutable on-chain ids; none of them equals a Docker id below (docs/REPRODUCIBLE-BUILDS.md).
+# A change to a guest's source, its lock or its host's risc0-build re-pins its id here in the same
+# commit (run the CI job `repro-guest-builds`).
+
+[[repro_guest]]
+name = "token_guest"
+workspace = "lez-bridge"
+manifest = "lez-bridge/methods/token_guest/Cargo.toml"
+role = "lez_guests"
+image_id = { v = "0x243bc09d66c1e742725b5fb6192b0a2d06772d95d7d00759d12dce8aa46b91de", elf_sha256 = "e81a57701fc68dbbe53511078e544a8337dea29a889c24767b2a3ba3d4856af0", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
+
+[[repro_guest]]
+name = "bridge_guest"
+workspace = "lez-bridge"
+manifest = "lez-bridge/methods/bridge_guest/Cargo.toml"
+role = "lez_guests"
+image_id = { v = "0x4003fd0d9112728364dec5c784983fe72f2e9fe5fbe270974cbd8af9bd129adb", elf_sha256 = "b7ba2c04ae9f053724a173404952d09a50398b5e4bfbbc32e29eccb11ebde684", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
+
+[[repro_guest]]
+name = "attest_guest"
+workspace = "lez-bridge/methods/attest_guest"
+manifest = "lez-bridge/methods/attest_guest/Cargo.toml"
+role = "lez_guests"
+image_id = { v = "0x4b7209e82ed3c3647863e9d6700948b833126fc0e6cbe428411248827717d1ff", elf_sha256 = "7433279fa849097e9eaa324f0b1837571f4364204c7c2687a07aa9a698e0c068", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
+
+[[repro_guest]]
+name = "attest_probe_guest"
+workspace = "lez-bridge/methods/attest_probe_guest"
+manifest = "lez-bridge/methods/attest_probe_guest/Cargo.toml"
+role = "lez_guests"
+image_id = { v = "0xad23410addf9b681fcce9e474d03714bd04cbc2b21d0fc9ae2376bd405460f29", elf_sha256 = "7afe3be0ad4ff54b400f87cb2cfa4a3b58f99094b08420711887d9ece53172c2", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
+
+[[repro_guest]]
+name = "outbound_guest"
+workspace = "lez-bridge/methods/outbound_guest"
+manifest = "lez-bridge/methods/outbound_guest/Cargo.toml"
+role = "eth_guests"
+image_id = { v = "0xc12da7fa92b942ad3b2d52222c62ddebe970625d95dfd9f9d98d54f59d410589", elf_sha256 = "1046ad4bbae30ae470c5eeaf576e88e9c3daa84db69146e56888096b221c3847", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
+
+[[repro_guest]]
+name = "outbound_guest_trusted_tip"
+workspace = "lez-bridge/methods/outbound_guest_trusted_tip"
+manifest = "lez-bridge/methods/outbound_guest_trusted_tip/Cargo.toml"
+role = "eth_guests"
+image_id = { v = "0xee5056bafa30aa172bc69cf074552a01292e20edb1582e8fd7803a719626d7ba", elf_sha256 = "13d1abc022e03fd061ec16f09373dcfe27fb4898ded68e436673d6690b34bc5f", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
+
+[[repro_guest]]
+name = "release_guest"
+workspace = "lez-bridge/methods/release_guest"
+manifest = "lez-bridge/methods/release_guest/Cargo.toml"
+role = "eth_guests"
+image_id = { v = "0x98728e5b83c7b3b2e808b9d44aae8eed58d240c139a523a65e1a26ca4f1e32f9", elf_sha256 = "3c4e85a274bc64163e11a2f7fef9b7ca77a6b874a2128362703ed690d4c0e8d9", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
+
+[[repro_guest]]
+name = "outbound_guest_seqsig"
+workspace = "lez-bridge/methods/outbound_guest_seqsig"
+manifest = "lez-bridge/methods/outbound_guest_seqsig/Cargo.toml"
+role = "eth_guests"
+image_id = { v = "0x807ea870608801031f19cf3595d7bd86364b88ee50f746e5ec16c0a26d99dd01", elf_sha256 = "7d7236780f756ccb72971f11c54c1421be78cc6e591893dfa09509f99aa61ce2", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
+
+[[repro_guest]]
+name = "seqsig_evidence_guest"
+workspace = "lez-bridge/methods/seqsig_evidence_guest"
+manifest = "lez-bridge/methods/seqsig_evidence_guest/Cargo.toml"
+role = "eth_guests"
+image_id = { v = "0x17c58454aa6db2c2eb27e288c11b663fe1df3ec4b23a63b56bd17a7cdf2efac9", elf_sha256 = "b9929c47840463cc63caa1e9b75ce3c419f1dde68ef3d3754015bd498df769bc", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
+
+[[repro_guest]]
+name = "reclaim_guest"
+workspace = "lez-bridge/methods/reclaim_guest"
+manifest = "lez-bridge/methods/reclaim_guest/Cargo.toml"
+role = "eth_guests"
+image_id = { v = "0x5ef74cc78ad5d5560962b928f14511beb14d7adc4f2d5596220938842276937c", elf_sha256 = "63f6ad46d9aad0ea1016b2077f2127cfbd41caa4db83b6ab00cfb38834ccaa61", src = "scripts/repro-build.sh, two clean GitHub-hosted runners, identical ids and ELF sha256 (pre-merge public CI run 46095730461, 2026-11-28)" }
 
 [judge_demo]
 kit_url = { v = "https://github.com/jefdiesel/logos-execution-zone.git", src = "scripts/judge-demo.sh KIT_URL" }
@@ -605,6 +691,36 @@ value = "toolchain.solc"
 file = "vault/foundry.toml"
 re = 'optimizer_runs = ([0-9]+)'
 value = "toolchain.optimizer_runs"
+
+[[pin]]
+file = "scripts/repro-build.sh"
+re = 'BUILDER_IMAGE="\$\{RISC0_BUILDER_IMAGE:-([^}]+)\}"'
+value = "toolchain.docker_builder_image"
+
+[[pin]]
+file = "scripts/repro-build.sh"
+re = 'BUILDER_TAG="\$\{RISC0_BUILDER_TAG:-([^}]+)\}"'
+value = "toolchain.docker_builder_tag"
+
+[[pin]]
+file = "scripts/repro-build.sh"
+re = 'BUILDER_DIGEST="\$\{RISC0_BUILDER_DIGEST:-([^}]+)\}"'
+value = "toolchain.docker_builder_digest"
+
+[[pin]]
+file = "docs/REPRODUCIBLE-BUILDS.md"
+re = '\| Docker builder image \| `([^`]+)` \|'
+value = "toolchain.docker_builder_image"
+
+[[pin]]
+file = "docs/REPRODUCIBLE-BUILDS.md"
+re = '\| Docker builder tag \| `([^`]+)` \|'
+value = "toolchain.docker_builder_tag"
+
+[[pin]]
+file = "docs/REPRODUCIBLE-BUILDS.md"
+re = '\| Docker builder digest \| `([^`]+)` \|'
+value = "toolchain.docker_builder_digest"
 
 # v2
 [[pin]]

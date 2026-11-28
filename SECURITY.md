@@ -42,8 +42,7 @@ Known limits are written down rather than hidden: the trust model is in `DESIGN.
   the vault frozen (no funds move; the remedy is a new vault;
   `test_KnownLimit_FreezerCanVetoItsOwnReplacement`). The LEZ bridge program (`lez-bridge/bridge`)
   does not have an admin timelock yet.
-- **Reproducible guest builds:** local guest builds embed machine/registry paths, and reproducible
-  guest builds with RISC Zero's Docker builder are not done yet (set up in M1).
+- **Reproducible guest builds:** reproducible guest builds with RISC Zero's Docker builder are done for the code on `main` (2026-11-28): all 10 deployable guests build with the same image id and ELF sha256 on two clean machines (two fresh GitHub-hosted runners, pre-merge CI run 46095730461; ids pinned in `VERSIONS.toml` `[[repro_guest]]`; `docs/REPRODUCIBLE-BUILDS.md`). **The deployed guests (v2–v7) were built natively before that, and none of their image ids reproduces from Docker**, including the release (`0x6bcbd714…`), trusted-tip update (`0x098f5a1a…`) and v7 seq-sig guests (`0x93c88f77…`, `0x9df4de66…`), whose guest sources and locks on main are the deployed builds' (v7: its branch tip); the bridge and token programs (`0dabbd6c…`, `ac175cb5…`) also changed lock since. Their archived ELFs stay the proving inputs for those vaults; a new deployment uses the Docker ids. Not yet checked on a machine outside GitHub.
 
 Public demo faucet and relay (test network, test LEZ only; found 2026-11-27, fix planned, the
 running services unchanged until then; each is pinned by a test in `public-demo/`):

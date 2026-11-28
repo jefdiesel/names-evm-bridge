@@ -258,9 +258,14 @@ flow: its secrets derive from the recovery phrase and the account id under a sep
   deploy time. The LEZ bridge half is still open.
 - Source: proposal #281 Technical Approach §6; `SECURITY.md` "Known limits".
 
-**D38 (2026-11-27, owner's decision). Reproducible guest builds with RISC Zero's Docker builder are set up in M1 (not
-done yet).**
+**D38 (2026-11-27, owner's decision). Reproducible guest builds with RISC Zero's Docker builder are set up in M1 (done
+for main on 2026-11-28; the deployed native ids do not reproduce).**
 - Context and decision: guest image ids differ across machines today (the guests embed the cargo registry's absolute
   path, `DESIGN.md` header). M1's acceptance includes every guest image id rebuilt identically on two machines with RISC
   Zero's Docker builder.
+- Result (2026-11-28): `scripts/repro-build.sh` builds the 10 deployable guests in `risczero/risc0-guest-builder:r0.1.97.0`
+  pinned by digest; two fresh GitHub-hosted runners gave identical ids and ELF sha256 (pre-merge CI run 46095730461), pinned in
+  `VERSIONS.toml`. None of the deployed v2–v7 ids equals the Docker id of its guest, even for guests whose inputs are
+  unchanged since the deploy (release, trusted-tip update; v7 seq-sig against its branch tip): the deployed records stay as they are and new
+  deployments use Docker ids (`docs/REPRODUCIBLE-BUILDS.md`).
 - Source: proposal #281 Milestone 1; `DESIGN.md` header; `SECURITY.md` "Known limits".

@@ -72,8 +72,9 @@ technical model they summarise.
   unfreeze scheduled before the latest freeze refused (`vault/test/AdminTimelock*.t.sol`); it applies to the next new
   vault. Its known limit: a stolen freezer key can veto its own replacement and keep the vault frozen (no funds move).
   The LEZ bridge program has no timelock yet.
-- **Reproducible guest builds:** reproducible guest builds with RISC Zero's Docker builder are not done yet (set up in
-  M1).
+- **Reproducible guest builds:** done for the code on `main` (2026-11-28): the 10 deployable guests build identically in
+  RISC Zero's digest-pinned Docker builder on two clean machines (`docs/REPRODUCIBLE-BUILDS.md`). The deployed guests
+  (v2–v7) were built natively before that and their image ids do not reproduce from Docker.
 
 ## 2. Assets
 
