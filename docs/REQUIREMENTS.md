@@ -157,7 +157,7 @@ Soft requirements (10): 5 offered (RFP-022 Soft1 as a written migration path onl
 | P8 | "cycle-count delta" to "a hypothetical native precompile" | In | 1 | TST |
 | P9 | "No action's cycle count or gas cost scales with accumulated on-chain storage" | In | 1 | DES (fixed-size store) |
 | Sup1 | "deployed and tested on LEZ testnet 0.4" | In | 3, 7 | NS [ext] |
-| Sup2 | "End-to-end integration tests … included in CI" | In | 7 | NS |
+| Sup2 | "End-to-end integration tests … included in CI" | In | 7 | NS. CI workflow e2e.yml (not yet run) |
 | Sup3–5 | docs: core module, "Recommended Consumer Pattern", CLI and operators | In | 7 | DES (`docs/rfp/LIGHT-CLIENT-SPEC.md` §7–§9, `docs/rfp/OPERATORS.md`) |
 | Sup6 | "trust assumptions document … the cost of the attack it admits" | In | 7 | DES (`docs/rfp/SECURITY-AND-TRUST.md`) |
 | Sup7 | "Document the operator role" | In | 3 | DES (`docs/rfp/OPERATORS.md` §1–§2) |

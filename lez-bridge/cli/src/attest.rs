@@ -96,6 +96,10 @@ pub enum AttestCommand {
         /// Write the bootstrap, committee and ids here.
         #[arg(long)]
         save_dir: Option<PathBuf>,
+        /// Tests only: override `genesis_time` (Unix seconds) when replaying historical
+        /// fixtures whose weak-subjectivity deadline has passed wall-clock time.
+        #[arg(long, hide = true)]
+        test_genesis_time: Option<u64>,
     },
     /// Advance an instance by one update, from a PRIVATE account of this wallet (the update is
     /// verified in its privately proved execution). With `--dry-run`: simulate, no proof.
@@ -561,6 +565,7 @@ pub async fn run(wallet: &mut WalletCore<SequencerClient>, sequencer: &str, comm
             min_participants,
             salt,
             save_dir,
+            test_genesis_time,
         } => {
             let net = network(&name);
             let beacon = beacon.unwrap_or_else(|| net.beacon.to_owned());
@@ -582,6 +587,9 @@ pub async fn run(wallet: &mut WalletCore<SequencerClient>, sequencer: &str, comm
                 println!("  cross-checked with {other}");
             }
             config.checkpoint = root;
+            if let Some(t) = test_genesis_time {
+                config.genesis_time = t;
+            }
             let bootstrap = match bootstrap_file {
                 Some(path) => std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?,
                 None => {

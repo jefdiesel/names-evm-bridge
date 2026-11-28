@@ -692,6 +692,31 @@ re = 'KIT_URL=\$\{KIT_URL:-([^}]+)\}'
 value = "judge_demo.kit_url"
 
 [[pin]]
+file = "scripts/e2e-ci.sh"
+re = 'KIT_COMMIT=\$\{KIT_COMMIT:-([0-9a-f]{40})\}'
+value = "judge_demo.kit_commit"
+
+[[pin]]
+file = "scripts/e2e-ci.sh"
+re = 'KIT_URL=\$\{KIT_URL:-([^}]+)\}'
+value = "judge_demo.kit_url"
+
+[[pin]]
+file = ".github/workflows/e2e.yml"
+re = 'KIT_COMMIT: ([0-9a-f]{40})'
+value = "judge_demo.kit_commit"
+
+[[pin]]
+file = ".github/workflows/e2e.yml"
+re = 'rzup install cargo-risczero ([0-9.]+)'
+value = "toolchain.cargo_risczero"
+
+[[pin]]
+file = ".github/workflows/e2e.yml"
+re = 'foundry-toolchain@[0-9a-f]{40} # v[0-9.]+\s+with:\s+version: (v[0-9.]+)'
+value = "toolchain.foundry"
+
+[[pin]]
 file = ".github/workflows/ci.yml"
 re = 'foundry-toolchain@v1\s+with:\s+version: (v[0-9.]+)'
 value = "toolchain.foundry"

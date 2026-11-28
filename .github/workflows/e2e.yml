@@ -1,0 +1,221 @@
+# End-to-end integration tests in CI (RFP-021 Sup2), scripts/e2e-ci.sh on one Ubuntu runner:
+#   1. a throwaway LEZ v0.4.0-rc3 chain from the pinned testnet kit (RISC0_DEV_MODE=1: private
+#      transactions carry development receipts, nothing is proved) and a local anvil;
+#   2. the RFP-021 light client (eth_attest + its reference consumer eth_attest_probe) fed from the
+#      recorded Sepolia fixtures in lez-bridge/attest/fixtures/sepolia/ through a loopback mock
+#      beacon: a same-period finality update, a committee handoff (period 1410 -> 1411), a storage
+#      proof checked on chain, a mainnet update and a stale checkpoint refused;
+#   3. BridgeVault (RoundTripDeploy.s.sol, MockVerifier) + DepositDesk on anvil, the token and
+#      bridge programs on LEZ, and the round trip deposit -> claim (direct and relayed) -> burn ->
+#      G2-lite update -> G3 release, balances checked at every stage;
+#   4. local security cases: double claim, wrong chain, frozen token (LEZ mint and burn, the
+#      vault's deposit freeze and its timelocked unfreeze), the C1/H1/M2 regressions.
+#
+# Cost: three Rust workspaces (the kit, the bridge CLI, the outbound host), each compiling LEZ
+# and RISC Zero and their guests: cold, about 2 h each on a 4-CPU runner (judge-demo.yml's
+# notes), so they build in three parallel jobs, each with its own cache, and hand their binaries
+# to the test job as artifacts. With the caches warm a run takes about 30 min. Caches saved by a
+# run on main are visible to every branch.
+name: e2e
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push waits instead of cancelling: a cancelled cold build would lose its cache.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: never
+  # must match KIT_COMMIT in scripts/e2e-ci.sh (VERSIONS.toml [judge_demo] kit_commit: LEZ v0.4.0-rc3 + kit patches)
+  KIT_COMMIT: 96a0a50232203ceae0cb8e69ef564d2d4a5d34a1
+
+jobs:
+  build:
+    name: build ${{ matrix.part }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [kit, bridge, outbound]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Runner size and cache keys
+        id: keys
+        run: |
+          echo "CPUs $(nproc), memory $(awk '/MemTotal/ {print int($2 / 1048576)}' /proc/meminfo) GB"
+          echo "CARGO_BUILD_JOBS=$(nproc)" >> "$GITHUB_ENV"
+          echo "CARGO_DIR=$HOME/.cargo" >> "$GITHUB_ENV"
+          os="${RUNNER_OS}-${RUNNER_ARCH}"
+          tc=$(sha256sum lez-bridge/rust-toolchain.toml | cut -c1-16)
+          case "${{ matrix.part }}" in
+            kit)      dir=run/e2e-ci/build/kit-bin;         bin=run/e2e-ci/build/kit-bin/bin;                       h=$KIT_COMMIT ;;
+            bridge)   dir=run/e2e-ci/build/target-bridge;   bin=run/e2e-ci/build/target-bridge/release/lez-bridge;  h=$(cat lez-bridge/Cargo.lock lez-bridge/methods/attest_guest/Cargo.lock lez-bridge/methods/attest_probe_guest/Cargo.lock | sha256sum | cut -c1-16)-$tc ;;
+            outbound) dir=run/e2e-ci/build/target-outbound; bin=run/e2e-ci/build/target-outbound/release/outbound_host; h=$(cat lez-bridge/outbound/Cargo.lock lez-bridge/methods/outbound_guest*/Cargo.lock lez-bridge/methods/release_guest/Cargo.lock | sha256sum | cut -c1-16)-$tc ;;
+          esac
+          {
+            echo "dir=$dir"
+            echo "bin=$bin"
+            echo "prefix=e2e-${{ matrix.part }}-$os-"
+            echo "key=e2e-${{ matrix.part }}-$os-$h"
+            echo "registry=e2e-cargo-${{ matrix.part }}-$os-$h"
+          } >> "$GITHUB_OUTPUT"
+
+      # The kit's binaries are keyed on its commit alone: a hit means nothing to build.
+      - name: Restore the build cache
+        id: cache
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ steps.keys.outputs.dir }}
+          key: ${{ steps.keys.outputs.key }}
+          restore-keys: ${{ matrix.part != 'kit' && steps.keys.outputs.prefix || '' }}
+
+      - name: Free disk
+        if: steps.cache.outputs.cache-hit != 'true' || matrix.part != 'kit'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h / | tail -1
+
+      - name: System packages (as the testnet kit's README lists them)
+        if: steps.cache.outputs.cache-hit != 'true' || matrix.part != 'kit'
+        run: sudo apt-get update -q && sudo apt-get install -y -q build-essential clang libclang-dev libssl-dev pkg-config libpcsclite-dev
+
+      - name: Restore rzup
+        id: rzup
+        if: steps.cache.outputs.cache-hit != 'true' || matrix.part != 'kit'
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.CARGO_DIR }}/bin/rzup
+          key: e2e-rzup-0.5.0-${{ runner.os }}-${{ runner.arch }}
+          restore-keys: judge-demo-rzup-0.5.0-${{ runner.os }}-${{ runner.arch }}
+
+      - name: RISC Zero toolchain (rzup 0.5.0, rust 1.97.0, cargo-risczero 3.0.5)
+        if: steps.cache.outputs.cache-hit != 'true' || matrix.part != 'kit'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          [ -x "$CARGO_DIR/bin/rzup" ] || cargo install rzup --version 0.5.0 --locked
+          rzup install rust 1.97.0
+          rzup install cargo-risczero 3.0.5
+          rzup show
+
+      - name: Save rzup
+        if: matrix.part == 'bridge' && steps.rzup.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ env.CARGO_DIR }}/bin/rzup
+          key: e2e-rzup-0.5.0-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Restore the cargo registry
+        id: registry
+        if: steps.cache.outputs.cache-hit != 'true' || matrix.part != 'kit'
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ${{ env.CARGO_DIR }}/registry/index
+            ${{ env.CARGO_DIR }}/registry/cache
+            ${{ env.CARGO_DIR }}/git/db
+          key: ${{ steps.keys.outputs.registry }}
+          restore-keys: e2e-cargo-${{ matrix.part }}-
+
+      # Its own step timeout, so a build that runs long still saves what it compiled.
+      - name: scripts/e2e-ci.sh --build-only ${{ matrix.part }}
+        id: build
+        if: steps.cache.outputs.cache-hit != 'true' || matrix.part != 'kit'
+        timeout-minutes: 320
+        run: bash scripts/e2e-ci.sh --build-only ${{ matrix.part }}
+
+      - name: Save the build cache
+        if: always() && steps.cache.outputs.cache-hit != 'true' && steps.build.outcome != 'skipped' && (matrix.part != 'kit' || hashFiles('run/e2e-ci/build/kit-bin/bin/wallet') != '')
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ steps.keys.outputs.dir }}
+          key: ${{ steps.keys.outputs.key }}
+
+      - name: Save the cargo registry
+        if: steps.build.outcome == 'success' && steps.registry.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ${{ env.CARGO_DIR }}/registry/index
+            ${{ env.CARGO_DIR }}/registry/cache
+            ${{ env.CARGO_DIR }}/git/db
+          key: ${{ steps.keys.outputs.registry }}
+
+      - name: Build logs (on failure)
+        if: failure()
+        run: |
+          for f in run/e2e-ci/build/*.log run/e2e-ci/build/kit-bin/logs/*.log; do
+            [ -f "$f" ] && { echo "== $f"; tail -60 "$f"; }
+          done || true
+
+      - name: Upload the binaries
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-bin-${{ matrix.part }}
+          path: ${{ steps.keys.outputs.bin }}
+          if-no-files-found: error
+          retention-days: 3
+
+  e2e:
+    name: e2e (local LEZ + anvil)
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Runner size
+        run: echo "CPUs $(nproc), memory $(awk '/MemTotal/ {print int($2 / 1048576)}' /proc/meminfo) GB"
+
+      - name: System packages (runtime libraries of the binaries)
+        run: sudo apt-get update -q && sudo apt-get install -y -q libssl-dev libpcsclite-dev
+
+      - name: Foundry (pinned)
+        uses: foundry-rs/foundry-toolchain@82dee4ba654bd2146511f85f0d013af94670c4de # v1.4.0
+        with:
+          version: v1.5.1
+
+      - name: Download the binaries
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          pattern: e2e-bin-*
+          path: run/e2e-ci/bin
+          merge-multiple: true
+
+      - name: Binaries
+        run: |
+          chmod +x run/e2e-ci/bin/*
+          ls -l run/e2e-ci/bin
+          for b in run/e2e-ci/bin/*; do echo "== $b"; ldd "$b" | grep -v -E '^\s*(linux-vdso|/lib64/ld-linux)' || true; done
+          if ldd run/e2e-ci/bin/* | grep 'not found'; then exit 1; fi
+          {
+            echo "SEQ_BIN=$PWD/run/e2e-ci/bin/sequencer_service"
+            echo "WALLET_BIN=$PWD/run/e2e-ci/bin/wallet"
+            echo "LEZ_BRIDGE_BIN=$PWD/run/e2e-ci/bin/lez-bridge"
+            echo "OUTBOUND_HOST_BIN=$PWD/run/e2e-ci/bin/outbound_host"
+          } >> "$GITHUB_ENV"
+
+      - name: scripts/e2e-ci.sh
+        run: bash scripts/e2e-ci.sh
+
+      - name: Upload the transcript
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-ci-transcript
+          path: run/e2e-ci/e2e-ci-*.public.log
+          if-no-files-found: warn
